@@ -57,9 +57,9 @@ production/defaultは明示的なリリース作業まで触れません。
 
 ## 現在の段階
 
-現在は実装開始直前の設計最終確認フェーズです。
+**設計Phase 0は完了し、実装開始可能な状態です。**
 
-設計完了後はmilestone単位でbranchを切り、Codexで実装・test・Evidence・docs更新・staging確認・PR作成まで行います。
+以降は `docs/IMPLEMENTATION_PLAN.md` のMilestone順に、branchを切ってCodexで実装・test・Evidence・docs更新・staging確認・PR作成まで行います。
 
 詳細な開発ルールは `docs/DEVELOPMENT_POLICY.md` を正とします。
 
@@ -78,6 +78,7 @@ production/defaultは明示的なリリース作業まで触れません。
 - [Cloudflareインフラ](docs/CLOUDFLARE_INFRASTRUCTURE.md)
 - [HouseToDo流用設計](docs/REUSE_FROM_HOUSETODO.md)
 - [ロードマップ](docs/ROADMAP.md)
+- [実装計画](docs/IMPLEMENTATION_PLAN.md)
 - [開発方針](docs/DEVELOPMENT_POLICY.md)
 
 > 仕様変更はコードだけで行わず、関連ドキュメントも同じ作業内で更新します。
