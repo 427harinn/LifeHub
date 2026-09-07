@@ -1,254 +1,274 @@
 # LifeHub ロードマップ
 
-## 方針
+## 1. 方針
 
-LifeHubは、実装を始める前に設計を固める。
+LifeHub は HouseToDo を直接改造せず、完成度の高い基盤・UI・考え方だけを選択的に流用する独立プロダクトとする。
 
-HouseToDoの既存コードを大量にコピーしてから削るのではなく、必要な基盤・UI・考え方を選択的に抽出する。
+LifeHub は完全個人用であり、Household / HouseholdMember / 共有モデルは持ち込まない。
+
+設計文書を正として実装し、実装中に仕様変更が発生した場合はコードだけを変更せず、必ず関連文書も同じ作業内で更新する。
+
+開発手順の詳細は `DEVELOPMENT_POLICY.md` を正とする。
 
 ---
 
 # Phase 0: 設計
 
-現在のフェーズ。
-
-## 0-1. プロダクト仕様
+## 0-1. プロダクト / 画面設計
 
 - [x] アプリの目的
+- [x] 完全個人用
+- [x] Todoではなく予定を扱い、完了状態を持たない
 - [x] 5つのボトムナビ
-- [x] Calendar / Daily / Moneyの役割分担
+- [x] Calendar / Daily / Money / Settingsの役割
 - [x] 家 / 仕事カテゴリ
-- [x] 期間中にやりたい項目
-- [x] 予定メモ / 今日のメモ
-- [x] ズボラ家計簿の基本思想
-- [x] 予定額 / 実績 / みなし実績
+- [x] scheduled / period Event
+- [x] 今週中 / 今月中 / 任意期間
+- [x] Calendar複数日帯
+- [x] Daily timeline
+- [x] Event登録フロー
+- [x] Money基本UI
+- [x] LifeHub用オレンジテーマ
 
 ## 0-2. HouseToDo流用設計
 
-- [x] 流用 / 再設計 / 新規の分類
-- [x] Auth / Household流用方針
-- [x] UI foundation流用方針
-- [x] 登録フォーム参考方針
-- [x] recurrenceをそのままコピーしない方針
-- [x] Push基盤流用方針
-- [x] Calendar / Homeの参考範囲
+- [x] Auth / Session流用方針
+- [x] Householdを持ち込まない方針
+- [x] UI foundation / BottomSheet流用方針
+- [x] returnTo / recent definitions参考方針
+- [x] recurrenceを再設計する方針
+- [x] Push / Service Worker / scheduler参考方針
 
-## 0-3. データモデル設計
+## 0-3. データモデル
 
-次に実施。
+- [x] User ownership
+- [x] UserSettings / LifeHubUserState
+- [x] Event
+- [x] periodWindow / periodAnchorDate
+- [x] RecurrenceRule
+- [x] EventOccurrenceOverride
+- [x] EventNotification / NotificationTemplate
+- [x] DailyNote
+- [x] MoneyItem / MoneyCategory
+- [x] MoneyOccurrenceOverride
+- [x] MoneyOccurrenceSettlement
+- [x] actual / estimated_actual
+- [x] ArchiveMetadata
+- [x] migration_locked
 
-- [ ] User / Householdの採用範囲
-- [ ] Event
-- [ ] EventTiming
-- [ ] RecurrenceRule
-- [ ] NotificationRule
-- [ ] NotificationTemplate
-- [ ] DailyNote
-- [ ] MoneyEntry
-- [ ] MoneyCategory
-- [ ] planned / actual / estimated_actual
-- [ ] 過去データ / recurrence instanceの扱い
+## 0-4. API
 
-## 0-4. API設計
+- [x] Calendar API
+- [x] Daily API
+- [x] Event CRUD
+- [x] Event recent definitions
+- [x] Search
+- [x] Money CRUD / monthly aggregation
+- [x] Money actual
+- [x] DailyNote CRUD
+- [x] NotificationTemplate CRUD方針
+- [x] MoneyCategory CRUD方針
+- [x] Settings
+- [x] Archive
+- [x] Migration
 
-- [ ] Calendar range API
-- [ ] Calendar day API
-- [ ] Daily API
-- [ ] Event CRUD
-- [ ] Event search
-- [ ] Recent Event / 以前の項目
-- [ ] Money CRUD
-- [ ] Money monthly aggregation
-- [ ] DailyNote CRUD
-- [ ] Notification APIs
+## 0-5. インフラ / データ保持
 
-## 0-5. UI詳細設計
+- [x] HouseToDoとCloudflareリソースを完全分離
+- [x] staging-first
+- [x] D1直近1年保持
+- [x] IndexedDBアーカイブ
+- [x] JSONバックアップ
+- [x] 安全な機種変更フロー
 
-- [ ] Calendar cell仕様
-- [ ] 複数日予定の帯
-- [ ] Date Sheet
-- [ ] Daily timeline
-- [ ] Add choice sheet
-- [ ] Event form
-- [ ] Money form
-- [ ] Money charts
-- [ ] empty / loading / error states
+## 0-6. 実装開始前
 
-設計完了後にMVP実装へ進む。
+- [x] 開発方針文書
+- [ ] 全仕様書の最終整合性確認
+- [ ] MVP milestone / task分割
 
 ---
 
-# Phase 1: LifeHub基盤
-
-HouseToDoから汎用基盤を抽出し、LifeHubとして起動できる状態にする。
-
-候補:
+# Phase 1: 基盤
 
 - React / Vite / TypeScript
 - UI foundation
+- LifeHub color tokens
 - BottomSheet
-- Bottom Navigation骨格
+- Bottom Navigation
 - Auth / Session
-- Household
 - Workers / D1
-- timezone utilities
-- PWA
+- timezone / weekStartsOn utilities
+- PWA / Service Worker基盤
 - testing setup
+- local環境
 
-このPhaseではTask / Shoppingドメインを持ち込まない。
+Task / Shopping / Householdドメインは持ち込まない。
 
 ---
 
-# Phase 2: Event基盤
+# Phase 2: Event MVP
 
-- Event DB / API
+- Event schema / migration
+- Event CRUD API
 - Event form
 - 家 / 仕事
-- 単日予定
-- 終日
-- 開始 / 終了
+- scheduled Event
+- 単日 / 複数日
+- 終日 / 時間あり
 - 編集 / 削除
 - 以前の項目から選ぶ
+- returnTo
 
 まず単発Eventを完成させる。
 
 ---
 
-# Phase 3: Calendar + Daily
+# Phase 3: Calendar + Daily MVP
 
-- 月Calendar
-- 家 / 仕事 / すべて
-- 日付選択
+- 大きな月Calendar
+- すべて / 家 / 仕事 / お金タブ
+- 日セルMoney表示
+- 単発 / 繰り返し / periodの色分け
+- TimeTree型の複数日帯
+- `+N` 省略表示
 - Date Sheet
 - Daily timeline
 - Calendar ↔ Daily
-- Calendar / DailyからのQuick Add
-- returnTo
-- 過去日登録
+- Calendar / DailyからQuick Add
+- DailyNote
+
+Calendarの1日最大表示件数は、390×844に最大量のダミーデータを入れてEvidenceを確認後に決定する。
 
 ---
 
 # Phase 4: Recurrence + Period Event
 
-- 共通RecurrenceRule
-- 毎日
-- 毎週
-- 曜日指定
-- 毎月
-- 繰り返し期間
-- 期間中にやりたいEvent
-- Event instance/projection
+- 共通Recurrence Projection
+- daily / weekly / monthly
+- interval / weekdays / dayOfMonth
+- recurrence range
+- stable occurrenceKey
+- 今週中 / 今月中 / custom range
+- periodAnchorDate
+- 今回のみ / これ以降 / すべて
+- EventOccurrenceOverride
 
-HouseToDoのrecurrence utilityを参考にするが、Task modelはコピーしない。
+Calendar / Daily / Notificationで別々のrecurrence実装を作らない。
 
 ---
 
 # Phase 5: Notification
 
-- HouseToDo Push基盤の移植/再利用
-- Event notification
-- 複数通知
+- Web Push基盤
+- Push subscription
+- Event複数通知
+- 終日09:00基準
+- period deadline基準
+- 朝09:00 / 夜21:00まとめ通知
+- 設定から時刻変更 / ON-OFF
 - NotificationTemplate
-- 家 / 仕事のdefault template
 - deep link
+- NotificationDeliveryによる重複防止
 - timezone検証
 
 ---
 
 # Phase 6: Money MVP
 
-- 支出 / 収入
 - MoneyCategory
 - Money form
+- 支出 / 収入
+- plannedAmount
+- 単発Money
 - 以前の項目から選ぶ
-- 単発MoneyEntry
-- Calendar Moneyタブ
-- Daily Moneyタブ
+- Calendar Money表示
+- Daily Money表示
 - 今月summary
 
 ---
 
-# Phase 7: Money Recurrence / ズボラ実績
+# Phase 7: Money Recurrence / 実績
 
 - Money + RecurrenceRule
-- 予定額
-- 実績額入力
-- future recurrence ruleを壊さない月単位override
-- estimated_actual
-- 月末の扱い
-- 月別集計
+- MoneyOccurrenceOverride
+- 今回のみ / これ以降 / すべて
+- actual入力
+- 月末estimated_actual確定
+- MoneyOccurrenceSettlement
+- 過去月集計固定
 
 ---
 
 # Phase 8: Money可視化
 
-- 今月: category pie
+- 今月: 支出見込み / 収入見込み / 残りそう
+- 確定済み / 予定の補助集計
+- category donut
 - category list
-- 月ごと: bar chart
+- 月別bar chart
 - 月詳細
 
-高度な家計分析はMVP対象外。
+高度な家計分析は初期対象外。
 
 ---
 
-# Phase 9: DailyNote / Search
+# Phase 9: Search / Archive
 
-- 今日のメモ
-- 過去メモ
-- Event検索
+- Event title / place / memo検索
 - Calendar jump
-
-ここまででLifeHubの「軽いライフログ」が成立する。
+- IndexedDB検索統合
+- 1年超履歴のローカルアーカイブ
+- D1 + IndexedDB統合表示
+- ArchiveMetadata
 
 ---
 
-# Phase 10: Settings / Polish
+# Phase 10: Settings / Backup / Migration
 
-- Notification templates UI
-- Money category設定
-- Household関連設定
-- UI polish
+- 通知設定
+- NotificationTemplate設定
+- MoneyCategory設定
+- Calendar設定
+- Archive状態
+- 通常JSONバックアップ
+- 機種変更JSON生成・再検証
+- migration lock
+- 新端末import / complete
+
+---
+
+# Phase 11: Polish / Release
+
 - accessibility
+- loading / empty / error states
 - performance
-- App Store / PWA公開準備
+- PWA install確認
+- iPhone実機確認
+- notification実機確認
+- staging総合テスト
+- production環境準備
+
+production作成・deploy・migrationは明示的なリリース作業としてのみ行う。
 
 ---
 
-# 開発フロー（実装フェーズ）
+# 実装フェーズ共通フロー
 
-HouseToDoで採用している安全な開発フローをLifeHubでも基本とする。
+各milestoneは `DEVELOPMENT_POLICY.md` に従う。
+
+要約:
 
 1. main最新化
-2. milestoneごとにbranch作成
-3. 実装
-4. unit / integration test
-5. lint / typecheck / build
-6. UI変更はPlaywright 390×844 evidence
-7. staging validation
-8. 必要なmigrationのみstaging適用
-9. staging deploy
-10. PR作成
-11. 自動mergeしない
-12. review後に手動merge
-
-productionは明示的なリリースPhaseまで触らない。
-
----
-
-# 次に設計する内容
-
-次の作業は **データモデル設計**。
-
-特に以下の関係を最初に固める。
-
-```text
-Event ─────────────┐
-                   ├─ RecurrenceRule
-MoneyEntry ────────┘
-
-Event ─ NotificationRule
-
-Date ─ DailyNote
-```
-
-Eventの日時・期間表現、recurrence instance、Moneyの予定/実績overrideが設計上の重要ポイント。
+2. 新規branch
+3. `.ai/MILESTONE.md` / `.ai/TASKS.md` をCodexが更新
+4. 実装
+5. lint / typecheck / test / build
+6. UIは390×844 screenshot evidence、必要なら動画
+7. 関連仕様書更新
+8. 十分まとまった段階でstaging検証
+9. push
+10. Pull Request作成
+11. PRリンク・branch・commit・test・evidenceを報告
+12. 自動mergeしない
+13. production/defaultへ明示指示なしで触れない
