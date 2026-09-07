@@ -11,6 +11,9 @@
 - [x] T7: unit / integration / Playwrightを追加・実行
 - [x] T8: 390×844 Evidenceと必要なdocsを更新
 - [x] T9: self-review、commit、push、main向けPR作成。自動mergeしない
+- [x] T10: PR #2へ反映された最新版docsを確認
+- [x] T11: Calendar / Daily / Money / Settings shellをfixture中心へ更新
+- [x] T12: safe-area、Calendar date sheet、Settings detail、Evidence、Playwrightを更新
 
 ## M2セルフレビュー観点
 

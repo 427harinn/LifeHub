@@ -36,6 +36,15 @@ LifeHubを個人アプリとして利用できる骨格にする。User / Sessio
 - [x] test / Evidence / docs更新
 - [x] self-review、commit、push、PR作成
 
+## PR #2 レビュー対応
+
+- [x] 最新の`SCREEN_SPEC.md` / `DEVELOPMENT_POLICY.md` / `DESIGN.md`を確認
+- [x] Calendarを42セルの高密度fixture、タブ、検索placeholder、日付BottomSheetへ更新
+- [x] safe-area top / bottomを主要shellへ反映
+- [x] Settings root → detail shell構造へ更新
+- [x] Daily / Money fixtureと390×844 Evidenceを更新
+- [x] 同じPR #2のbranchへpush。新しいPRは作成しない
+
 ---
 
 # Milestone 1: Application Foundation

@@ -36,20 +36,48 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   });
   expect(addStyle).toEqual({ backgroundColor: "rgba(0, 0, 0, 0)", boxShadow: "none", minHeight: "48px" });
   await page.screenshot({ path: path.join(evidenceDir, "calendar-390x844.png") });
+  await expect(page.getByRole("tab", { name: "すべて" })).toHaveAttribute("aria-selected", "true");
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-tabs-390x844.png") });
+  await page.getByRole("button", { name: "7日", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "2026年9月7日" })).toBeVisible();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-390x844.png") });
+  await page.getByRole("dialog", { name: "2026年9月7日" }).getByRole("button", { name: "閉じる" }).click();
+  await page.getByRole("button", { name: "検索" }).click();
+  await expect(page.getByRole("dialog", { name: "検索" })).toBeVisible();
+  await page.getByRole("dialog", { name: "検索" }).getByRole("button", { name: "閉じる" }).first().click();
 
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  await expect(page.getByText("家族の予定")).toBeVisible();
+  await expect(page.getByText("今週中：書類を整理")).toBeVisible();
+  await expect(page.getByText("今日のメモ")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-390x844.png") });
 
   await page.getByRole("button", { name: "お金" }).click();
   await expect(page.getByRole("heading", { name: "お金" })).toBeVisible();
+  await expect(page.getByText("支出見込み")).toBeVisible();
+  await expect(page.getByText("収入見込み")).toBeVisible();
+  await expect(page.getByText("残りそう")).toBeVisible();
+  await expect(page.getByText("家賃")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-390x844.png") });
 
   await page.getByRole("button", { name: "設定" }).click();
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "アカウントを開く" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "通知を開く" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "カレンダーを開く" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "お金を開く" })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "settings-390x844.png") });
+
+  await page.getByRole("button", { name: "カレンダーを開く" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー", exact: true })).toBeVisible();
   await expect(page.getByText("Asia/Tokyo")).toBeVisible();
   await expect(page.getByText("月曜日")).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "settings-390x844.png") });
+  await page.screenshot({ path: path.join(evidenceDir, "settings-detail-390x844.png") });
+  await page.getByRole("button", { name: "設定へ戻る" }).click();
+  await page.getByRole("button", { name: "アカウントを開く" }).click();
+  await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "追加" }).click();
   await expect(page.getByRole("dialog", { name: "追加" })).toBeVisible();

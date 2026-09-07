@@ -37,7 +37,10 @@ describe("LifeHub M2 shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "お金" }));
     expect(screen.getByRole("heading", { name: "お金" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "設定" }));
-    expect(screen.getByRole("heading", { name: "設定" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^設定$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "カレンダーを開く" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "カレンダーを開く" }));
+    expect(screen.getByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
     expect(screen.getByText("Asia/Tokyo")).toBeInTheDocument();
   });
 
@@ -56,6 +59,22 @@ describe("LifeHub M2 shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "家を追加" }));
     expect(screen.getByRole("status")).toHaveTextContent("家の追加");
     expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("opens calendar date details and the search placeholder", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
+      if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      return Promise.resolve(response({}));
+    });
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "7日" }));
+    expect(screen.getByRole("dialog", { name: "2026年9月7日" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "背景を閉じる" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    expect(screen.getByRole("dialog", { name: "検索" })).toBeInTheDocument();
   });
 
   it("shows login failure from the API", async () => {
