@@ -77,25 +77,34 @@ actualがない回 → plannedAmount
 
 ---
 
-## 5. 過去月の考え方
+## 5. 月末のみなし実績
 
-過去月は、入力済みactualは実績として使用する。
-actual未入力のものはplannedAmountを「みなし実績」として使用する。
+月が終了した時点でactual未入力のMoney occurrenceは、plannedAmountを `estimated_actual` として**DBへ確定保存**する。
 
-内部的には以下を区別する。
-
-- actual
-- estimated_actual
-
-ただし通常UIでは細かく強調しない。
-
-必要なら詳細で:
+例:
 
 ```text
-10,000円（予定額のまま）
+電気代 planned 10,000円
+9月 actual未入力
 ```
 
-程度に分かるようにする。
+9月終了後:
+
+```text
+estimated_actual = 10,000円
+```
+
+と保存する。
+
+目的:
+
+- 過去月の集計結果を後から再計算して変化させない
+- アーカイブ時に過去月の確定状態をそのまま保存できる
+- 長期グラフを安定させる
+
+後から実額が分かった場合は、estimated_actualをactualへ置き換えられる。
+
+通常UIでは `estimated_actual` を強く意識させず、必要な詳細画面で `予定額のまま` などと表示する。
 
 ---
 
@@ -214,7 +223,7 @@ MoneyOccurrenceOverrideへ保存する。
 
 系列全体の定義を変更する。
 
-過去のactualは勝手に上書きしない。
+過去のactual / estimated_actualは勝手に上書きしない。
 
 ---
 
@@ -238,7 +247,10 @@ Money詳細または月一覧から:
 
 程度に表示できる。
 
-実績を消した場合は再びplannedAmountを着地見込みに使う。
+actualを消した場合:
+
+- 今月中ならplannedAmountへ戻す
+- 過去月なら必要に応じてestimated_actualへ戻す
 
 ---
 
@@ -268,7 +280,7 @@ Money詳細または月一覧から:
 
 ### 今月
 
-支出のカテゴリ構成は円グラフまたはドーナツグラフを基本候補とする。
+支出のカテゴリ構成はドーナツグラフを第一候補とする。
 
 目的は:
 
@@ -304,7 +316,7 @@ Money詳細または月一覧から:
 
 ## 15. Calendarとの連携
 
-Calendarの `お金` タブでは、その日のMoney occurrenceを表示する。
+Calendarでは金額情報を日セル内の予定より上に置く。
 
 ### お金タブ
 
@@ -323,13 +335,15 @@ Calendarの `お金` タブでは、その日のMoney occurrenceを表示する�
 
 `-6,500円`
 
-予定 / 実績のどちらを使うかはMoney画面と同じ優先順位で計算する。
+予定 / actual / estimated_actualの優先順位はMoney画面と共通ロジックを使う。
 
 ---
 
 ## 16. Dailyとの連携
 
-Dailyのお金タブではその日の明細を表示する。
+Dailyでは予定タイムラインの下に今日のお金を表示する。
+
+お金タブではその日の明細を表示する。
 
 ```text
 食費      -1,500円
@@ -361,7 +375,7 @@ Dailyのお金タブではその日の明細を表示する。
 
 Money履歴も `BACKUP_AND_RETENTION.md` の対象。
 
-- 古い月のMoney occurrence / overrideはIndexedDBへ移動可能
+- 1年より古いMoney occurrence / actual / estimated_actualはIndexedDBへ移動可能
 - 現在も続くMoneyItem / RecurrenceRuleはD1に残す
 - JSONエクスポートにはクラウド・ローカル双方のお金履歴を含める
 
