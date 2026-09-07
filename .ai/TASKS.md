@@ -10,7 +10,7 @@
 - [x] T6: Bottom Navigation、Calendar / Daily / Money / Settings shell、中央`+`選択UIを実装
 - [x] T7: unit / integration / Playwrightを追加・実行
 - [x] T8: 390×844 Evidenceと必要なdocsを更新
-- [ ] T9: self-review、commit、push、main向けPR作成。自動mergeしない
+- [x] T9: self-review、commit、push、main向けPR作成。自動mergeしない
 
 ## M2セルフレビュー観点
 

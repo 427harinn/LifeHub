@@ -2,7 +2,7 @@
 
 ## 現在のMilestone
 
-M2を実装中。M1の完了記録は下記に保持する。
+M2を完了。M1の完了記録は下記に保持する。
 
 ## 目的
 
@@ -34,7 +34,7 @@ LifeHubを個人アプリとして利用できる骨格にする。User / Sessio
 - [x] Auth / Session / User / UserSettings / LifeHubUserStateを実装
 - [x] Navigation / screen shell / add choiceを実装
 - [x] test / Evidence / docs更新
-- [ ] self-review、commit、push、PR作成
+- [x] self-review、commit、push、PR作成
 
 ---
 
