@@ -2,11 +2,11 @@
 
 ## 1. 目的
 
-LifeHub は HouseToDo を直接改造するのではなく、HouseToDo で完成度が高い基盤・UI・考え方を抽出して利用する独立プロダクトとする。
+LifeHubはHouseToDoを直接改造するのではなく、完成度が高い基盤・UI・考え方を抽出して利用する独立プロダクトとする。
 
-LifeHub は**完全個人用**であり、HouseToDoのHousehold / HouseholdMemberによる共有モデルは持ち込まない。
+LifeHubは完全個人用であり、Household / HouseholdMemberによる共有モデルは持ち込まない。
 
-Codex が実装時に迷わないよう、各領域を以下の3分類で扱う。
+分類:
 
 - **A: ほぼそのまま流用**
 - **B: HouseToDoを参考にLifeHub向けへ再設計**
@@ -18,362 +18,244 @@ Codex が実装時に迷わないよう、各領域を以下の3分類で扱う�
 
 | 領域 | 方針 | 備考 |
 |---|---|---|
-| React / Vite / TypeScript | A | 基本構成を流用 |
-| Cloudflare Workers | A | API基盤として利用 |
-| D1 | A | DB基盤として利用。テーブルはLifeHub用に新規設計 |
-| R2 | A候補 | 将来画像等が必要な場合 |
-| 認証 / Session | A/B | 個人用ログイン基盤として流用候補 |
-| Household / HouseholdMember | 持ち込まない | LifeHubは共有しない |
-| timezone / weekStartsOn | A/B | 汎用日付処理として流用 |
-| UI foundation | A | 色・余白・フォント・角丸・基本部品 |
-| BottomSheet | A | Calendar日付詳細・選択UIなどで利用 |
-| スマホ向けレイアウト | A | HouseToDoのデザイン言語を継承 |
-| Bottom Navigation | B | 構造流用、項目はLifeHub用に変更 |
-| Settings / Other構造 | B | 構造流用、中身はLifeHub向け |
-| 登録フォームUI | B | 強く参考。データモデルは新規 |
-| Progressive Disclosure | A思想 | そのまま設計原則として採用 |
-| 以前の項目から選ぶ | B | UI/UX流用、Event/Money用APIは新規 |
-| 日付utility | A/B | 汎用部分を抽出・再利用 |
-| Recurrence計算 | B | HouseToDoを参考に共通Engineへ再設計 |
-| weekly_flexible | 持ち込まない | LifeHubではTimingとRecurrenceを分離 |
-| monthly_flexible | 持ち込まない | 同上 |
-| occurrence / period keyの考え方 | B | LifeHubのOccurrence識別へ応用 |
-| Push / Service Worker | A/B | 基盤は流用候補 |
-| Notification scheduler | B | 基盤参考、複数通知対応へ再設計 |
-| Calendar月UI | B | 見た目・操作を参考 |
-| Calendar API | C | Event/Money中心に新規 |
-| Calendar Date Sheet | A/B | UIは流用候補、中身は新規 |
-| Calendar quick add | B | 選択日引継ぎの考え方を採用 |
-| Home UI | B | Daily画面の参考 |
-| Task status | 持ち込まない | LifeHubの中心概念ではない |
-| TaskRecord | 持ち込まない | Event occurrenceとは別設計 |
-| Shopping | 持ち込まない | LifeHub対象外 |
-| Event | C | LifeHubの中心モデル |
-| EventOccurrenceOverride | C | 今回だけ編集/削除用 |
-| 複数日予定 | C | LifeHubで新規 |
-| 家 / 仕事分類 | C | 個人予定のカテゴリ軸 |
-| DailyNote | C | 新規・個人専用 |
-| Event検索 | C | 新規 |
-| MoneyItem | C | 新規・個人専用 |
-| planned / actual / estimated_actual | C | LifeHub固有 |
-| Moneyグラフ | C | 新規 |
+| React / Vite / TypeScript | A | 基本構成 |
+| Cloudflare Workers | A | API基盤 |
+| D1 | A | 基盤のみ。schemaはLifeHub新規 |
+| R2 | 不使用 | 初期版不要 |
+| Auth / Session | A/B | 個人ログイン基盤 |
+| Household / HouseholdMember | 持ち込まない | 完全個人用 |
+| timezone / weekStartsOn | A/B | 汎用日付処理 |
+| spacing / radius / typography | A | HouseToDoと同じ |
+| color theme | C | LifeHubオレンジ系 |
+| BottomSheet | A | 強く流用 |
+| Bottom Navigation | B | 構造流用、項目変更 |
+| Settings shell | B | 構造流用 |
+| Form row / Progressive Disclosure | A/B | 思想・UIを強く継承 |
+| returnTo | B | Calendar / Daily context維持 |
+| 以前の項目から選ぶ | B | UX参考、API新規 |
+| Recurrence date utility | B | 汎用部分を抽出 |
+| weekly_flexible / monthly_flexible | 持ち込まない | TimingとRecurrenceを分離 |
+| occurrence keyの考え方 | B | stable keyへ応用 |
+| Push / Service Worker | A/B | 基盤流用候補 |
+| Notification scheduler | B | 複数通知/period対応へ再設計 |
+| Calendar月UI | B | 基本操作参考、描画はLifeHub新規 |
+| Calendar API | C | Event/Money中心 |
+| Calendar Date Sheet | A/B | UI参考 |
+| Home UI | B | Dailyの参考 |
+| Task status / TaskRecord | 持ち込まない | 完了概念なし |
+| Shopping | 持ち込まない | 対象外 |
+| Event | C | LifeHub中心モデル |
+| EventOccurrenceOverride | C | 今回のみ編集/削除 |
+| DailyNote | C | 個人専用 |
+| Money | C | planned / actual / estimated_actual |
+| Archive / Migration | C | IndexedDB + JSON |
 
 ---
 
-## 3. そのまま流用したい基盤
+## 3. 基盤
 
-### 3.1 フロントエンド基盤
+### フロント
 
-HouseToDoの以下の構成をLifeHubの開始点として利用する。
+流用候補:
 
-- React
-- Vite
-- TypeScript
-- ESLint / typecheck / Vitest / Playwrightの開発フロー
-- PWA / Service Worker周辺
+- React / Vite / TypeScript
+- ESLint / Vitest / Playwright
+- PWA / Service Worker基盤
+- UI foundation components
 
-ただしHouseToDo固有のTask/Shoppingコードを大量に残した状態から削除するのではなく、必要な基盤だけを選択的に抽出する。
+Task / Shoppingコードを大量コピーして削る方法は採用しない。
 
-### 3.2 Backend基盤
+### Backend
 
-- Cloudflare Workers
-- D1
+参考・流用:
+
+- Workers構成
+- D1 repository/service/route分離
 - API error handling
 - authentication middleware
-- repository / service / routeの分離方針
+- Cookie session
 - timezone処理
 
-を参考・流用する。
+LifeHub専用Worker / D1 / secrets / Cronを作る。
 
-### 3.3 Auth
+---
 
-LifeHubは個人用なので、HouseToDoのUser / Sessionは流用候補とするが、以下は持ち込まない。
+## 4. Auth
+
+User / SessionはHouseToDoを参考にする。
+
+持ち込まない:
 
 - Household
 - HouseholdMember
+- invite
 - owner / member
-- household invite
-- household切り替え
-- household単位の権限制御
+- household switching
+- household権限制御
 
-主要データは原則 `userId` を所有者として持つ設計にする。
+主要データは `userId` 所有。
 
 ---
 
-## 4. UIで強く流用するもの
+## 5. UI
 
-### 4.1 UI Foundation
+HouseToDoからそのまま継承するもの:
 
-LifeHubはHouseToDoと同系統のデザインにする。
-
-- font stack
-- color tokens
 - spacing
 - radius
-- input / row
-- button
+- typography
+- button/input/form rowのサイズ感
 - BottomSheet
-- bottom navigation
-- mobile safe-area
+- safe-area
+- mobile-first layout
 
-可能ならコンポーネント・CSSを直接抽出して利用する。
+LifeHubで変更するもの:
 
-### 4.2 登録フォーム
+- primaryをgreenからorangeへ
+- Calendar予定色を単発 / 繰り返し / periodの3種類へ
+- Money色
 
-HouseToDoの家事登録画面はLifeHubのEvent登録画面の最重要参考元とする。
-
-参考にする点:
-
-- 1画面にまとめる
-- rowを押してBottomSheetで詳細設定
-- 普段使わない詳細は閉じる
-- 入力値の要約をフォームrowへ表示
-- 以前の項目から選ぶ
-- 編集画面でも同じ構造を使う
-- form state / validation / API payload変換をUIから分離する
-
-LifeHubではTaskFormをそのまま使わず、EventForm / MoneyFormとして新規設計する。
-
-### 4.3 戻り導線
-
-HouseToDoで導入した `returnTo` の考え方をLifeHubでも利用する。
-
-- 追加前にいた画面へ戻る
-- Calendarの選択日を維持
-- Dailyの対象日を維持
-- 登録成功後も同じcontextへ戻る
+HouseToDoのgreen値を直接コピーしない。
 
 ---
 
-## 5. 繰り返しは「考え方とutilityを参考」にする
+## 6. 登録フォーム
 
-### 5.1 HouseToDoの現状
+HouseToDoの良い点を継承する。
 
-HouseToDoではTask recurrenceに以下のような型がある。
+- 1画面中心
+- rowからBottomSheet
+- 高度な項目を隠す
+- rowにsummary表示
+- recent definitions
+- editでも同じフォーム
+- form state / validation / payload変換を分離
 
-- once
-- daily
-- weekly_fixed
-- monthly_fixed
-- weekly_flexible
-- monthly_flexible
+TaskForm自体はコピーせずEventForm / MoneyFormを新規設計する。
 
-`weekly_flexible` / `monthly_flexible` は、繰り返し周期と「期間のどこかでやる」というTask scopeを兼ねている。
+---
 
-これはHouseToDoの家事管理には合うが、LifeHubではそのままコピーしない。
+## 7. Recurrence
 
-### 5.2 LifeHub方針
+LifeHubでは以下を分離する。
 
-LifeHubでは概念を分離する。
+- Timing: scheduled / period
+- RecurrenceRule: daily / weekly / monthly
+- Period Window: this_week / this_month / custom_range
+- periodAnchorDate: 対象週/月を安定復元
+- OccurrenceOverride
 
-#### RecurrenceRule
+UI上の「カスタム」はfrequencyではなく詳細設定入口。
 
-「どの周期で発生するか」
-
-- daily
-- weekly
-- monthly
-- custom
-
-繰り返しなしはruleなしで表現する。
-
-#### Recurrence Range
-
-「いつからいつまで繰り返すか」
-
-- forever
-- until
-- date range
-
-#### Event Timing
-
-「予定日時が決まっているか / 期間中にやりたいか」
-
-- scheduled
-- period
-
-#### Period Window
-
-periodの場合の期間枠。
-
-- 今週中
-- 今月中
-- 日付範囲指定
-
-初期仕様では、
-
-- 今週中 + 毎週: 可
-- 今月中 + 毎月: 可
-- 任意の日付範囲 + recurrence: 不可
-
-とする。
-
-詳細は `RECURRENCE_AND_OCCURRENCE.md` を参照する。
-
-### 5.3 流用候補
-
-HouseToDoの日付処理から以下の汎用ロジックを参考・抽出候補とする。
+参考にするutility:
 
 - timezone-safe date key
-- weekday計算
-- 月の日数
-- 毎月31日指定時の短い月への丸め
-- start/end date range
-- occurrence key生成の考え方
+- weekday
+- weekStartsOn
+- month-day clamp
+- range計算
+- occurrence key
 
-Task固有のperiod keyやTaskRecordはそのまま持ち込まない。
-
----
-
-## 6. 繰り返し予定の編集
-
-HouseToDoにはないLifeHub固有の機能として新規設計する。
-
-繰り返し予定の編集・削除は以下に対応する。
-
-- この予定のみ
-- この予定以降
-- すべての予定
-
-この予定のみの変更・キャンセルには `EventOccurrenceOverride` を使用する。
-
-この予定以降の変更は、対象位置で系列を分割する設計とする。
+TaskRecordやflexible recurrence型はコピーしない。
 
 ---
 
-## 7. 通知
+## 8. Calendar / Daily
 
-### 流用するもの
+Calendarで参考にする:
 
-- Web Push基盤
+- month navigation
+- selected date
+- Date Sheet
+- quick add
+- returnTo
+
+LifeHub新規:
+
+- 大きな情報量の月Calendar
+- TimeTree型複数日帯
+- 単発 / recurrence / period色分け
+- Money表示
+- Event検索
+
+DailyはHouseToDo Homeの縦情報階層を参考にするが、start / complete / skip等は持ち込まない。
+
+---
+
+## 9. Notification
+
+流用候補:
+
+- Web Push
 - Push subscription
 - Service Worker
-- Cron / scheduled worker
-- same-origin deep linkの考え方
+- Cron
 - timezone-aware scheduler
+- deep link
 
-### 再設計するもの
+新規:
 
-LifeHubでは1予定に複数通知が必要。
-
-HouseToDoの単一 `notificationOffsetMinutes` をそのままEventへコピーしない。
-
-NotificationRule / NotificationOffsetの新しいモデルを作る。
-通知テンプレートもLifeHubで新規開発する。
-
----
-
-## 8. Calendar
-
-### 参考・流用
-
-- 月カレンダーの基本レイアウト
-- 日付選択
-- BottomSheetの日付詳細
-- selected date state
-- quick add
-- Calendar → add → 同じ日へ戻る動線
-- range/day APIを分離する考え方
-
-### 新規開発
-
-- Event中心のCalendar API
-- 家 / 仕事 / お金 / すべてタブ
-- 複数日予定の帯表示
-- Moneyの日別表示
-- Event検索と日付ジャンプ
-
-HouseToDoの `fixed / weeklyFlexible / monthlyFlexible / completed / shopping` というレスポンス構造は持ち込まない。
+- 複数offset
+- EventNotification
+- NotificationTemplate
+- all-day 09:00
+- period deadline通知
+- 朝夜まとめ
+- NotificationDelivery
 
 ---
 
-## 9. Daily
+## 10. Money / Archive / Migration
 
-LifeHubのDailyはHouseToDo Homeの見た目・情報階層を参考にする。
+完全新規。
 
-### 参考にするもの
+Money:
 
-- 縦スクロール
-- 日単位データ取得
-- row展開
-- loading / error / empty UI
-- optimistic/local-first設計は必要に応じて参考
-
-### 持ち込まないもの
-
-- start
-- complete
-- skip
-- weekly target
-- TaskRecord projection
-
-LifeHubでは時系列Event表示を中心にする。
-
----
-
-## 10. 完全新規とするドメイン
-
-### Event
-
-- 家 / 仕事
-- scheduled / period
-- start / end
-- all-day
-- place
-- memo
-- recurrence
-- notification
-
-### EventOccurrenceOverride
-
-- 繰り返し1回分だけの編集
-- 1回分だけのキャンセル
-
-### DailyNote
-
-- date
-- content
-- userId
-
-### Money
-
-- 支出 / 収入
-- amount
-- category
-- date/time
-- recurrence
-- planned amount
-- actual amount
+- MoneyItem
+- MoneyCategory
+- MoneyOccurrenceOverride
+- MoneyOccurrenceSettlement
 - actual / estimated_actual
+- 月次集計・グラフ
 
-### Search
+Archive / Migration:
 
-Event title / place / memo等を対象にするLifeHub固有検索。
+- D1直近1年
+- IndexedDB
+- ArchiveMetadata
+- JSON export/import
+- migration_locked
 
 ---
 
 ## 11. Codexへの実装原則
 
-1. 「HouseToDoにあるからそのままコピー」しない
-2. ドメイン固有コードと汎用基盤を区別する
-3. Auth / UI foundation等の汎用基盤は積極的に流用候補とする
-4. Household / Task / Shopping固有モデルは持ち込まない
-5. recurrenceはHouseToDoを参考にするがLifeHubモデルへ再設計する
-6. EventとMoneyで共有できるロジックはLifeHub側で共通化する
-7. UIはHouseToDoと同じデザイン言語を維持する
-8. 実装前に `PRODUCT_SPEC.md` / `SCREEN_SPEC.md` / `DATA_MODEL.md` / `RECURRENCE_AND_OCCURRENCE.md` を確認する
+1. HouseToDoにあるという理由だけでコピーしない
+2. 汎用基盤とドメイン固有コードを分ける
+3. Household / Task / Shoppingを持ち込まない
+4. recurrenceはLifeHubモデルへ再設計する
+5. EventとMoneyで共通化できるロジックは共通化する
+6. UIはHouseToDoの形を継承し、色はLifeHub用tokenを使う
+7. 実装前に関連仕様書を読む
+8. 実装で仕様変更が必要になったらコードだけ変えず文書も更新する
+9. `DEVELOPMENT_POLICY.md` のbranch / evidence / staging / PRルールに従う
 
 ---
 
-## 12. 現在の未確定事項
+## 12. 現在の確定状況
 
-以下は今後の設計フェーズで決める。
+以下はすでに確定済みであり、HouseToDo既存仕様で勝手に補完しない。
 
-- AuthをHouseToDoと同等に残すか、個人用としてさらに簡略化するか
-- Event / RecurrenceRule / Overrideの最終DB schema
-- 複数通知の最終DB表現
-- Money categoryの初期セット
-- actual / estimated_actual確定処理のタイミング
-- Calendar複数日帯の正確なレンダリング仕様
+- 完全個人用 / userId ownership
+- Event / RecurrenceRule / Overrideの概念モデル
+- periodAnchorDate
+- 複数通知モデル
+- period通知基準
+- Money初期カテゴリ
+- actual / estimated_actual月末確定
+- Calendar TimeTree型帯
+- Calendar単発 / 繰り返し / period色分け
+- D1 1年保持 / IndexedDB archive
+- JSON機種変更フロー
 
-未確定事項をHouseToDoの既存仕様で勝手に補完しないこと。
+DBの具体的なSQL型・index等は実装milestoneで確定してよいが、概念モデルを変更する場合は先に文書を更新する。
