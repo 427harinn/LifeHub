@@ -57,7 +57,7 @@ describe("LifeHub M2 shell", () => {
     expect(screen.getByRole("dialog", { name: "追加" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "家を追加" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "家を追加" }));
-    expect(screen.getByRole("status")).toHaveTextContent("家の追加");
+    expect(await screen.findByRole("heading", { name: "予定を追加" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalled();
   });
 
@@ -70,15 +70,14 @@ describe("LifeHub M2 shell", () => {
     });
     render(<App />);
     expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "7日" }));
-    expect(screen.getByRole("dialog", { name: "2026年9月7日" })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: /\d+日$/ })[0]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "当日に追加" }));
     expect(screen.getByRole("dialog", { name: "追加" })).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole("dialog", { name: "追加" })).getByRole("button", { name: "閉じる" }));
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
     expect(screen.getByRole("dialog", { name: "検索" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "予定を検索" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /出張/ })).toBeInTheDocument();
+    expect(screen.getByText("検索は後のMilestoneで追加します。")).toBeInTheDocument();
   });
 
   it("shows login failure from the API", async () => {

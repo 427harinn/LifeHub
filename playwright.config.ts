@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const artifactDir = process.env.PLAYWRIGHT_ARTIFACT_DIR ?? "artifacts/playwright/m2-auth-navigation";
+const artifactDir = process.env.PLAYWRIGHT_ARTIFACT_DIR ?? "artifacts/playwright/m3-single-scheduled-event";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -17,7 +17,7 @@ export default defineConfig({
     video: "off"
   },
   webServer: {
-    command: "npm run cf:dev:m2",
+    command: "npm run cf:dev:m3",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

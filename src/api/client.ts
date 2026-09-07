@@ -12,6 +12,27 @@ export type UserSettings = {
   updatedAt: string;
 };
 
+export type Event = {
+  id: string;
+  userId: string;
+  category: "home" | "work";
+  title: string;
+  place: string | null;
+  memo: string | null;
+  timingType: "scheduled";
+  allDay: boolean;
+  startDate: string;
+  startTime: string | null;
+  endDate: string;
+  endTime: string | null;
+  active: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
+
 class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -35,3 +56,9 @@ export const login = (email: string, password: string) => request<{ user: AuthUs
 export const register = (displayName: string, email: string, password: string) => request<{ user: AuthUser }>("/api/auth/register", { method: "POST", body: JSON.stringify({ displayName, email, password }) });
 export const logout = () => request<{ loggedOut: boolean }>("/api/auth/logout", { method: "POST" });
 export const getSettings = () => request<{ settings: UserSettings }>("/api/settings");
+export const getEvents = (startDate: string, endDate: string) => request<{ events: Event[] }>(`/api/events?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+export const getEvent = (id: string) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`);
+export const getRecentEventDefinitions = (limit = 20) => request<{ events: Event[] }>(`/api/events/recent-definitions?limit=${limit}`);
+export const createEvent = (input: ScheduledEventInput) => request<{ event: Event }>("/api/events", { method: "POST", body: JSON.stringify(input) });
+export const updateEvent = (id: string, input: ScheduledEventInput) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
+export const deleteEvent = (id: string) => request<{ deleted: boolean }>(`/api/events/${encodeURIComponent(id)}`, { method: "DELETE" });

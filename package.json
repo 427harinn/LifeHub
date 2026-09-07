@@ -7,6 +7,7 @@
     "dev": "vite",
     "cf:dev": "vite build && wrangler dev --local --config dist/lifehub/wrangler.json --persist-to .wrangler/state --port 5173",
     "cf:dev:m2": "npm run db:migrate:local && npm run cf:dev",
+    "cf:dev:m3": "npm run db:migrate:local && npm run cf:dev",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -14,6 +15,7 @@
     "test:unit": "vitest run --maxWorkers=1",
     "test:e2e": "playwright test",
     "test:e2e:m2": "playwright test e2e/m2-auth-navigation.spec.ts",
+    "test:e2e:m3": "playwright test e2e/m3-single-scheduled-event.spec.ts",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "cf:types": "wrangler types"
   },
