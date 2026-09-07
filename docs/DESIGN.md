@@ -189,15 +189,12 @@ General ratio:
 
 LifeHub 固有差分。
 
-Calendarでは色を以下の予定の性質に使う。
+Calendarでは色を家 / 仕事のカテゴリ、支出 / 収入の金額、period予定の補助表現に使う。
 
-1. 単発予定
-2. 繰り返し予定
-3. period予定
+家はオレンジ、仕事は青とする。単日予定は文字色、複数日予定は帯そのものの色で区別する。
+支出は赤、収入は青系とする。period予定は背景帯にせず、期限を示す補助表現で区別する。
 
-家 / 仕事は主色ではなく、小さなラベル・アイコン等の補助情報で区別する。
-
-色だけで意味を伝えない。
+色は既存の情報構造を補助するために使い、家 / 仕事の補助文字を常設しない。
 
 具体tokenは `DESIGN_SYSTEM.md` を参照するが、鮮やかな原色や強い塗り面は避ける。
 
@@ -396,10 +393,11 @@ Requirements:
 - six weeks / 42 cellsを基本
 - 可能な限り予定情報をセル内に表示
 - long titleは `…`
-- overflowは `+N`
-- moneyはcell最上部、その下に予定
+- overflowは日付右上の小型丸バッジ
+- バッジがないセルは固定行を空けず、予定表示へ高さを使う
+- moneyはセル最下部中央、その上に予定
 - multi-day scheduled eventはTimeTree型の横帯
-- period eventも対象範囲を横断する帯
+- period eventは対象期間の開始日にだけ表示し、Calendar上で帯にしない
 - 今日の強調は日付数字周辺だけを控えめに
 - Saturday blue / Sunday redはrestrained shade
 - headerはcompact

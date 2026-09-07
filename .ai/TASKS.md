@@ -24,6 +24,10 @@
 - [x] T20: Calendar検索BottomSheet、検索結果から該当日へのplaceholder導線、Date Sheetのお金一覧・収支合計を実装
 - [x] T21: Dailyのカテゴリ文字ラベルを削除し、家=オレンジ・仕事=青の色表現へ統一
 - [x] T22: 390×844 Evidenceを再撮影し、lint / typecheck / unit・integration / build / Playwrightを再実行して同じPR #2へpush
+- [x] T23: Calendar件数バッジの位置と可変表示領域、period開始日表示を更新
+- [x] T24: Calendar Date SheetのMoneyを収支合計1行へ簡略化し、家 / 仕事のカテゴリ色を反映
+- [x] T25: Calendar / Dailyの全タブfixture表示と390×844 Evidenceを追加
+- [x] T26: `SCREEN_SPEC.md` / `DESIGN.md`を最新レビュー仕様へ更新し、全テストを再実行
 
 ## M2セルフレビュー観点
 

@@ -74,6 +74,14 @@ LifeHubを個人アプリとして利用できる骨格にする。User / Sessio
 - [x] Date Sheetの収支1行・お金一覧・収支合計・独立した小型`＋`を維持し、390×844 Evidenceを再撮影
 - [x] lint / typecheck / unit・integration / build / Playwrightを再実行し、同じPR #2へpush。mergeと新規PR作成は行わない
 
+## PR #2 レビュー対応（タブ状態 / period開始日 / 1日詳細簡略化）
+
+- [x] 最新の`DESIGN.md` / `SCREEN_SPEC.md`を確認し、Calendarの件数バッジを日付数字より少し下へ配置。バッジなしセルに固定行を確保しない仕様を明文化
+- [x] period予定をCalendarの対象期間開始日にだけ表示し、Calendar上の帯を廃止。Daily / Date Sheetでは期間内の予定を確認できる構造を維持
+- [x] Calendarから開く1日詳細のMoney表示を個別明細なしの収支合計1行へ簡略化し、家=オレンジ・仕事=青の予定色を反映
+- [x] Dailyのすべて / 家 / 仕事 / お金、Calendarのすべて / 家 / 仕事 / お金をfixtureで切り替え、390×844 Evidenceを追加
+- [x] `docs/SCREEN_SPEC.md`と関連する`docs/DESIGN.md`の旧ルールを更新し、lint / typecheck / unit・integration / build / Playwrightを再実行
+
 ---
 
 # Milestone 1: Application Foundation

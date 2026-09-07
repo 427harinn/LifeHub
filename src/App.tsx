@@ -31,6 +31,8 @@ const screenPath: Record<Screen, string> = { calendar: "/calendar", daily: "/dai
 const filterLabels: Record<CalendarFilter, string> = { all: "すべて", home: "家", work: "仕事", money: "お金" };
 const filterForCategory = (category: CalendarFixtureEvent["category"]): CalendarFilter => category;
 const eventMatchesFilter = (event: CalendarFixtureEvent, filter: CalendarFilter) => filter === "all" || (filter === "money" ? Boolean(event.money) : filterForCategory(event.category) === filter);
+const parseFixtureMoney = (value: string) => Number(value.replace(/[^0-9+-]/g, ""));
+const formatFixtureMoney = (value: number) => `${value > 0 ? "+" : ""}${value.toLocaleString("ja-JP")}円`;
 
 function buildCalendarBandSegments(events: CalendarFixtureEvent[], firstWeekday: number): CalendarBandSegment[] {
   const grouped = new Map<string, CalendarFixtureEvent[]>();
@@ -140,7 +142,7 @@ function CalendarShell({ onDateSelect, onSearch }: { onDateSelect: (day: number)
     return day > 0 && day <= daysInMonth ? day : null;
   }), [daysInMonth, firstWeekday]);
   const filteredEvents = useMemo(() => calendarFixture.events.filter((event) => eventMatchesFilter(event, filter)), [filter]);
-  const bandSegments = useMemo(() => buildCalendarBandSegments(filteredEvents, firstWeekday), [filteredEvents, firstWeekday]);
+  const bandSegments = useMemo(() => filter === "money" ? [] : buildCalendarBandSegments(filteredEvents, firstWeekday), [filter, filteredEvents, firstWeekday]);
   const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
   return <main className="screen-page calendar-page">
@@ -155,7 +157,7 @@ function CalendarShell({ onDateSelect, onSearch }: { onDateSelect: (day: number)
         const moneyEvent = events.find((event) => event.money);
         const money = moneyEvent?.money;
         const normalEvents = events.filter((event) => !event.isMultiDay && event.kind !== "period");
-        const deadlineEvents = events.filter((event) => event.kind === "period" && event.band === "end");
+        const deadlineEvents = events.filter((event) => event.kind === "period" && event.band === "start");
         const cellEvents = [...normalEvents, ...deadlineEvents];
         const hasBand = events.some((event) => event.isMultiDay);
         const visibleEvents = cellEvents.slice(0, hasBand && cellEvents.length > 2 ? 1 : 2);
@@ -169,10 +171,16 @@ function CalendarShell({ onDateSelect, onSearch }: { onDateSelect: (day: number)
 }
 
 function CalendarDateSheet({ day, onClose, onAdd }: { day: number; onClose: () => void; onAdd: () => void }) {
-  const items = ["終日：家の予定", "10:00：会議", "12:00：買い物", "18:30：運動", "今週中：書類を整理"];
+  const items = [
+    { category: "home", label: "終日：家の予定" },
+    { category: "work", label: "10:00：会議" },
+    { category: "home", label: "12:00：買い物" },
+    { category: "home", label: "18:30：運動" },
+    ...calendarFixture.events.filter((event) => event.day === day && event.kind === "period").map((event) => ({ category: event.category, label: event.label }))
+  ] as const;
   const moneyItems = calendarFixture.events.filter((event) => event.day === day && event.money);
-  const total = moneyItems[0]?.money ?? "±0円";
-  return <BottomSheet className="calendar-date-sheet" open title={`2026年9月${day}日`} onClose={onClose}><div className="sheet-detail"><p className="sheet-total">今日の収支 <strong>{total}</strong></p><div className="sheet-list">{items.map((item) => <div className="sheet-row" key={item}>{item}</div>)}</div><div className="sheet-money-list"><h3>お金</h3>{moneyItems.length > 0 ? moneyItems.map((event) => <div className="sheet-money-row" key={`${event.label}-${event.money}`}><span>{event.label}</span><strong>{event.money}</strong></div>) : <div className="sheet-money-row"><span>記録なし</span></div>}<div className="sheet-money-total"><span>収支合計</span><strong>{total}</strong></div></div><div className="sheet-footer"><Button onClick={onClose} variant="secondary">1日の詳細を見る</Button><button aria-label="当日に追加" className="sheet-add-button" onClick={onAdd} type="button"><NavIcon name="add" /></button></div></div></BottomSheet>;
+  const total = formatFixtureMoney(moneyItems.reduce((sum, event) => sum + parseFixtureMoney(event.money ?? "0"), 0));
+  return <BottomSheet className="calendar-date-sheet" open title={`2026年9月${day}日`} onClose={onClose}><div className="sheet-detail"><div className="sheet-total"><span>今日のお金</span><strong>収支&nbsp; {total}</strong></div><div className="sheet-list">{items.map((item, index) => <div className={`sheet-row sheet-row--${item.category}`} key={`${item.label}-${index}`}>{item.label}</div>)}</div><div className="sheet-footer"><Button onClick={onClose} variant="secondary">1日の詳細を見る</Button><button aria-label="当日に追加" className="sheet-add-button" onClick={onAdd} type="button"><NavIcon name="add" /></button></div></div></BottomSheet>;
 }
 
 function SearchSheet({ onClose, onSelect }: { onClose: () => void; onSelect: (day: number) => void }) {
@@ -184,7 +192,9 @@ function SearchSheet({ onClose, onSelect }: { onClose: () => void; onSelect: (da
 
 function DailyShell() {
   const [filter, setFilter] = useState<CalendarFilter>("all");
-  return <main className="screen-page daily-page"><header className="screen-header"><h1>デイリー</h1><button className="today-button" type="button">今日</button></header><FixtureTabs active={filter} onChange={setFilter} /><section className="timeline-section"><h2>予定</h2><div className="fixture-group"><h3>終日</h3>{dailyFixture.allDay.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--${item.category}`} key={item.label}><span className="fixture-row__title">{item.label}</span></div>)}</div><div className="fixture-group"><h3>期間</h3>{dailyFixture.period.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--period fixture-row--${item.category}`} key={item.label}><span className="fixture-row__title">{item.label}</span></div>)}</div><div className="fixture-group"><h3>時間あり</h3>{dailyFixture.timed.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--${item.category}`} key={item.label}><time>{item.time}</time><span className="fixture-row__title">{item.label}</span></div>)}</div></section><section className="daily-section"><h2>今日のお金</h2>{dailyFixture.money.map((item) => <div className="fixture-row" key={item.label}><span>{item.label}</span><strong>{item.amount}</strong></div>)}</section><section className="daily-section"><h2>今日のメモ</h2><p className="memo-text">{dailyFixture.memo}</p></section></main>;
+  const showTimeline = filter !== "money";
+  const showOverview = filter === "all";
+  return <main className="screen-page daily-page"><header className="screen-header"><h1>デイリー</h1><button className="today-button" type="button">今日</button></header><FixtureTabs active={filter} onChange={setFilter} />{showTimeline ? <section className="timeline-section"><h2>予定</h2><div className="fixture-group"><h3>終日</h3>{dailyFixture.allDay.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--${item.category}`} key={item.label}><span className="fixture-row__title">{item.label}</span></div>)}</div><div className="fixture-group"><h3>期間</h3>{dailyFixture.period.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--period fixture-row--${item.category}`} key={item.label}><span className="fixture-row__title">{item.label}</span></div>)}</div><div className="fixture-group"><h3>時間あり</h3>{dailyFixture.timed.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--${item.category}`} key={item.label}><time>{item.time}</time><span className="fixture-row__title">{item.label}</span></div>)}</div></section> : null}{filter === "money" || showOverview ? <section className="daily-section"><h2>今日のお金</h2>{dailyFixture.money.map((item) => <div className="fixture-row" key={item.label}><span>{item.label}</span><strong>{item.amount}</strong></div>)}</section> : null}{showOverview ? <section className="daily-section"><h2>今日のメモ</h2><p className="memo-text">{dailyFixture.memo}</p></section> : null}</main>;
 }
 
 function MoneyShell() {
