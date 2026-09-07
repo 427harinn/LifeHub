@@ -26,3 +26,27 @@ export type LifeHubUserState = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type EventCategory = "home" | "work";
+export type EventTimingType = "scheduled" | "period";
+
+export type Event = {
+  id: string;
+  userId: string;
+  category: EventCategory;
+  title: string;
+  place: string | null;
+  memo: string | null;
+  timingType: EventTimingType;
+  allDay: boolean;
+  startDate: string;
+  startTime: string | null;
+  endDate: string;
+  endTime: string | null;
+  active: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;

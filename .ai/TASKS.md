@@ -87,3 +87,40 @@
 - mobile-first: 確認済み（390×844 Playwright + screenshot）
 - 共通UIの再利用可能性: 確認済み（`src/components/ui/`のButton / Input / FormRow / BottomSheet / MobileShell / NavIcon）
 - M2以降の先行実装: なし
+# Milestone 3 Tasks
+
+## 小タスク
+
+- [x] T1: 最新`main`から`codex/m3-single-scheduled-event`を作成し、指定docsを確認
+- [x] T2: M3 Event schema、scheduled制約、userId ownershipを設計
+- [x] T3: `0003_m3_events.sql`、Event type / repository / validation serviceを実装
+- [x] T4: Event create / list / get / recent / update / soft delete routeを認証付きで実装
+- [x] T5: home / work EventForm、日時BottomSheet、all-day、multi-day、place / memo展開を実装
+- [x] T6: Calendar / Dailyの実Event表示、Date Sheet、detail / edit / delete confirmを実装
+- [x] T7: recent definitionsとCalendar / Daily / center `+` のreturnToを実装
+- [x] T8: unit / integration / Playwrightとownership / validation確認
+- [x] T9: 390×844 Evidence、returnTo動画、self-review
+- [x] T10: docs更新、local migration確認、commit / push / PR作成。自動mergeしない
+
+## PR #3 UI regression correction
+
+- [x] T11: HouseToDo最新mainのHome / Shopping interaction grammarを確認
+- [x] T12: M2 Calendar / Daily UIを維持し、実Event表示だけを統合
+- [x] T13: Daily Eventのinline展開、再tap閉じ、他行切替、左swipe編集を実装
+- [x] T14: 編集画面の深い削除導線、390×844 screenshot / video、回帰Playwrightを追加
+- [x] T15: docs更新、self-review、同じPR #3へpush。新規PR・mergeは行わない
+- [x] T16: M2 base commitとのCalendar / Daily diffを確認し、Calendar表示DOMへ実Event projectionを接続
+- [x] T17: Daily inline detailをvalues-onlyへ整理し、HouseToDoのopenRowAction / toggleTaskDetail排他とHomeSwipeRowのgesture grammarを反映
+- [x] T18: M2 Calendar / Daily structure regression、EventForm bottom navigation非表示、place / memo screenshotとswipe動画を更新
+
+## M3セルフレビュー観点
+
+- userId ownershipが一覧・詳細・更新・削除・recent queryにある
+- 他ユーザーのEventは404で取得・編集・削除できない
+- allDayならtimeはnull、時間ありなら両時刻必須
+- scheduled以外、period / recurrence / notificationを先行実装していない
+- fixtureは実Event表示に混在せず、DBへ保存しない
+- formを大きなcardで囲わず、HouseToDo系のrow / divider / sheetを維持
+- 完了ボタン、checkbox、pass等のTodo UIを持ち込んでいない
+
+---

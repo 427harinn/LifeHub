@@ -70,6 +70,14 @@ PATCH  /api/events/:id
 DELETE /api/events/:id
 ```
 
+M3ではscheduled Eventのみを扱う。Calendar / Dailyの実データ取得用に、指定期間と重なる自分のactive Eventを取得するlist APIも利用する。
+
+```text
+GET /api/events?startDate=2026-09-01&endDate=2026-09-30
+```
+
+list / detail / update / deleteは、認証ユーザーの`userId`を必ず条件に含める。他ユーザーのIDは存在を推測できないよう404とする。DELETEは`active=false`と`deletedAt`を設定するsoft deleteとする。
+
 繰り返しEventでは:
 
 ```text
@@ -91,6 +99,8 @@ GET /api/events/recent-definitions?limit=20
 ```
 
 再利用可能な定義を返し、過去の日付はそのままコピーしない。
+
+M3のrecent候補は現在ユーザーのactiveなEventから返し、フォーム入口のcategoryを維持して、title / allDay / time / place / memoだけを新しい日付contextへコピーする。
 
 ---
 

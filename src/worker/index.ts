@@ -4,8 +4,10 @@ import { AppError, validationError } from "./lib/errors";
 import { requireAuth, type Handler, type RequestContext } from "./middleware/auth";
 import { requireWritableUserState } from "./middleware/migration-guard";
 import { SettingsRepository } from "./repositories/settings-repository";
+import { EventRepository } from "./repositories/event-repository";
 import { UserStateRepository } from "./repositories/user-state-repository";
 import { AuthService } from "./services/auth-service";
+import { EventService } from "./services/event-service";
 import type { UserSettings } from "./types";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
@@ -98,6 +100,52 @@ const getUserState = requireAuth(async ({ env, user }) => {
   return json({ state });
 });
 
+const eventService = (env: Env) => new EventService(new EventRepository(env.DB));
+
+const createEvent = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
+  const event = await eventService(env).create(user.id, await parseObject(request), nowIso());
+  return json({ event }, { status: 201 });
+});
+
+const listEvents = requireAuth(async ({ request, env, user }) => {
+  const url = new URL(request.url);
+  const startDate = stringValue(url.searchParams.get("startDate"));
+  const endDate = stringValue(url.searchParams.get("endDate"));
+  if (!startDate || !endDate) throw validationError({ date: "表示期間を指定してください。" });
+  const events = await new EventRepository(env.DB).listForRange(user.id, startDate, endDate);
+  return json({ events });
+});
+
+const listRecentEventDefinitions = requireAuth(async ({ request, env, user }) => {
+  const url = new URL(request.url);
+  const parsedLimit = Number(url.searchParams.get("limit") ?? "20");
+  const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 20;
+  const events = await new EventRepository(env.DB).recentDefinitions(user.id, limit);
+  return json({ events });
+});
+
+const getEvent = requireAuth(async ({ env, user, request }) => {
+  const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
+  const event = await new EventRepository(env.DB).getById(user.id, id);
+  if (!event) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
+  return json({ event });
+});
+
+const updateEvent = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
+  const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
+  const event = await eventService(env).update(user.id, id, await parseObject(request), nowIso());
+  return json({ event });
+});
+
+const deleteEvent = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
+  const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
+  await eventService(env).delete(user.id, id, nowIso());
+  return json({ deleted: true });
+});
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
@@ -111,6 +159,13 @@ export default {
       if (url.pathname === "/api/settings" && request.method === "GET") return await getSettings(context);
       if (url.pathname === "/api/settings" && request.method === "PATCH") return await patchSettings(context);
       if (url.pathname === "/api/user-state" && request.method === "GET") return await getUserState(context);
+      if (url.pathname === "/api/events" && request.method === "GET") return await listEvents(context);
+      if (url.pathname === "/api/events" && request.method === "POST") return await createEvent(context);
+      if (url.pathname === "/api/events/recent-definitions" && request.method === "GET") return await listRecentEventDefinitions(context);
+      const eventIdPath = url.pathname.match(/^\/api\/events\/([^/]+)$/);
+      if (eventIdPath && request.method === "GET") return await getEvent(context);
+      if (eventIdPath && request.method === "PATCH") return await updateEvent(context);
+      if (eventIdPath && request.method === "DELETE") return await deleteEvent(context);
       if (url.pathname.startsWith("/api/")) return json({ error: { code: "NOT_FOUND", message: "対象が見つかりません。" } }, { status: 404 });
       return env.ASSETS.fetch(request);
     } catch (error) {

@@ -150,6 +150,8 @@ endDate
 
 scheduledではperiod系フィールドはnull。
 
+M3では`timing_type=scheduled`の行だけを作成し、period系・recurrenceRule・notificationの保存は行わない。`allDay=1`の行は`start_time`と`end_time`をnullにし、`allDay=0`の行は両時刻を必須とする。Eventの通常削除は`active=0 + deletedAt`で表す。
+
 ## 5.2 period
 
 「実施日時は決まっていないが、この期間のどこかに置いておきたい予定」。Todoではなく予定として扱い、完了状態を持たない。

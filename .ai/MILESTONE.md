@@ -161,3 +161,51 @@ React / Vite / TypeScript、Cloudflare Workers + Vite assets、local D1 / `wrang
 - hierarchyをspacing / divider / typographyで再構成し、Button / Input / FormRow / BottomSheetは再利用可能なUI基盤として維持。
 - Bottom Navigationを白背景・thin top border・no shadow・icons onlyへ修正。selected iconのみLifeHub orange、center `+`は背景なしで少し大きいアイコンとした。
 - 390×844の通常状態とBottomSheet open状態を再撮影し、Playwrightで表示仕様を検証。
+# Milestone 3: Single Scheduled Event
+
+## 現在のMilestone
+
+M3完了。対象は`timingType=scheduled`の家 / 仕事Eventのみとし、recurrence / period / notification / Money / Search / stagingは対象外とする。M1 / M2の完了記録は上記に保持する。
+
+## 目的
+
+認証ユーザーが自分の家・仕事の通常予定を登録、確認、編集、soft deleteできる状態にする。Calendar / Dailyから日付contextを引き継ぎ、登録後も元の画面と日付へ戻る。
+
+## 完了条件
+
+- [x] scheduled Event migration / repository / service / route
+- [x] userId ownershipをcreate / list / get / update / delete / recent全てで確認
+- [x] title / date / time / allDay / multi-day validation
+- [x] home / work EventForm、progressive disclosure、recent definitions
+- [x] Calendar / Dailyの実Event表示、detail / edit / delete confirm
+- [x] Calendar / Daily / center `+` のreturnTo
+- [x] 390×844 EvidenceとreturnTo動画
+- [x] lint / typecheck / unit / integration / build / Playwright
+- [x] docs / commit / push / main向けPR（自動mergeなし）
+
+## 明示的な非対象
+
+- recurrence本実装、period Event、Event通知本実装
+- Money登録、Search本実装
+- staging resource作成、staging deploy、production/default、HouseToDo環境
+
+## 進捗
+
+- [x] 最新`main`からM2とは別のbranchを作成し、指定docsを確認
+- [x] Event schema / repository / service / CRUD routeを実装
+- [x] scheduled Event form / detail / edit / soft deleteを実装
+- [x] Calendar / Dailyの実Event表示とreturnToを実装
+- [x] test / Evidence / docs更新
+- [x] self-review、commit、push、PR作成
+
+## PR #3 UI regression correction
+
+- [x] HouseToDo `origin/main`のHome / Shopping行操作を確認し、Daily Eventへinline展開・左swipe編集を適用
+- [x] M2 merged時点のCalendar / Dailyの情報階層、タブ、セル、色、fixture sectionを維持
+- [x] Daily通常操作からEvent detail pageへの遷移を削除し、編集画面から削除できる深い導線を追加
+- [x] Daily / Calendar回帰、tap展開・再tap・他行切替・swipe reveal・edit遷移のEvidenceと動画を更新
+- [x] base commit `2130b034e2a00fbb2e6716f796980a39cd19b1ed`との差分を確認し、Calendar M2 DOM / CSS / densityをadapter接続へ戻した
+- [x] DailyのM2 section order / transparent row / dividerを維持し、値のみのinline detailとHouseToDo式の排他interactionを確認
+- [x] EventForm / Event editでBottom Navigationを非表示にし、Calendar / Daily回帰assertionと操作動画を更新
+
+---

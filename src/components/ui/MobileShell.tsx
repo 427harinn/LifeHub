@@ -14,13 +14,14 @@ type MobileShellProps = {
   activeNavigation?: (typeof navigationItems)[number]["id"];
   onAdd?: () => void;
   onNavigate?: (navigation: Exclude<(typeof navigationItems)[number]["id"], "add">) => void;
+  showBottomNavigation?: boolean;
 };
 
-export function MobileShell({ children, activeNavigation = "calendar", onAdd, onNavigate }: MobileShellProps) {
+export function MobileShell({ children, activeNavigation = "calendar", onAdd, onNavigate, showBottomNavigation = true }: MobileShellProps) {
   return (
     <div className="mobile-shell">
       <div className="mobile-shell__content">{children}</div>
-      <nav aria-label="主要画面" className="mobile-nav">
+      {showBottomNavigation ? <nav aria-label="主要画面" className="mobile-nav">
         {navigationItems.map((item) => (
           <button
             aria-current={activeNavigation === item.id ? "page" : undefined}
@@ -34,7 +35,7 @@ export function MobileShell({ children, activeNavigation = "calendar", onAdd, on
             <span className="sr-only">{item.label}</span>
           </button>
         ))}
-      </nav>
+      </nav> : null}
     </div>
   );
 }
