@@ -2,9 +2,7 @@
 
 ## 1. 方針
 
-LifeHub は HouseToDo と同じUIデザイン言語を継承する。
-
-ただし、HouseToDoとの差別化のため、**色だけをLifeHub用へ変更**する。
+LifeHubはHouseToDoと同じUIデザイン言語を継承する。
 
 変更しないもの:
 
@@ -23,18 +21,14 @@ LifeHub は HouseToDo と同じUIデザイン言語を継承する。
 変更するもの:
 
 - primary color
-- primary strong
-- primary soft
-- LifeHub固有の予定カテゴリ色
-- period Event用の帯色
+- Calendar予定種別色
+- LifeHub固有のMoney色
 
-HouseToDoのUIをコピーするのではなく、**同じデザインシステムの兄弟アプリとして色だけLifeHubへ置き換える**ことを基本とする。
+HouseToDoの兄弟アプリとして、形は近く、色で明確にLifeHubと分かることを目標にする。
 
 ---
 
 ## 2. HouseToDoから継承する基礎トークン
-
-HouseToDoの現行CSSを基準とする。
 
 ```css
 --color-bg: #fcfbf7;
@@ -62,7 +56,7 @@ HouseToDoの現行CSSを基準とする。
 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 ```
 
-LifeHubではこれらを原則そのまま利用する。
+これらは原則そのまま利用する。
 
 ---
 
@@ -70,102 +64,94 @@ LifeHubではこれらを原則そのまま利用する。
 
 テーマは **ベージュ + やわらかいオレンジ**。
 
-HouseToDoのナチュラルさは残しつつ、緑ではなく暖色系へ変更する。
-
-### 3.1 基本色
-
 ```css
---color-bg: #fcfbf7;
---color-surface: #ffffff;
-
 --color-primary: #f2a766;
 --color-primary-strong: #d77a35;
 --color-primary-soft: #fff0e3;
-
---color-text: #303531;
---color-text-secondary: #717772;
---color-border: #e5e7e2;
---color-disabled: #c8ccc7;
 ```
 
-### 3.2 色の役割
+用途:
 
-`primary`
-- 選択状態
-- 小さなアクセント
-- アイコン
 - active navigation
-- 軽い強調
-
-`primary-strong`
-- 主要ボタン
 - FAB / ＋追加
-- 強いリンク
-- selected stateの文字
+- 選択状態
+- 主要ボタン
+- リンク / 小さなアクセント
 
-`primary-soft`
-- 選択背景
-- chip背景
-- 軽い強調背景
-- swipe action等の背景
-
-背景・surface・文字・borderはHouseToDoと同じ値を利用し、色テーマだけで差別化する。
+テーマ色を画面へ直接ハードコードせずtoken参照する。
 
 ---
 
-## 4. 予定カテゴリ色
+## 4. Calendar予定色
 
-LifeHubでは予定の意味を色だけに依存させない。
-ラベル・アイコン・位置関係と組み合わせる。
+Calendarでは **家 / 仕事ではなく、予定の性質を主軸に色分けする**。
 
-初期案:
+3種類:
+
+1. 単発の通常予定
+2. 繰り返し予定
+3. period予定（今週中 / 今月中 / custom range）
+
+初期token案:
 
 ```css
---color-event-home: #e99a58;
---color-event-home-soft: #fff0e3;
+--color-event-single: #e99a58;
+--color-event-single-soft: #fff0e3;
 
---color-event-work: #7897b2;
---color-event-work-soft: #edf3f7;
+--color-event-recurring: #c98555;
+--color-event-recurring-soft: #f8e7da;
 
---color-money: #c79a45;
+--color-event-period: #d8a04f;
+--color-event-period-soft: #f8edd8;
+```
+
+実装時は390×844のCalendarへ多数の予定を表示して、帯同士の判別性・文字の可読性をEvidenceで確認する。必要なら同系統のオレンジ/テラコッタ/ゴールド内で調整してよい。
+
+原色や強すぎる彩度は避ける。
+
+---
+
+## 5. 家 / 仕事の表現
+
+家 / 仕事は予定種別の色分けと競合させない。
+
+色を全面的に塗り分けるのではなく、必要に応じて以下の補助表現を使う。
+
+- 小さな `家` / `仕事` ラベル
+- アイコン
+- 文字横の小マーカー
+- 詳細画面でのカテゴリ表示
+
+Calendar上では「単発 / 繰り返し / period」が一目で分かることを優先する。
+
+色だけに意味を依存しない。
+
+---
+
+## 6. 複数日 / period帯
+
+通常の複数日予定は、その予定が単発か繰り返しかに応じた色を使う。
+
+period Eventは `--color-event-period` 系を使い、TimeTreeのように複数日にまたがる連続帯として描画する。
+
+帯の開始・継続・終了は形でも分かるようにし、色だけに依存しない。
+
+---
+
+## 7. Money色
+
+MoneyはCalendar予定種別色とは別に、落ち着いたゴールド系を利用する。
+
+```css
+--color-money: #b88b3e;
 --color-money-soft: #f8f0df;
 ```
 
-- 家: LifeHubのメインテーマに近いオレンジ
-- 仕事: 暖色と競合しない、くすんだブルー
-- お金: ベージュ系デザインに馴染む落ち着いたゴールド
-
-鮮やかすぎる色は避ける。
+支出 / 収入の判別は `- / +` を必ず表示し、色だけで意味を伝えない。
 
 ---
 
-## 5. period Eventの色
-
-`今週中`、`今月中`、任意の日付範囲などの「期間中にやりたい」Eventは、通常予定と視覚的に区別する。
-
-通常の日時予定:
-- 比較的はっきりしたカテゴリ色
-
-period Event:
-- 同じカテゴリ系統の淡い色
-- カレンダー上では複数日にまたがる帯として表示
-- 必要に応じて枠線や薄いパターンを追加し、通常の複数日予定との違いを出す
-
-例:
-
-```css
---color-period-home: #f8d7b8;
---color-period-work: #dce7ee;
-```
-
-色だけで「完了/未完了」の意味は持たせない。
-LifeHubには完了状態そのものが存在しない。
-
----
-
-## 6. 状態色
-
-danger / warningなどの意味色はHouseToDoを基本的に継承する。
+## 8. 状態色
 
 ```css
 --color-danger: #d65f5f;
@@ -173,53 +159,21 @@ danger / warningなどの意味色はHouseToDoを基本的に継承する。
 --color-success: #4fa77b;
 ```
 
-ただし `success` を予定完了の意味には使用しない。
-フォーム保存成功、接続成功等の一般的な成功状態だけに使用する。
+`success` は保存成功・接続成功等にのみ使用し、予定完了の意味には使わない。
+
+LifeHubには完了状態が存在しない。
 
 ---
 
-## 7. 角丸
+## 9. 角丸 / 余白 / Typography
 
 HouseToDoと同一。
 
-```css
---radius-input: 8px;
---radius-action: 10px;
---radius-sheet: 16px;
---radius-sm: 8px;
---radius-md: 14px;
---radius-lg: 20px;
-```
+- spacing: 4 / 8 / 12 / 16 / 20 / 24 / 32px
+- radius: 8 / 10 / 14 / 16 / 20px系
+- font: system UI
 
-LifeHub独自の角丸体系を増やさない。
-
----
-
-## 8. 余白
-
-HouseToDoと同一。
-
-4px基準のspacing systemを使用する。
-
-```css
-4 / 8 / 12 / 16 / 20 / 24 / 32px
-```
-
-画面ごとに独自の余白値を乱立させない。
-
----
-
-## 9. Typography
-
-HouseToDoと同一。
-
-```css
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-```
-
-既存HouseToDoの見出し・本文・補助テキストのサイズとweightを原則そのまま利用する。
-
-LifeHub専用フォントは導入しない。
+独自体系を増やさない。
 
 ---
 
@@ -240,22 +194,19 @@ HouseToDoから以下を直接流用・抽出候補とする。
 
 構造・サイズ・motionは極力変更しない。
 
-LifeHubへ持ち込む際はHouseToDo固有のgreen値をハードコードせず、LifeHub側のcolor tokenへ置き換える。
-
 ---
 
 ## 11. 実装原則
 
-CodexはLifeHubのUI実装時に以下を守る。
-
 1. HouseToDoの角丸・余白・Typographyを基準にする
-2. HouseToDoの緑色をそのままコピーしない
-3. 色は必ずLifeHub tokenを参照する
-4. `#f2a766` 等のテーマ色を各画面へ直接ハードコードしない
-5. Eventカテゴリ色もtoken化する
-6. HouseToDoと見た目が似ること自体は問題ではない
-7. ただしアプリを並べたとき、primary colorによってLifeHubだと判別できる状態にする
-8. 新しいコンポーネントを作る前にHouseToDoに流用可能なUIがないか確認する
+2. HouseToDoのgreen値をコピーしない
+3. LifeHub色はtoken化する
+4. Calendarは単発 / 繰り返し / periodを主色分けする
+5. 家 / 仕事は補助表現とする
+6. 色だけで状態・意味を伝えない
+7. UI変更時は390×844 screenshot evidenceを必須とする
+8. motion / swipe / sheet遷移等、静止画で判断しにくい場合は動画Evidenceも残す
+9. 新規コンポーネント作成前にHouseToDoの流用可能UIを確認する
 
 ---
 
@@ -263,10 +214,8 @@ CodexはLifeHubのUI実装時に以下を守る。
 
 HouseToDo:
 
-> ベージュ + グリーン / 家事 / 植物 / ナチュラル
+> ベージュ + グリーン / 家事 / ナチュラル
 
 LifeHub:
 
 > ベージュ + オレンジ / 手帳 / 暮らし / 時間 / あたたかさ
-
-2アプリは別テーマだが、同じ作者・同じプロダクトファミリーだと感じられることを目標にする。
