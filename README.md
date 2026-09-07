@@ -18,7 +18,7 @@ LifeHubはTodoアプリではなく、予定を中心に生活全体を見渡す
 
 ## HouseToDoとの関係
 
-LifeHubは `427harinn/HouseToDo` を参考にする独立プロダクトです。
+LifeHubは `427harinn/HouseToDo` と `427harinn/HouseToDo-Mockup` を基準にする独立プロダクトです。
 
 積極的に流用・参考にするもの:
 
@@ -27,11 +27,12 @@ LifeHubは `427harinn/HouseToDo` を参考にする独立プロダクトです�
 - Auth / Session
 - timezone / weekStartsOn utilities
 - UI foundation / BottomSheet / mobile layout
-- spacing / radius / typography
 - Progressive Disclosure
 - returnTo
 - 「以前の項目から選ぶ」UX
 - recurrence / notificationの汎用的な考え方
+
+**UI Director / Anti-pattern / spacing / radius / typography / Bottom Navigation / interaction grammar は HouseToDo-Mockup の `DESIGN.md` をLifeHub向けに継承した `docs/DESIGN.md` を正とします。**
 
 持ち込まないもの:
 
@@ -40,8 +41,9 @@ LifeHubは `427harinn/HouseToDo` を参考にする独立プロダクトです�
 - 完了 / skip workflow
 - Shopping
 - weekly_flexible / monthly_flexible
+- HouseToDo固有のgreen theme
 
-LifeHubのUIはHouseToDoと同じ形・密度を継承し、メインカラーをグリーンではなくオレンジ系へ変更します。
+LifeHubのUIはHouseToDoと同じ形・密度・階層を継承し、LifeHub固有の色とドメインだけを変更します。
 
 ## Cloudflare
 
@@ -57,9 +59,11 @@ production/defaultは明示的なリリース作業まで触れません。
 
 ## 現在の段階
 
-**Milestone 1: Application Foundationを実装済みです。**
+**Milestone 1: Application FoundationはPRレビュー中です。**
 
-ローカルで起動できるReact / Vite / TypeScript + Cloudflare Workers / D1基盤と、後続画面で再利用するLifeHub用UI foundationを整えています。Auth、Calendar、Event、Moneyなどの本実装は後続milestoneで扱います。
+基盤実装後のEvidenceレビューで、UIがHouseToDo DESIGN.mdのDirector / Anti-patternを十分に反映していないことが判明したため、M1のUI foundationを `docs/DESIGN.md` に合わせて修正してからmergeします。
+
+Auth、Calendar、Event、Moneyなどの本実装は後続milestoneで扱います。
 
 以降は `docs/IMPLEMENTATION_PLAN.md` のMilestone順に、branchを切ってCodexで実装・test・Evidence・docs更新・staging確認・PR作成まで行います。
 
@@ -67,6 +71,8 @@ production/defaultは明示的なリリース作業まで触れません。
 
 ## ドキュメント
 
+- [デザインDirector / Anti-pattern](docs/DESIGN.md)
+- [デザインシステム / tokens](docs/DESIGN_SYSTEM.md)
 - [プロダクト仕様](docs/PRODUCT_SPEC.md)
 - [画面仕様](docs/SCREEN_SPEC.md)
 - [Eventフォーム仕様](docs/EVENT_FORM_SPEC.md)
@@ -75,7 +81,6 @@ production/defaultは明示的なリリース作業まで触れません。
 - [通知仕様](docs/NOTIFICATION_SPEC.md)
 - [お金仕様](docs/MONEY_SPEC.md)
 - [API仕様](docs/API_SPEC.md)
-- [デザインシステム](docs/DESIGN_SYSTEM.md)
 - [バックアップ / データ保持](docs/BACKUP_AND_RETENTION.md)
 - [Cloudflareインフラ](docs/CLOUDFLARE_INFRASTRUCTURE.md)
 - [HouseToDo流用設計](docs/REUSE_FROM_HOUSETODO.md)
