@@ -102,6 +102,14 @@
 - [x] T9: 390×844 Evidence、returnTo動画、self-review
 - [x] T10: docs更新、local migration確認、commit / push / PR作成。自動mergeしない
 
+## PR #3 UI regression correction
+
+- [x] T11: HouseToDo最新mainのHome / Shopping interaction grammarを確認
+- [x] T12: M2 Calendar / Daily UIを維持し、実Event表示だけを統合
+- [x] T13: Daily Eventのinline展開、再tap閉じ、他行切替、左swipe編集を実装
+- [x] T14: 編集画面の深い削除導線、390×844 screenshot / video、回帰Playwrightを追加
+- [x] T15: docs更新、self-review、同じPR #3へpush。新規PR・mergeは行わない
+
 ## M3セルフレビュー観点
 
 - userId ownershipが一覧・詳細・更新・削除・recent queryにある

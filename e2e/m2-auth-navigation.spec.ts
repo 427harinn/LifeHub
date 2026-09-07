@@ -17,6 +17,10 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
+  await expect(page.locator(".shell-tabs")).toBeVisible();
+  await expect(page.locator(".calendar-grid")).toHaveCount(1);
+  await expect(page.locator(".calendar-cell")).toHaveCount(42);
+  await expect(page.locator(".calendar-today")).toBeVisible();
   await expect(page.locator(".mobile-nav")).toBeVisible();
   await expect(page.locator(".mobile-nav__button--add")).toBeVisible();
   await page.getByRole("button", { name: "デイリー" }).click();

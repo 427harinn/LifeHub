@@ -198,4 +198,11 @@ M3完了。対象は`timingType=scheduled`の家 / 仕事Eventのみとし、rec
 - [x] test / Evidence / docs更新
 - [x] self-review、commit、push、PR作成
 
+## PR #3 UI regression correction
+
+- [x] HouseToDo `origin/main`のHome / Shopping行操作を確認し、Daily Eventへinline展開・左swipe編集を適用
+- [x] M2 merged時点のCalendar / Dailyの情報階層、タブ、セル、色、fixture sectionを維持
+- [x] Daily通常操作からEvent detail pageへの遷移を削除し、編集画面から削除できる深い導線を追加
+- [x] Daily / Calendar回帰、tap展開・再tap・他行切替・swipe reveal・edit遷移のEvidenceと動画を更新
+
 ---

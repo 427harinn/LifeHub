@@ -42,6 +42,7 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   await page.getByLabel("メモ").fill("持ち物を確認");
   await page.screenshot({ path: path.join(evidenceDir, "place-memo-expanded-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await expect(page.getByText("家の予定", { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-after-create-390x844.png") });
 
@@ -72,6 +73,7 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   await page.getByLabel("終了時間").fill("11:00");
   await page.screenshot({ path: path.join(evidenceDir, "work-timed-form-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await expect(page.getByText("仕事の予定", { exact: true }).first()).toBeVisible();
 });
 
@@ -87,6 +89,7 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await expect(page.getByLabel("開始時間")).toHaveCount(0);
   await page.screenshot({ path: path.join(evidenceDir, "all-day-form-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
   await openAdd(page, "仕事");
   await page.getByLabel("タイトル").fill("複数日の予定");
@@ -96,6 +99,7 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await page.getByRole("button", { name: "この日付にする" }).click();
   await page.screenshot({ path: path.join(evidenceDir, "multi-day-form-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await expect(page.locator(".calendar-band--work")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "multi-day-calendar-390x844.png") });
 
@@ -106,10 +110,51 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await page.screenshot({ path: path.join(evidenceDir, "recent-390x844.png") });
   await page.getByRole("dialog").getByRole("button", { name: /複数日の予定/ }).click();
   await page.getByRole("button", { name: "登録" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByText("終日の予定", { exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-390x844.png") });
+  const allDayRow = page.locator(".event-swipe-row").filter({ hasText: "終日の予定" }).first();
+  await allDayRow.locator(".event-swipe-row__main").click();
+  await expect(allDayRow.locator(".event-inline-detail")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "予定の詳細" })).toHaveCount(0);
+  await page.screenshot({ path: path.join(evidenceDir, "daily-expanded-first-390x844.png") });
+  await allDayRow.locator(".event-swipe-row__main").click();
+  await expect(allDayRow.locator(".event-inline-detail")).toHaveCount(0);
+  const multiDayRow = page.locator(".event-swipe-row").filter({ hasText: "複数日の予定" }).first();
+  await multiDayRow.locator(".event-swipe-row__main").click();
+  await expect(multiDayRow.locator(".event-inline-detail")).toContainText("9月");
+  await expect(allDayRow.locator(".event-inline-detail")).toHaveCount(0);
+  await page.screenshot({ path: path.join(evidenceDir, "daily-expanded-second-390x844.png") });
+  const multiDayBox = await multiDayRow.boundingBox();
+  if (!multiDayBox) throw new Error("Daily Event row bounds unavailable");
+  await page.mouse.move(multiDayBox.x + 250, multiDayBox.y + 24);
+  await page.mouse.down();
+  await page.mouse.move(multiDayBox.x + 170, multiDayBox.y + 24, { steps: 4 });
+  await page.mouse.up();
+  const revealedEdit = multiDayRow.locator(".event-swipe-row__actions").getByRole("button", { name: "編集", exact: true });
+  await expect(revealedEdit).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "daily-swipe-edit-390x844.png") });
+  await allDayRow.locator(".event-swipe-row__main").click();
+  await expect(multiDayRow.locator(".event-swipe-row__actions")).toHaveCount(0);
+  await expect(allDayRow.locator(".event-inline-detail")).toBeVisible();
+  await allDayRow.locator(".event-swipe-row__main").click();
+  await multiDayRow.locator(".event-swipe-row__main").click();
+  const secondRevealedEdit = multiDayRow.locator(".event-swipe-row__actions").getByRole("button", { name: "編集", exact: true });
+  const secondMultiDayBox = await multiDayRow.boundingBox();
+  if (!secondMultiDayBox) throw new Error("Daily Event row bounds unavailable after closing another row");
+  await page.mouse.move(secondMultiDayBox.x + 250, secondMultiDayBox.y + 24);
+  await page.mouse.down();
+  await page.mouse.move(secondMultiDayBox.x + 170, secondMultiDayBox.y + 24, { steps: 4 });
+  await page.mouse.up();
+  await expect(secondRevealedEdit).toBeVisible();
+  await secondRevealedEdit.click();
+  await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "削除", exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "daily-edit-form-390x844.png") });
+  await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
+  await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await page.locator(".timeline-section").getByRole("button", { name: "追加", exact: true }).click();
   await page.getByRole("button", { name: "家を追加" }).click();
   await expect(page.getByRole("button", { name: "日付" })).toContainText(`${dayNumber}`);
