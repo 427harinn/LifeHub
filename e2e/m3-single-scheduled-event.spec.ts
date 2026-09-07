@@ -8,6 +8,7 @@ const password = "correct-horse-battery";
 const uniqueEmail = () => `m3-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const nextDate = (date: string, days: number) => { const value = new Date(`${date}T00:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); };
+const createEvidenceEvent = async (page: import("@playwright/test").Page, input: Record<string, unknown>) => { const response = await page.request.post("/api/events", { data: { place: null, memo: null, timingType: "scheduled", allDay: false, ...input } }); expect(response.status()).toBe(201); };
 
 async function registerThroughUi(page: import("@playwright/test").Page) {
   await page.goto("/");
@@ -45,8 +46,19 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   await page.getByRole("button", { name: "登録" }).click();
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await expect(page.getByText("買い物", { exact: true }).first()).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "calendar-after-create-390x844.png") });
+  await createEvidenceEvent(page, { category: "home", title: "朝の支度", startDate: today, startTime: "08:00", endDate: today, endTime: "09:00" });
+  await createEvidenceEvent(page, { category: "work", title: "会議", startDate: today, startTime: "09:30", endDate: today, endTime: "10:30" });
+  await createEvidenceEvent(page, { category: "work", title: "出張", startDate: nextDate(today, 1), startTime: null, endDate: nextDate(today, 3), endTime: null, allDay: true });
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
+  await page.getByRole("button", { name: "デイリー" }).click();
+  await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  await expect(page.getByText("朝の支度", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "カレンダー" }).click();
+  await expect(page.locator(".calendar-band--work")).toBeVisible();
+  await expect(page.locator(".calendar-cell__count")).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-m2-density-real-events-390x844.png") });
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   const homeRow = page.locator(".event-swipe-row").filter({ hasText: "買い物" }).first();
@@ -73,8 +85,10 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   await page.getByLabel("タイトル").fill("買い物（変更）");
   await page.screenshot({ path: path.join(evidenceDir, "event-edit-390x844.png") });
   await page.getByRole("button", { name: "変更を保存" }).click();
-  await expect(page.getByText("買い物（変更）", { exact: true }).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await page.getByRole("button", { name: `${dayNumber}日`, exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: /買い物（変更）/ })).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: /買い物（変更）/ }).click();
   await page.getByRole("button", { name: "削除" }).click();
   await expect(page.getByRole("dialog", { name: "予定を削除" })).toBeVisible();
@@ -93,7 +107,6 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   await page.screenshot({ path: path.join(evidenceDir, "work-timed-form-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
-  await expect(page.getByText("定例ミーティング", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   const workRow = page.locator(".event-swipe-row").filter({ hasText: "定例ミーティング" }).first();
@@ -108,6 +121,27 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await registerThroughUi(page);
   const today = isoToday();
   const dayNumber = Number(today.slice(-2));
+  for (const input of [
+    { category: "home", title: "朝の散歩", startDate: today, startTime: "08:30", endDate: today, endTime: "09:00" },
+    { category: "work", title: "定例ミーティング", startDate: today, startTime: "10:00", endDate: today, endTime: "11:00" },
+    { category: "home", title: "買い物", startDate: today, startTime: "12:30", endDate: today, endTime: "13:00" },
+    { category: "home", title: "クリーニング受け取り", startDate: today, startTime: "15:30", endDate: today, endTime: "16:00" },
+    { category: "work", title: "顧客への返信", startDate: today, startTime: "18:00", endDate: today, endTime: "18:30" }
+  ]) await createEvidenceEvent(page, input);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
+  await page.getByRole("button", { name: "デイリー" }).click();
+  await expect(page.getByText("朝の散歩", { exact: true })).toBeVisible();
+  await expect(page.getByText("定例ミーティング", { exact: true })).toBeVisible();
+  await expect(page.getByText("買い物", { exact: true })).toBeVisible();
+  await expect(page.getByText("クリーニング受け取り", { exact: true })).toBeVisible();
+  await expect(page.getByText("顧客への返信", { exact: true })).toBeVisible();
+  await expect(page.locator(".daily-page .event-swipe-row")).toHaveCount(5);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: path.join(evidenceDir, "daily-390x844.png") });
+  await page.getByRole("button", { name: "カレンダー" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
   await openAdd(page, "家");
   await page.getByLabel("タイトル").fill("終日の予定");
@@ -140,19 +174,16 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
 
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByText("終日の予定", { exact: true })).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "daily-390x844.png") });
   const allDayRow = page.locator(".event-swipe-row").filter({ hasText: "終日の予定" }).first();
   await allDayRow.locator(".event-swipe-row__main").click();
   await expect(allDayRow.locator(".event-inline-detail")).toBeVisible();
   await expect(page.getByRole("heading", { name: "予定の詳細" })).toHaveCount(0);
-  await page.screenshot({ path: path.join(evidenceDir, "daily-expanded-first-390x844.png") });
   await allDayRow.locator(".event-swipe-row__main").click();
   await expect(allDayRow.locator(".event-inline-detail")).toHaveCount(0);
   const multiDayRow = page.locator(".event-swipe-row").filter({ hasText: "複数日の予定" }).first();
   await multiDayRow.locator(".event-swipe-row__main").click();
   await expect(multiDayRow.locator(".event-inline-detail")).toContainText("9月");
   await expect(allDayRow.locator(".event-inline-detail")).toHaveCount(0);
-  await page.screenshot({ path: path.join(evidenceDir, "daily-expanded-second-390x844.png") });
   const multiDayBox = await multiDayRow.boundingBox();
   if (!multiDayBox) throw new Error("Daily Event row bounds unavailable");
   await page.mouse.move(multiDayBox.x + 250, multiDayBox.y + 24);
