@@ -1,0 +1,62 @@
+# Milestone 1: Application Foundation
+
+## 目的
+
+LifeHubを、HouseToDoのドメインを持ち込まない独立アプリとしてローカルで起動・検証できる状態にする。
+React / Vite / TypeScript、Cloudflare Workers + Vite assets、local D1 / `wrangler dev`、品質検証、PWAの最低限の土台、LifeHub用UI foundationを整える。
+
+## 対象範囲
+
+- React / Vite / TypeScript基盤
+- Cloudflare Workers + Vite assets構成
+- local D1と`wrangler dev`
+- lint / typecheck / Vitest / Playwright / build
+- PWA / Service Workerの最低限の土台
+- LifeHub用ディレクトリ構成と汎用UI foundation
+- HouseToDoと同系統のspacing / radius / typography
+- LifeHubのオレンジ系color token
+- Button / Input / FormRow / BottomSheet / mobile shell
+- 390×844での表示確認とscreenshot evidence
+
+## 明示的な非対象
+
+- Auth / Sessionの本実装
+- Calendar / Event / Moneyの本実装
+- Task / TaskRecord / Shopping / Household / HouseholdMember
+- invite、owner/member role、Todo workflow
+- weekly_flexible / monthly_flexible
+- HouseToDoのgreen theme
+- staging / production deploy、migration、既存Cloudflare resourceへの操作
+
+## 完了条件
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test:unit`
+- `npm run build`
+- Playwrightで390×844表示確認
+- UI screenshot evidenceにオレンジテーマ、mobile shell、Button、Input、FormRow、BottomSheet、共通spacing / radius / typographyを含む
+- HouseToDo固有ドメイン、green theme、M2以降の機能が混入していない
+- 関連docsの不足・不整合を必要に応じて更新
+- commit / push / main向けPR作成（自動mergeなし）
+
+## 進捗
+
+- [x] 最新`main`確認とM1 branch作成
+- [x] 指定docs確認。最新mainで存在する関連docsを再確認
+- [x] HouseToDoの汎用基盤とCloudflare構成を調査
+- [x] LifeHubのアプリ基盤とディレクトリを実装
+- [x] UI foundationと390×844 evidence画面を実装
+- [x] lint / typecheck / unit / build / Playwrightを実行
+- [x] self-reviewとdocs更新
+- [ ] commit / push / PR作成
+
+## セルフレビュー観点
+
+各小タスク完了時に以下を確認する。
+
+- HouseToDo固有ドメインが混入していないか
+- green themeが残っていないか
+- mobile-firstになっているか
+- 共通UIが今後再利用可能な構造か
+- M2以降の機能を先行実装していないか

@@ -94,17 +94,21 @@ LifeHub は完全個人用であり、Household / HouseholdMember / 共有モデ
 
 # Phase 1: 基盤
 
-- React / Vite / TypeScript
-- UI foundation
-- LifeHub color tokens
-- BottomSheet
-- Bottom Navigation
-- Auth / Session
-- Workers / D1
-- timezone / weekStartsOn utilities
-- PWA / Service Worker基盤
-- testing setup
-- local環境
+## Milestone 1: Application Foundation（完了）
+
+- [x] React / Vite / TypeScript
+- [x] UI foundation
+- [x] LifeHub color tokens
+- [x] BottomSheet
+- [x] Bottom Navigationのmobile shell
+- [ ] Auth / Session（M2以降）
+- [x] Workers / local D1 / `wrangler dev`
+- [ ] timezone / weekStartsOn utilities（M2以降）
+- [x] PWA / Service Worker基盤
+- [x] lint / typecheck / Vitest / Playwright / build
+- [x] local環境
+
+M1の詳細は`IMPLEMENTATION_PLAN.md`と`.ai/MILESTONE.md`を参照する。
 
 Task / Shopping / Householdドメインは持ち込まない。
 
