@@ -70,6 +70,8 @@ LifeHubUserState
 
 `migration_locked` 中は通常の Event / Money / DailyNote 書き込みを拒否する。
 
+M2では`users`、`sessions`、`lifehub_user_state`をlocal D1 migrationへ追加した。UserStateの初期値は`active`で、認証成功時にユーザーごとに初期生成する。migration操作とUIは後続milestoneの対象とする。
+
 ---
 
 # 4. UserSettings
@@ -87,6 +89,8 @@ UserSettings
 - createdAt
 - updatedAt
 ```
+
+M2では`user_settings`をlocal D1 migrationへ追加し、認証成功後または`GET /api/settings`で初期生成する。初期値は`Asia/Tokyo`、`weekStartsOn=1`、朝夜まとめON、朝09:00、夜21:00、期間予定の既定締切21:00とする。全項目はAPIのstateとして保持し、画面ではtimezone / weekStartsOnを表示する。
 
 終日Eventの単体通知基準09:00は初期仕様では固定値とする。
 

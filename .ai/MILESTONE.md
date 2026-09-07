@@ -1,3 +1,43 @@
+# Milestone 2: Auth / Personal Settings / Navigation Shell
+
+## 現在のMilestone
+
+M2を実装中。M1の完了記録は下記に保持する。
+
+## 目的
+
+LifeHubを個人アプリとして利用できる骨格にする。User / Session / Cookie認証、UserSettings、userId ownership、migration_locked guardの土台、Calendar / Daily / Money / Settingsへのnavigation shell、中央`+`の選択UIを実装する。
+
+## 明示的な非対象
+
+- Event / Money / DailyNoteの本機能・CRUD
+- recurrence / notification / archive / device migrationの本機能
+- Household / HouseholdMember / invite / owner-member role
+- staging / production deploy、Cloudflare外部リソース作成
+- M3のEvent登録フォーム
+
+## M2完了条件
+
+- login / logout / authenticated user取得 / Cookie sessionがWorkerで動作
+- userId ownershipをUserSettings / LifeHubUserStateで確認
+- UserSettingsが初回取得時に生成され、指定項目をAPI / frontend stateで扱える
+- migration_locked中の通常writeを拒否するguard土台がある
+- 5項目のicons-only Bottom Navigationと4画面shellが390×844で確認できる
+- 中央`+`から家 / 仕事 / お金のBottomSheet選択UIを開ける
+- lint / typecheck / unit / integration / build / Playwright pass
+- 指定Evidence、docs、commit、push、main向けPRを作成（自動mergeなし）
+
+## 進捗
+
+- [x] 最新`main`をfetchし、M1と別のM2 branchを作成
+- [x] 指定docsとHouseToDo auth実装を確認
+- [x] Auth / Session / User / UserSettings / LifeHubUserStateを実装
+- [x] Navigation / screen shell / add choiceを実装
+- [x] test / Evidence / docs更新
+- [ ] self-review、commit、push、PR作成
+
+---
+
 # Milestone 1: Application Foundation
 
 ## 目的

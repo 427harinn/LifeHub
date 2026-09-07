@@ -59,11 +59,11 @@ production/defaultは明示的なリリース作業まで触れません。
 
 ## 現在の段階
 
-**Milestone 1: Application FoundationはPRレビュー中です。**
+**Milestone 2: Auth / Personal Settings / Navigation Shellを実装中です。**
 
-基盤実装後のEvidenceレビューを受け、M1のUI foundationを `docs/DESIGN.md` のDirector / Anti-patternに合わせて修正済みです。PRレビュー完了後にmergeします。
+M1の完了記録を維持したまま、最新`main`からM1とは別のbranchでAuth / Session / UserSettings / navigation shellを実装しています。M2ではEvent登録やMoney本機能には着手しません。
 
-Auth、Calendar、Event、Moneyなどの本実装は後続milestoneで扱います。
+M2で提供するのは、個人用Cookie session、`userId` ownershipの基盤、Settings state、Calendar / Daily / Money / Settings shell、中央`+`の選択UIです。
 
 以降は `docs/IMPLEMENTATION_PLAN.md` のMilestone順に、branchを切ってCodexで実装・test・Evidence・docs更新・staging確認・PR作成まで行います。
 

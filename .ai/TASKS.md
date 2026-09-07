@@ -1,3 +1,28 @@
+# Milestone 2 Tasks
+
+## 小タスク
+
+- [x] T1: 最新`main`をfetchし、M1と別のM2 branchを作成
+- [x] T2: 指定docsとHouseToDoの安全な認証方式を確認
+- [x] T3: User / Session / Cookie auth / auth middleware / APIを実装
+- [x] T4: UserSettings / LifeHubUserState / migration_locked guard / ownershipを実装
+- [x] T5: Auth UI、session restore、logout、route shellを実装
+- [x] T6: Bottom Navigation、Calendar / Daily / Money / Settings shell、中央`+`選択UIを実装
+- [x] T7: unit / integration / Playwrightを追加・実行
+- [x] T8: 390×844 Evidenceと必要なdocsを更新
+- [ ] T9: self-review、commit、push、main向けPR作成。自動mergeしない
+
+## M2セルフレビュー観点
+
+- userId ownershipが全Auth / Settings / UserState queryにある
+- Household / invite / owner-member role / switchingを持ち込んでいない
+- migration_locked中の通常write guardがWorker側にある
+- English decoration、card-everything、decorative shadow、FAB化を復活させていない
+- Bottom NavigationがCalendar / Daily / + / Money / Settingsの順で、icons only、44px touch target
+- M3のEvent登録機能へ踏み込んでいない
+
+---
+
 # Milestone 1 Tasks
 
 ## 小タスク
