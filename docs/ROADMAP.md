@@ -84,7 +84,7 @@ LifeHub は完全個人用であり、Household / HouseholdMember / 共有モデ
 ## 0-6. 実装開始前
 
 - [x] 開発方針文書
-- [ ] 全仕様書の最終整合性確認
+- [x] 全仕様書の最終整合性確認
 - [ ] MVP milestone / task分割
 
 ---
