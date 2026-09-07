@@ -45,6 +45,16 @@ LifeHubを個人アプリとして利用できる骨格にする。User / Sessio
 - [x] Daily / Money fixtureと390×844 Evidenceを更新
 - [x] 同じPR #2のbranchへpush。新しいPRは作成しない
 
+## PR #2 レビュー対応（連続帯 / fixture密度 / Date Sheet）
+
+- [x] 最新`DESIGN.md` / `SCREEN_SPEC.md`を確認し、複数日予定・period予定をセル外の週帯レイヤーで連続表示
+- [x] 同一週内・週またぎ・週またぎと通常予定/金額の同居・`+N`をM2表示専用fixtureで確認
+- [x] Calendarセルを日付左上、予定、金額最下部中央へ整理し、金額なしセルは予定領域を拡張
+- [x] Date Sheetを縦長化し、収支を1行表示、追加`＋`を詳細ボタンから離して独立配置
+- [x] Dailyの時間ありfixtureを6件へ増量し、家=オレンジ、仕事=青のカテゴリトーンを反映
+- [x] 390×844の通常 / 複数日帯 / 週またぎ / Date Sheet / Daily / Money / Settings / Add Evidenceを再撮影
+- [x] lint / typecheck / unit・integration / build / Playwrightを再実行し、同じPR #2へpush
+
 ## PR #2 レビュー対応（Calendar / fixture / separator）
 
 - [x] 最新`DESIGN.md` / `SCREEN_SPEC.md`を再確認し、Calendarの順序をタブ→年月→中央寄せの`今日`→曜日→42セルへ調整

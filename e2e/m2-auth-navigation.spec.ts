@@ -40,6 +40,11 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   await expect(page.getByText("週またぎ", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".calendar-cell__overflow").first()).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-multi-day-390x844.png") });
+  await page.getByRole("tab", { name: "仕事" }).click();
+  await expect(page.getByText("週またぎ", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("移動", { exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-week-crossing-390x844.png") });
+  await page.getByRole("tab", { name: "すべて" }).click();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-tabs-390x844.png") });
   await page.getByRole("button", { name: "7日", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "2026年9月7日" })).toBeVisible();
@@ -57,6 +62,8 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   await expect(page.getByText("今週中：書類を整理")).toBeVisible();
   await expect(page.getByText("今日のメモ")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-390x844.png") });
+  await page.locator(".daily-section").last().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(evidenceDir, "daily-summary-390x844.png") });
 
   await page.getByRole("button", { name: "お金" }).click();
   await expect(page.getByRole("heading", { name: "お金" })).toBeVisible();

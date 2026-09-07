@@ -1,13 +1,14 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 
 type BottomSheetProps = {
+  className?: string;
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
 };
 
-export function BottomSheet({ open, title, onClose, children }: BottomSheetProps) {
+export function BottomSheet({ className, open, title, onClose, children }: BottomSheetProps) {
   const titleId = useId();
   const dragStartY = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -53,7 +54,7 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
       <section
         aria-labelledby={titleId}
         aria-modal="true"
-        className="bottom-sheet"
+        className={`bottom-sheet${className ? ` ${className}` : ""}`}
         role="dialog"
         style={{ "--sheet-drag-offset": `${dragOffset}px` } as CSSProperties}
       >
