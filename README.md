@@ -61,7 +61,7 @@ production/defaultは明示的なリリース作業まで触れません。
 
 **Milestone 1: Application FoundationはPRレビュー中です。**
 
-基盤実装後のEvidenceレビューで、UIがHouseToDo DESIGN.mdのDirector / Anti-patternを十分に反映していないことが判明したため、M1のUI foundationを `docs/DESIGN.md` に合わせて修正してからmergeします。
+基盤実装後のEvidenceレビューを受け、M1のUI foundationを `docs/DESIGN.md` のDirector / Anti-patternに合わせて修正済みです。PRレビュー完了後にmergeします。
 
 Auth、Calendar、Event、Moneyなどの本実装は後続milestoneで扱います。
 

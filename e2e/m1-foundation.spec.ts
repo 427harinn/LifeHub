@@ -15,6 +15,19 @@ test("M1 foundation renders at the mobile review viewport", async ({ page }) => 
   await expect(page.getByRole("button", { name: "保存する" })).toBeVisible();
   await expect(page.getByRole("button", { name: "カレンダー" })).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".mobile-nav")).toBeVisible();
+  await expect(page.locator(".mobile-nav__icon")).toHaveCount(5);
+
+  const navStyle = await page.locator(".mobile-nav").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, borderTopWidth: style.borderTopWidth, boxShadow: style.boxShadow };
+  });
+  expect(navStyle).toEqual({ backgroundColor: "rgb(255, 255, 255)", borderTopWidth: "1px", boxShadow: "none" });
+
+  const addStyle = await page.locator(".mobile-nav__button--add").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, boxShadow: style.boxShadow };
+  });
+  expect(addStyle.boxShadow).toBe("none");
   await page.screenshot({ path: path.join(evidenceDir, "foundation-390x844.png") });
 
   await page.getByRole("button", { name: "表示設定" }).click();

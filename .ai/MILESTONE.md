@@ -49,6 +49,8 @@ React / Vite / TypeScript、Cloudflare Workers + Vite assets、local D1 / `wrang
 - [x] UI foundationと390×844 evidence画面を実装
 - [x] lint / typecheck / unit / build / Playwrightを実行
 - [x] self-reviewとdocs更新
+- [x] DESIGN.mdレビュー対応: 装飾的な英語ラベル・card-everything・shadow・FAB風ナビを除去し、HouseToDo系のdensity / hierarchyへ修正
+- [x] 390×844のFoundation通常状態 / BottomSheet open状態を再撮影し、Evidenceを置換
 - [x] commit / push / PR作成（PR #1 / 自動mergeなし）
 
 ## セルフレビュー観点
@@ -60,3 +62,10 @@ React / Vite / TypeScript、Cloudflare Workers + Vite assets、local D1 / `wrang
 - mobile-firstになっているか
 - 共通UIが今後再利用可能な構造か
 - M2以降の機能を先行実装していないか
+
+## デザインレビュー対応（2026-09-07）
+
+- `docs/DESIGN.md`を最上位仕様として、装飾目的の英語見出し・caption、常設説明文、連続した大きなrounded card、decorative shadowを削除。
+- hierarchyをspacing / divider / typographyで再構成し、Button / Input / FormRow / BottomSheetは再利用可能なUI基盤として維持。
+- Bottom Navigationを白背景・thin top border・no shadow・icons onlyへ修正。selected iconのみLifeHub orange、center `+`は背景なしで少し大きいアイコンとした。
+- 390×844の通常状態とBottomSheet open状態を再撮影し、Playwrightで表示仕様を検証。

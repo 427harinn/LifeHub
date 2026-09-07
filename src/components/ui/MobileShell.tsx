@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import { NavIcon } from "./NavIcon";
 
 const navigationItems = [
-  { id: "calendar", label: "カレンダー", glyph: "◫" },
-  { id: "daily", label: "デイリー", glyph: "◌" },
-  { id: "add", label: "追加", glyph: "＋" },
-  { id: "money", label: "お金", glyph: "¥" },
-  { id: "settings", label: "設定", glyph: "⚙" }
+  { id: "calendar", label: "カレンダー", icon: "calendar" },
+  { id: "daily", label: "デイリー", icon: "daily" },
+  { id: "add", label: "追加", icon: "add" },
+  { id: "money", label: "お金", icon: "money" },
+  { id: "settings", label: "設定", icon: "settings" }
 ] as const;
 
 type MobileShellProps = {
@@ -28,7 +29,7 @@ export function MobileShell({ children, activeNavigation = "calendar", onAdd }: 
             onClick={item.id === "add" ? onAdd : undefined}
             type="button"
           >
-            <span aria-hidden="true" className="mobile-nav__glyph">{item.glyph}</span>
+            <NavIcon className="mobile-nav__icon" name={item.icon} />
             <span className="sr-only">{item.label}</span>
           </button>
         ))}
