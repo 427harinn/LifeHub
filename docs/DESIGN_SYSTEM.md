@@ -4,8 +4,12 @@
 
 LifeHubはHouseToDoと同じUIデザイン言語を継承する。
 
-変更しないもの:
+**Director / Anti-pattern / layout / interaction の正本は `docs/DESIGN.md` とする。**
+この文書は、主にLifeHub固有の色tokenと実装上の補助ルールを定義する。
 
+HouseToDoから変更しないもの:
+
+- 情報階層の作り方
 - 角丸
 - 余白
 - フォント
@@ -15,16 +19,19 @@ LifeHubはHouseToDoと同じUIデザイン言語を継承する。
 - BottomSheetの形状
 - Bottom Navigationの構造
 - safe-area対応
-- 基本的な影
-- スマートフォンファーストのレイアウト
+- smartphone-firstの考え方
+- cardを乱用しない方針
+- shadowを原則使わない方針
+- 英語を装飾目的で使わない方針
 
-変更するもの:
+LifeHubで変更するもの:
 
 - primary color
 - Calendar予定種別色
-- LifeHub固有のMoney色
+- Money色
+- HouseToDo固有のTask / Shopping / Household UIをLifeHubのEvent / Money / Dailyへ置き換えること
 
-HouseToDoの兄弟アプリとして、形は近く、色で明確にLifeHubと分かることを目標にする。
+HouseToDoの兄弟アプリとして、**形・密度・階層は同じ、色とドメインだけLifeHub**を基本とする。
 
 ---
 
@@ -56,7 +63,7 @@ HouseToDoの兄弟アプリとして、形は近く、色で明確にLifeHubと�
 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 ```
 
-これらは原則そのまま利用する。
+ただし `--radius-lg` が存在しても、通常UIを大きなrounded cardで埋める用途には使わない。
 
 ---
 
@@ -72,13 +79,16 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
 用途:
 
-- active navigation
-- FAB / ＋追加
-- 選択状態
-- 主要ボタン
-- リンク / 小さなアクセント
+- active navigation icon
+- 主要action
+- selected state
+- link / small accent
 
+オレンジを大きなsurfaceとして常用しない。
 テーマ色を画面へ直接ハードコードせずtoken参照する。
+
+**Bottom Navigation中央の `+` にはオレンジ背景を付けない。**
+HouseToDo同様、白いナビゲーション面の中で `+` アイコン自体を少し大きくするだけにする。
 
 ---
 
@@ -105,7 +115,8 @@ Calendarでは **家 / 仕事ではなく、予定の性質を主軸に色分け
 --color-event-period-soft: #f8edd8;
 ```
 
-実装時は390×844のCalendarへ多数の予定を表示して、帯同士の判別性・文字の可読性をEvidenceで確認する。必要なら同系統のオレンジ/テラコッタ/ゴールド内で調整してよい。
+実装時は390×844のCalendarへ多数の予定を表示し、帯同士の判別性・文字の可読性をEvidenceで確認する。
+必要なら同系統のオレンジ / テラコッタ / ゴールド内で調整してよい。
 
 原色や強すぎる彩度は避ける。
 
@@ -170,10 +181,12 @@ LifeHubには完了状態が存在しない。
 HouseToDoと同一。
 
 - spacing: 4 / 8 / 12 / 16 / 20 / 24 / 32px
-- radius: 8 / 10 / 14 / 16 / 20px系
+- input/button radius: 8–10px中心
+- large BottomSheet: top corner約16px
+- normal list row: 原則card化しない
 - font: system UI
 
-独自体系を増やさない。
+`docs/DESIGN.md` の禁止事項を優先し、large radius / shadow / card-everythingで階層を作らない。
 
 ---
 
@@ -198,15 +211,20 @@ HouseToDoから以下を直接流用・抽出候補とする。
 
 ## 11. 実装原則
 
-1. HouseToDoの角丸・余白・Typographyを基準にする
-2. HouseToDoのgreen値をコピーしない
-3. LifeHub色はtoken化する
-4. Calendarは単発 / 繰り返し / periodを主色分けする
-5. 家 / 仕事は補助表現とする
-6. 色だけで状態・意味を伝えない
-7. UI変更時は390×844 screenshot evidenceを必須とする
-8. motion / swipe / sheet遷移等、静止画で判断しにくい場合は動画Evidenceも残す
-9. 新規コンポーネント作成前にHouseToDoの流用可能UIを確認する
+1. 実装前に `docs/DESIGN.md` を読む
+2. HouseToDoの角丸・余白・Typography・densityを基準にする
+3. HouseToDoのgreen値をコピーしない
+4. LifeHub色はtoken化する
+5. Calendarは単発 / 繰り返し / periodを主色分けする
+6. 家 / 仕事は補助表現とする
+7. 英語を装飾として使わない
+8. 大きなrounded card / nested card / decorative shadowを使わない
+9. 見出し下の小さいgray説明文を常設しない
+10. Bottom Navigationはicons only / white / top border / no shadow
+11. center `+` はbackgroundなし、他iconより少し大きいだけ
+12. UI変更時は390×844 screenshot evidenceを必須とする
+13. motion / swipe / sheet遷移等、静止画で判断しにくい場合は動画Evidenceも残す
+14. 新規コンポーネント作成前にHouseToDoの流用可能UIを確認する
 
 ---
 
@@ -219,3 +237,5 @@ HouseToDo:
 LifeHub:
 
 > ベージュ + オレンジ / 手帳 / 暮らし / 時間 / あたたかさ
+
+違いは色と情報内容。AI生成アプリのような装飾パターンへ寄せない。
