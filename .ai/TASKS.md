@@ -14,6 +14,9 @@
 - [x] T10: PR #2へ反映された最新版docsを確認
 - [x] T11: Calendar / Daily / Money / Settings shellをfixture中心へ更新
 - [x] T12: safe-area、Calendar date sheet、Settings detail、Evidence、Playwrightを更新
+- [x] T13: 最新`DESIGN.md` / `SCREEN_SPEC.md`に合わせてCalendar header / safe-area / cell alignmentを再調整
+- [x] T14: 複数日帯・期間帯・`+N` fixture、Date Sheetの小型`＋`、Daily separator、個人用文言を更新
+- [x] T15: 390×844 Evidenceを再撮影し、lint / typecheck / unit・integration / build / Playwrightを再実行してPR #2へpush
 
 ## M2セルフレビュー観点
 

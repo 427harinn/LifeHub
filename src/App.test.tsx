@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -72,7 +72,9 @@ describe("LifeHub M2 shell", () => {
     expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "7日" }));
     expect(screen.getByRole("dialog", { name: "2026年9月7日" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "背景を閉じる" }));
+    fireEvent.click(screen.getByRole("button", { name: "当日に追加" }));
+    expect(screen.getByRole("dialog", { name: "追加" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog", { name: "追加" })).getByRole("button", { name: "閉じる" }));
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
     expect(screen.getByRole("dialog", { name: "検索" })).toBeInTheDocument();
   });

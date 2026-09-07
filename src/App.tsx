@@ -74,16 +74,18 @@ function CalendarShell({ onDateSelect, onSearch }: { onDateSelect: (day: number)
 
   return <main className="screen-page calendar-page">
     <header className="screen-header"><h1>カレンダー</h1><button aria-label="検索" className="icon-button" onClick={onSearch} type="button"><NavIcon name="search" /></button></header>
+    <FixtureTabs active={filter} onChange={setFilter} />
     <section aria-label={`${calendarFixture.year}年${calendarFixture.month + 1}月`} className="calendar-section">
       <div className="calendar-month"><button aria-label="前の月" className="month-button" type="button">‹</button><h2>{calendarFixture.year}年{calendarFixture.month + 1}月</h2><button aria-label="次の月" className="month-button" type="button">›</button></div>
       <button className="calendar-today" type="button">今日</button>
-      <FixtureTabs active={filter} onChange={setFilter} />
       <div className="calendar-weekdays">{weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}</div>
       <div className="calendar-grid">{cells.map((day, index) => {
         const events = day ? calendarFixture.events.filter((event) => filter === "all" || (filter === "money" ? Boolean(event.money) : filterForCategory(event.category) === filter)).filter((event) => event.day === day) : [];
-        const money = events.find((event) => event.money)?.money;
+        const moneyEvent = events.find((event) => event.money);
+        const money = moneyEvent?.money;
+        const visibleEvents = events.slice(0, events.length > 2 ? 1 : 2);
         return <button aria-label={day ? `${day}日` : "空の日付"} className={`calendar-cell${day === calendarFixture.today ? " calendar-cell--today" : ""}`} disabled={!day} key={`${day ?? "empty"}-${index}`} onClick={() => { if (day) onDateSelect(day); }} type="button">
-          {day ? <><span className="calendar-cell__date">{day}</span>{money ? <span className="calendar-cell__money">{money}</span> : null}<span className="calendar-cell__events">{events.slice(0, 2).map((event) => <span className={`calendar-event calendar-event--${event.kind} calendar-event--${event.band ?? "single"}`} key={`${event.label}-${event.kind}`}>{event.label}</span>)}{events.length > 2 ? <span className="calendar-cell__overflow">+{events.length - 2}</span> : null}</span></> : null}
+          {day ? <><span className="calendar-cell__date">{day}</span><span className={`calendar-cell__money${money?.startsWith("+") ? " calendar-cell__money--income" : " calendar-cell__money--expense"}`}>{money ?? "\u00a0"}</span><span className="calendar-cell__events">{visibleEvents.map((event) => <span className={`calendar-event ${event.kind === "period" ? "calendar-event--period" : event.isMultiDay ? "calendar-event--multi" : "calendar-event--normal"} calendar-event--${event.band ?? "single"}`} key={`${event.label}-${event.kind}-${event.band ?? "single"}`}>{event.band === "middle" ? "\u00a0" : event.label}</span>)}{events.length > 2 ? <span className="calendar-cell__overflow">+{events.length - 1}</span> : null}</span></> : null}
         </button>;
       })}</div>
     </section>
@@ -91,7 +93,7 @@ function CalendarShell({ onDateSelect, onSearch }: { onDateSelect: (day: number)
 }
 
 function CalendarDateSheet({ day, onClose, onAdd }: { day: number; onClose: () => void; onAdd: () => void }) {
-  return <BottomSheet open title={`2026年9月${day}日`} onClose={onClose}><div className="sheet-detail"><p className="sheet-total">今日の収支 <strong>{calendarFixture.events.find((event) => event.day === day)?.money ?? "±0円"}</strong></p><div className="sheet-list">{["終日：家族の予定", "10:00：会議", "今週中：書類を整理"].map((item) => <div className="sheet-row" key={item}>{item}</div>)}</div><Button onClick={onClose} variant="secondary">1日の詳細を見る</Button><Button onClick={onAdd} variant="ghost">この日に追加</Button></div></BottomSheet>;
+  return <BottomSheet open title={`2026年9月${day}日`} onClose={onClose}><div className="sheet-detail"><p className="sheet-total">今日の収支 <strong>{calendarFixture.events.find((event) => event.day === day)?.money ?? "±0円"}</strong></p><div className="sheet-list">{["終日：家の予定", "10:00：会議", "今週中：書類を整理"].map((item) => <div className="sheet-row" key={item}>{item}</div>)}</div><div className="sheet-footer"><Button onClick={onClose} variant="secondary">1日の詳細を見る</Button><button aria-label="当日に追加" className="sheet-add-button" onClick={onAdd} type="button"><NavIcon name="add" /></button></div></div></BottomSheet>;
 }
 
 function SearchSheet({ onClose }: { onClose: () => void }) {

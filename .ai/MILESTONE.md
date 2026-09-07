@@ -45,6 +45,16 @@ LifeHubを個人アプリとして利用できる骨格にする。User / Sessio
 - [x] Daily / Money fixtureと390×844 Evidenceを更新
 - [x] 同じPR #2のbranchへpush。新しいPRは作成しない
 
+## PR #2 レビュー対応（Calendar / fixture / separator）
+
+- [x] 最新`DESIGN.md` / `SCREEN_SPEC.md`を再確認し、Calendarの順序をタブ→年月→中央寄せの`今日`→曜日→42セルへ調整
+- [x] Calendarセルの日付・金額・予定・`+N`の固定配置、支出/収入色、通常予定の背景なし表示を反映
+- [x] 同一週内・週またぎの複数日帯、期間帯、`+N`のM2表示専用fixtureを追加（Worker / D1へ保存しない）
+- [x] Date Sheetの大きな追加テキスト導線を小型オレンジ丸`＋`へ変更し、既存の詳細導線を維持
+- [x] Dailyの区切り線を項目間だけに整理し、個人用文言を`家の予定`へ修正
+- [x] 390×844 Evidence、lint / typecheck / unit・integration / build / Playwrightを再実行
+- [x] 同じPR #2のbranchへpush。mergeと新規PR作成は行わない
+
 ---
 
 # Milestone 1: Application Foundation

@@ -37,9 +37,13 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   expect(addStyle).toEqual({ backgroundColor: "rgba(0, 0, 0, 0)", boxShadow: "none", minHeight: "48px" });
   await page.screenshot({ path: path.join(evidenceDir, "calendar-390x844.png") });
   await expect(page.getByRole("tab", { name: "すべて" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("週またぎ", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".calendar-cell__overflow").first()).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-multi-day-390x844.png") });
   await page.screenshot({ path: path.join(evidenceDir, "calendar-tabs-390x844.png") });
   await page.getByRole("button", { name: "7日", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "2026年9月7日" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "当日に追加" })).toBeVisible();
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-390x844.png") });
   await page.getByRole("dialog", { name: "2026年9月7日" }).getByRole("button", { name: "閉じる" }).click();
@@ -49,7 +53,7 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
 
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
-  await expect(page.getByText("家族の予定")).toBeVisible();
+  await expect(page.getByText("家の予定")).toBeVisible();
   await expect(page.getByText("今週中：書類を整理")).toBeVisible();
   await expect(page.getByText("今日のメモ")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-390x844.png") });

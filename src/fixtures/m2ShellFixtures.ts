@@ -7,6 +7,7 @@ export type CalendarFixtureEvent = {
   kind: FixtureEventKind;
   money?: string;
   band?: "start" | "middle" | "end";
+  isMultiDay?: boolean;
 };
 
 // M2-only display data. It never goes through the Worker or D1.
@@ -19,13 +20,22 @@ export const calendarFixture = {
     { day: 5, label: "会議", category: "work", kind: "recurring" },
     { day: 7, label: "買い物", category: "home", kind: "single", money: "-1,500" },
     { day: 8, label: "締切", category: "work", kind: "recurring" },
-    { day: 10, label: "出張", category: "work", kind: "single", band: "start" },
-    { day: 11, label: "出張", category: "work", kind: "single", band: "middle" },
-    { day: 12, label: "出張", category: "work", kind: "single", band: "end", money: "-5,000" },
+    { day: 10, label: "出張", category: "work", kind: "single", band: "start", isMultiDay: true },
+    { day: 11, label: "出張", category: "work", kind: "single", band: "middle", isMultiDay: true },
+    { day: 12, label: "出張", category: "work", kind: "single", band: "end", money: "-5,000", isMultiDay: true },
     { day: 13, label: "今週中", category: "home", kind: "period", band: "start" },
     { day: 14, label: "今週中", category: "home", kind: "period", band: "middle" },
     { day: 15, label: "今週中", category: "home", kind: "period", band: "end", money: "+2,999" },
-    { day: 18, label: "+3", category: "work", kind: "recurring" },
+    { day: 16, label: "旅行", category: "home", kind: "single", band: "start", isMultiDay: true },
+    { day: 17, label: "旅行", category: "home", kind: "single", band: "middle", isMultiDay: true },
+    { day: 18, label: "旅行", category: "home", kind: "single", band: "end", isMultiDay: true },
+    { day: 18, label: "定例", category: "work", kind: "recurring" },
+    { day: 18, label: "買い物", category: "home", kind: "single" },
+    { day: 18, label: "連絡", category: "work", kind: "recurring" },
+    { day: 19, label: "週またぎ", category: "work", kind: "single", band: "start", isMultiDay: true },
+    { day: 20, label: "週またぎ", category: "work", kind: "single", band: "middle", isMultiDay: true },
+    { day: 21, label: "週またぎ", category: "work", kind: "single", band: "middle", isMultiDay: true },
+    { day: 22, label: "週またぎ", category: "work", kind: "single", band: "end", isMultiDay: true },
     { day: 24, label: "今月中", category: "home", kind: "period", band: "start" },
     { day: 25, label: "今月中", category: "home", kind: "period", band: "middle" },
     { day: 26, label: "今月中", category: "home", kind: "period", band: "end" }
@@ -33,7 +43,7 @@ export const calendarFixture = {
 };
 
 export const dailyFixture = {
-  allDay: [{ label: "家族の予定", category: "home" }, { label: "週次レビュー", category: "work" }],
+  allDay: [{ label: "家の予定", category: "home" }, { label: "週次レビュー", category: "work" }],
   period: [{ label: "今週中：書類を整理", category: "home" }, { label: "今月中：資料をまとめる", category: "work" }],
   timed: [{ time: "10:00", label: "定例ミーティング", category: "work" }, { time: "15:30", label: "クリーニング受け取り", category: "home" }],
   money: [{ label: "食費", amount: "-1,500円" }, { label: "副収入", amount: "+2,999円" }],
