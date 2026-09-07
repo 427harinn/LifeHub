@@ -208,6 +208,7 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await page.mouse.up();
   await expect(secondRevealedEdit).toBeVisible();
   await secondRevealedEdit.click();
+  await expect(page.getByRole("heading", { name: "予定の詳細" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await expect(page.getByRole("button", { name: "削除", exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-edit-form-390x844.png") });
