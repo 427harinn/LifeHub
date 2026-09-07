@@ -28,6 +28,7 @@
 - [x] T24: Calendar Date SheetのMoneyを収支合計1行へ簡略化し、家 / 仕事のカテゴリ色を反映
 - [x] T25: Calendar / Dailyの全タブfixture表示と390×844 Evidenceを追加
 - [x] T26: `SCREEN_SPEC.md` / `DESIGN.md`を最新レビュー仕様へ更新し、全テストを再実行
+- [x] T27: Calendar件数バッジを日付数字と同じ高さへ戻し、Evidenceと全テストを再実行
 
 ## M2セルフレビュー観点
 

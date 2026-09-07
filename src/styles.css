@@ -91,7 +91,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .calendar-event--deadline { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
 .calendar-event--home.calendar-event--deadline { color: var(--color-primary-strong); }
 .calendar-event--work.calendar-event--deadline { color: #527c9c; }
-.calendar-cell__count { position: absolute; top: 19px; right: 3px; display: grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; color: var(--color-text-secondary); background: var(--color-border); font-size: .5625rem; font-weight: 600; line-height: 1; }
+.calendar-cell__count { position: absolute; top: 4px; right: 3px; display: grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; color: var(--color-text-secondary); background: var(--color-border); font-size: .5625rem; font-weight: 600; line-height: 1; }
 .calendar-band-layer { position: absolute; inset: 0; z-index: 2; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(0, 1fr)); pointer-events: none; }
 .calendar-band { align-self: start; min-width: 0; height: 14px; margin-top: calc(30px + (var(--band-lane, 0) * 18px)); margin-inline: 2px; overflow: hidden; padding: 1px 3px; border-radius: 0; color: var(--color-text); font-size: .625rem; line-height: 1.2; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-band--multi.calendar-band--home { color: #8b4f20; background: #f3c38f; }

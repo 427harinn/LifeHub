@@ -394,6 +394,7 @@ Requirements:
 - 可能な限り予定情報をセル内に表示
 - long titleは `…`
 - overflowは日付右上の小型丸バッジ
+- 件数バッジは日付数字と同じ高さに置き、予定領域を圧迫しない
 - バッジがないセルは固定行を空けず、予定表示へ高さを使う
 - moneyはセル最下部中央、その上に予定
 - multi-day scheduled eventはTimeTree型の横帯
