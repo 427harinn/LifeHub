@@ -109,6 +109,9 @@
 - [x] T13: Daily Eventのinline展開、再tap閉じ、他行切替、左swipe編集を実装
 - [x] T14: 編集画面の深い削除導線、390×844 screenshot / video、回帰Playwrightを追加
 - [x] T15: docs更新、self-review、同じPR #3へpush。新規PR・mergeは行わない
+- [x] T16: M2 base commitとのCalendar / Daily diffを確認し、Calendar表示DOMへ実Event projectionを接続
+- [x] T17: Daily inline detailをvalues-onlyへ整理し、HouseToDoのopenRowAction / toggleTaskDetail排他とHomeSwipeRowのgesture grammarを反映
+- [x] T18: M2 Calendar / Daily structure regression、EventForm bottom navigation非表示、place / memo screenshotとswipe動画を更新
 
 ## M3セルフレビュー観点
 

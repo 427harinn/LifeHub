@@ -103,7 +103,7 @@ PRは自動mergeしない。
 - 実装だけ先行して文書を放置しない
 - 仕様と違う実装を見つけた場合、勝手にどちらかを正にせず確認する
 - 実装上の理由で仕様変更が必要なら、理由と変更点をPRに書く
-- 前Milestoneでレビュー・merge済みの画面は、新機能実装のために再設計しない。既存UIを維持できない理由がある場合は、その理由を報告して確認を得てから変更する
+- merge済みMilestoneでUIレビュー済みの画面へ新機能を追加するときは、既存UI component / DOM / CSSを置き換えない。原則data adapter / props / interaction追加で拡張する。既存UIを変更せざるを得ない場合は、実装前に理由を報告して確認を取る。「HouseToDoを参考にする」と指定されたinteractionは、推測で再実装せず、対象repositoryの実コードを読み、対象component / function / classを作業報告へ記載する
 - 完了したTASKは `.ai/TASKS.md` に反映する
 - milestone終了時は `.ai/MILESTONE.md` の状態も更新する
 

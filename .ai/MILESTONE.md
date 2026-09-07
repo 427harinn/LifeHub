@@ -204,5 +204,8 @@ M3完了。対象は`timingType=scheduled`の家 / 仕事Eventのみとし、rec
 - [x] M2 merged時点のCalendar / Dailyの情報階層、タブ、セル、色、fixture sectionを維持
 - [x] Daily通常操作からEvent detail pageへの遷移を削除し、編集画面から削除できる深い導線を追加
 - [x] Daily / Calendar回帰、tap展開・再tap・他行切替・swipe reveal・edit遷移のEvidenceと動画を更新
+- [x] base commit `2130b034e2a00fbb2e6716f796980a39cd19b1ed`との差分を確認し、Calendar M2 DOM / CSS / densityをadapter接続へ戻した
+- [x] DailyのM2 section order / transparent row / dividerを維持し、値のみのinline detailとHouseToDo式の排他interactionを確認
+- [x] EventForm / Event editでBottom Navigationを非表示にし、Calendar / Daily回帰assertionと操作動画を更新
 
 ---

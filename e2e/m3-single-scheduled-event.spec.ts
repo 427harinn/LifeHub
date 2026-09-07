@@ -23,6 +23,7 @@ async function openAdd(page: import("@playwright/test").Page, category: "家" | 
   await page.getByRole("button", { name: "追加", exact: true }).click();
   await page.getByRole("button", { name: `${category}を追加` }).click();
   await expect(page.getByRole("heading", { name: "予定を追加" })).toBeVisible();
+  await expect(page.locator(".mobile-nav")).toHaveCount(0);
 }
 
 test("creates, displays, edits and soft-deletes home and work scheduled Events", async ({ page }) => {
@@ -32,35 +33,49 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   const dayNumber = Number(today.slice(-2));
 
   await openAdd(page, "家");
-  await page.getByLabel("タイトル").fill("家の予定");
-  await page.getByLabel("開始時間").fill("15:00");
-  await page.getByLabel("終了時間").fill("16:00");
+  await page.getByLabel("タイトル").fill("買い物");
+  await page.getByLabel("開始時間").fill("12:00");
+  await page.getByLabel("終了時間").fill("13:00");
   await page.screenshot({ path: path.join(evidenceDir, "home-timed-form-390x844.png") });
   await page.getByRole("button", { name: "場所を追加" }).click();
-  await page.getByLabel("場所").fill("駅前");
+  await page.getByLabel("場所").fill("小倉駅");
   await page.getByRole("button", { name: "メモを追加" }).click();
-  await page.getByLabel("メモ").fill("持ち物を確認");
+  await page.getByLabel("メモ").fill("牛乳と洗剤を買う");
   await page.screenshot({ path: path.join(evidenceDir, "place-memo-expanded-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
-  await expect(page.getByText("家の予定", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("買い物", { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-after-create-390x844.png") });
+
+  await page.getByRole("button", { name: "デイリー" }).click();
+  await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  const homeRow = page.locator(".event-swipe-row").filter({ hasText: "買い物" }).first();
+  await homeRow.locator(".event-swipe-row__main").click();
+  await expect(homeRow.locator(".event-inline-detail")).toContainText("小倉駅");
+  await expect(homeRow.locator(".event-inline-detail")).toContainText("牛乳と洗剤を買う");
+  await expect(homeRow.locator(".event-inline-detail")).not.toContainText("場所");
+  await expect(homeRow.locator(".event-inline-detail")).not.toContainText("メモ");
+  await expect(homeRow.locator(".event-inline-detail .text-button")).toHaveCount(0);
+  await expect(homeRow.locator(".event-swipe-row__main")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await page.screenshot({ path: path.join(evidenceDir, "daily-home-expanded-390x844.png") });
+  await page.getByRole("button", { name: "カレンダー" }).click();
+  await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
   await page.getByRole("button", { name: `${dayNumber}日`, exact: true }).click();
   await expect(page.getByRole("dialog", { name: new RegExp(`${dayNumber}日`) })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-390x844.png") });
-  await page.getByRole("dialog").getByRole("button", { name: /家の予定/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /買い物/ }).click();
   await expect(page.getByRole("heading", { name: "予定の詳細" })).toBeVisible();
-  await expect(page.getByText("駅前")).toBeVisible();
+  await expect(page.getByText("小倉駅")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "event-detail-390x844.png") });
   await page.getByRole("button", { name: "編集" }).click();
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
-  await page.getByLabel("タイトル").fill("家の予定（変更）");
+  await page.getByLabel("タイトル").fill("買い物（変更）");
   await page.screenshot({ path: path.join(evidenceDir, "event-edit-390x844.png") });
   await page.getByRole("button", { name: "変更を保存" }).click();
-  await expect(page.getByText("家の予定（変更）", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("買い物（変更）", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: `${dayNumber}日`, exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: /家の予定（変更）/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /買い物（変更）/ }).click();
   await page.getByRole("button", { name: "削除" }).click();
   await expect(page.getByRole("dialog", { name: "予定を削除" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "delete-confirm-390x844.png") });
@@ -68,13 +83,24 @@ test("creates, displays, edits and soft-deletes home and work scheduled Events",
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
   await openAdd(page, "仕事");
-  await page.getByLabel("タイトル").fill("仕事の予定");
+  await page.getByLabel("タイトル").fill("定例ミーティング");
   await page.getByLabel("開始時間").fill("10:00");
   await page.getByLabel("終了時間").fill("11:00");
+  await page.getByRole("button", { name: "場所を追加" }).click();
+  await page.getByLabel("場所").fill("会議室A");
+  await page.getByRole("button", { name: "メモを追加" }).click();
+  await page.getByLabel("メモ").fill("資料を事前に確認");
   await page.screenshot({ path: path.join(evidenceDir, "work-timed-form-390x844.png") });
   await page.getByRole("button", { name: "登録" }).click();
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
-  await expect(page.getByText("仕事の予定", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("定例ミーティング", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "デイリー" }).click();
+  await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  const workRow = page.locator(".event-swipe-row").filter({ hasText: "定例ミーティング" }).first();
+  await workRow.locator(".event-swipe-row__main").click();
+  await expect(workRow.locator(".event-inline-detail")).toContainText("会議室A");
+  await expect(workRow.locator(".event-inline-detail")).toContainText("資料を事前に確認");
+  await page.screenshot({ path: path.join(evidenceDir, "daily-work-expanded-390x844.png") });
 });
 
 test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({ page }) => {
@@ -135,6 +161,7 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await page.mouse.up();
   const revealedEdit = multiDayRow.locator(".event-swipe-row__actions").getByRole("button", { name: "編集", exact: true });
   await expect(revealedEdit).toBeVisible();
+  await expect(multiDayRow.locator(".event-inline-detail")).toHaveCount(0);
   await page.screenshot({ path: path.join(evidenceDir, "daily-swipe-edit-390x844.png") });
   await allDayRow.locator(".event-swipe-row__main").click();
   await expect(multiDayRow.locator(".event-swipe-row__actions")).toHaveCount(0);
@@ -155,7 +182,7 @@ test("all-day, multi-day, recent definitions, Daily and returnTo work", async ({
   await page.screenshot({ path: path.join(evidenceDir, "daily-edit-form-390x844.png") });
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
-  await page.locator(".timeline-section").getByRole("button", { name: "追加", exact: true }).click();
+  await page.locator(".mobile-nav__button--add").click();
   await page.getByRole("button", { name: "家を追加" }).click();
   await expect(page.getByRole("button", { name: "日付" })).toContainText(`${dayNumber}`);
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
