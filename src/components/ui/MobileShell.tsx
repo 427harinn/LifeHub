@@ -13,9 +13,10 @@ type MobileShellProps = {
   children: ReactNode;
   activeNavigation?: (typeof navigationItems)[number]["id"];
   onAdd?: () => void;
+  onNavigate?: (navigation: Exclude<(typeof navigationItems)[number]["id"], "add">) => void;
 };
 
-export function MobileShell({ children, activeNavigation = "calendar", onAdd }: MobileShellProps) {
+export function MobileShell({ children, activeNavigation = "calendar", onAdd, onNavigate }: MobileShellProps) {
   return (
     <div className="mobile-shell">
       <div className="mobile-shell__content">{children}</div>
@@ -26,7 +27,7 @@ export function MobileShell({ children, activeNavigation = "calendar", onAdd }: 
             aria-label={item.label}
             className={`mobile-nav__button${item.id === "add" ? " mobile-nav__button--add" : ""}`}
             key={item.id}
-            onClick={item.id === "add" ? onAdd : undefined}
+            onClick={item.id === "add" ? onAdd : () => onNavigate?.(item.id)}
             type="button"
           >
             <NavIcon className="mobile-nav__icon" name={item.icon} />

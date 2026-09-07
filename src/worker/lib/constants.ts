@@ -1,0 +1,13 @@
+export const SESSION_COOKIE_NAME = "lifehub_session";
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+export const SESSION_TOKEN_BYTES = 32;
+export const PBKDF2_ITERATIONS = 100_000;
+export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MAX_LENGTH = 128;
+export const EMAIL_MAX_LENGTH = 254;
+export const DISPLAY_NAME_MAX_LENGTH = 80;
+export const DEFAULT_TIMEZONE = "Asia/Tokyo";
+export const DEFAULT_WEEK_STARTS_ON = 1;
+export const DEFAULT_MORNING_SUMMARY_TIME = "09:00";
+export const DEFAULT_EVENING_SUMMARY_TIME = "21:00";
+export const DEFAULT_PERIOD_DEADLINE_TIME = "21:00";

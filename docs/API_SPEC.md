@@ -8,6 +8,18 @@ Calendar / Daily / Notification / Search日時解決では、**Event + Recurrenc
 
 すべての個人データは `userId` ownershipを確認する。
 
+M2で実装する認証APIは以下。Session tokenはD1へ平文保存せずSHA-256 hashとして保存し、ブラウザにはHttpOnly / SameSite=Lax Cookieだけを返す。
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+GET  /api/user-state
+```
+
+register / login成功時に `LifeHubUserState` と `UserSettings` が存在しない場合は初期生成する。未認証の通常APIは401を返す。
+
 ---
 
 ## 2. Calendar
@@ -285,6 +297,8 @@ periodは有効期間内ならまとめ通知対象、期限後は対象外。
 - 必要な認証・状態確認
 
 通常Event / Money / DailyNote / Settings変更は不可。
+
+M2では機種変更フロー自体とlock操作UIは未実装だが、Workerの`requireWritableUserState` guardをSettings writeへ適用し、将来の通常write APIへ同じguardを適用できる構造にする。
 
 ---
 

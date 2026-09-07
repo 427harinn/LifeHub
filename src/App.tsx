@@ -1,47 +1,258 @@
-import { useCallback, useState } from "react";
-import { BottomSheet, Button, FormRow, Input, MobileShell } from "./components/ui";
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { apiErrorStatus, authMe, getSettings, login, logout, register, type AuthUser, type UserSettings } from "./api/client";
+import { dailyFixture, calendarFixture, moneyFixture, searchFixture, type CalendarFixtureEvent } from "./fixtures/m2ShellFixtures";
+import { BottomSheet, Button, FormRow, Input, MobileShell, NavIcon } from "./components/ui";
+
+type Screen = "calendar" | "daily" | "money" | "settings";
+type AddChoice = "家" | "仕事" | "お金";
+type CalendarFilter = "all" | "home" | "work" | "money";
+type SettingsDetail = "account" | "notifications" | "calendar" | "money" | "data";
+type CalendarBandSegment = {
+  category: CalendarFixtureEvent["category"];
+  endColumn: number;
+  isEnd: boolean;
+  isStart: boolean;
+  label: string;
+  lane: number;
+  kind: "multi";
+  row: number;
+  startColumn: number;
+};
+
+const screenFromPath = (): Screen => {
+  const path = window.location.pathname;
+  if (path === "/daily") return "daily";
+  if (path === "/money") return "money";
+  if (path === "/settings") return "settings";
+  return "calendar";
+};
+
+const screenPath: Record<Screen, string> = { calendar: "/calendar", daily: "/daily", money: "/money", settings: "/settings" };
+const filterLabels: Record<CalendarFilter, string> = { all: "すべて", home: "家", work: "仕事", money: "お金" };
+const filterForCategory = (category: CalendarFixtureEvent["category"]): CalendarFilter => category;
+const eventMatchesFilter = (event: CalendarFixtureEvent, filter: CalendarFilter) => filter === "all" || (filter === "money" ? Boolean(event.money) : filterForCategory(event.category) === filter);
+const parseFixtureMoney = (value: string) => Number(value.replace(/[^0-9+-]/g, ""));
+const formatFixtureMoney = (value: number) => `${value > 0 ? "+" : ""}${value.toLocaleString("ja-JP")}円`;
+
+function buildCalendarBandSegments(events: CalendarFixtureEvent[], firstWeekday: number): CalendarBandSegment[] {
+  const grouped = new Map<string, CalendarFixtureEvent[]>();
+  events.filter((event) => event.isMultiDay).forEach((event) => {
+    const key = `${event.kind}-${event.category}-${event.label}`;
+    const group = grouped.get(key) ?? [];
+    group.push(event);
+    grouped.set(key, group);
+  });
+
+  return Array.from(grouped.values()).flatMap((group) => {
+    const sortedDays = Array.from(new Set(group.map((event) => event.day))).sort((left, right) => left - right);
+    const ranges: Array<{ end: number; start: number }> = [];
+    let rangeStart = sortedDays[0];
+    let previousDay = sortedDays[0];
+    sortedDays.slice(1).forEach((day) => {
+      if (day !== previousDay + 1) {
+        ranges.push({ end: previousDay, start: rangeStart });
+        rangeStart = day;
+      }
+      previousDay = day;
+    });
+    if (rangeStart !== undefined && previousDay !== undefined) ranges.push({ end: previousDay, start: rangeStart });
+
+    const category = group[0]?.category ?? "home";
+    const kind = "multi" as const;
+    return ranges.flatMap((range) => {
+      const labelDay = Math.round((range.start + range.end) / 2);
+      const segments: CalendarBandSegment[] = [];
+      let currentDay = range.start;
+      while (currentDay <= range.end) {
+        const row = Math.floor((firstWeekday + currentDay - 1) / 7);
+        const rowEndDay = Math.min(range.end, (row + 1) * 7 - firstWeekday);
+        const startIndex = firstWeekday + currentDay - 1;
+        const endIndex = firstWeekday + rowEndDay - 1;
+        segments.push({
+          category,
+          endColumn: (endIndex % 7) + 1,
+          isEnd: rowEndDay === range.end,
+          isStart: currentDay === range.start,
+          label: labelDay >= currentDay && labelDay <= rowEndDay ? group[0]?.label ?? "" : "",
+          lane: 0,
+          kind,
+          row,
+          startColumn: (startIndex % 7) + 1
+        });
+        currentDay = rowEndDay + 1;
+      }
+      return segments;
+    });
+  }).reduce<CalendarBandSegment[]>((placed, segment) => {
+    let lane = 0;
+    while (placed.some((other) => other.row === segment.row && other.lane === lane && other.startColumn <= segment.endColumn && segment.startColumn <= other.endColumn)) lane += 1;
+    placed.push({ ...segment, lane });
+    return placed;
+  }, []);
+}
+
+function LoginPage({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => void }) {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const result = isRegistering ? await register(displayName, email, password) : await login(email, password);
+      onAuthenticated(result.user);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "ログインできませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <div className="auth-page">
+    <header className="app-header"><h1>LifeHub</h1></header>
+    <main className="auth-content">
+      <h2>{isRegistering ? "アカウントを作成" : "ログイン"}</h2>
+      <form className="auth-form" onSubmit={(event) => { void submit(event); }}>
+        {isRegistering ? <label className="input-field" htmlFor="display-name"><span>表示名</span><Input id="display-name" autoComplete="name" onChange={setDisplayName} required value={displayName} /></label> : null}
+        <label className="input-field" htmlFor="email"><span>メールアドレス</span><Input id="email" autoComplete="email" onChange={setEmail} required type="email" value={email} /></label>
+        <label className="input-field" htmlFor="password"><span>パスワード</span><Input id="password" autoComplete={isRegistering ? "new-password" : "current-password"} minLength={12} onChange={setPassword} required type="password" value={password} /></label>
+        {error ? <p className="form-error" role="alert">{error}</p> : null}
+        <Button disabled={busy} type="submit">{busy ? "確認中…" : isRegistering ? "アカウントを作成" : "ログイン"}</Button>
+      </form>
+      <button className="text-button" onClick={() => { setIsRegistering((current) => !current); setError(""); }} type="button">{isRegistering ? "ログインに戻る" : "アカウントを作成する"}</button>
+    </main>
+  </div>;
+}
+
+function FixtureTabs({ active, onChange }: { active: CalendarFilter; onChange: (filter: CalendarFilter) => void }) {
+  return <div aria-label="表示切替" className="shell-tabs" role="tablist">{(Object.keys(filterLabels) as CalendarFilter[]).map((filter) => <button aria-selected={active === filter} className="shell-tab" key={filter} onClick={() => onChange(filter)} role="tab" type="button">{filterLabels[filter]}</button>)}</div>;
+}
+
+function CalendarShell({ onDateSelect, onSearch }: { onDateSelect: (day: number) => void; onSearch: () => void }) {
+  const [filter, setFilter] = useState<CalendarFilter>("all");
+  const firstWeekday = new Date(calendarFixture.year, calendarFixture.month, 1).getDay();
+  const daysInMonth = new Date(calendarFixture.year, calendarFixture.month + 1, 0).getDate();
+  const cells = useMemo(() => Array.from({ length: 42 }, (_, index) => {
+    const day = index - firstWeekday + 1;
+    return day > 0 && day <= daysInMonth ? day : null;
+  }), [daysInMonth, firstWeekday]);
+  const filteredEvents = useMemo(() => calendarFixture.events.filter((event) => eventMatchesFilter(event, filter)), [filter]);
+  const bandSegments = useMemo(() => filter === "money" ? [] : buildCalendarBandSegments(filteredEvents, firstWeekday), [filter, filteredEvents, firstWeekday]);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+
+  return <main className="screen-page calendar-page">
+    <header className="screen-header"><h1>カレンダー</h1><button aria-label="検索" className="icon-button" onClick={onSearch} type="button"><NavIcon name="search" /></button></header>
+    <FixtureTabs active={filter} onChange={setFilter} />
+    <section aria-label={`${calendarFixture.year}年${calendarFixture.month + 1}月`} className="calendar-section">
+      <div className="calendar-month"><button aria-label="前の月" className="month-button" type="button">‹</button><h2>{calendarFixture.year}年{calendarFixture.month + 1}月</h2><button aria-label="次の月" className="month-button" type="button">›</button></div>
+      <button className="calendar-today" type="button">今日</button>
+      <div className="calendar-weekdays">{weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}</div>
+      <div className="calendar-grid">{cells.map((day, index) => {
+        const events = day ? filteredEvents.filter((event) => event.day === day) : [];
+        const moneyEvent = events.find((event) => event.money);
+        const money = moneyEvent?.money;
+        const normalEvents = events.filter((event) => !event.isMultiDay && event.kind !== "period");
+        const deadlineEvents = events.filter((event) => event.kind === "period" && event.band === "start");
+        const cellEvents = [...normalEvents, ...deadlineEvents];
+        const hasBand = events.some((event) => event.isMultiDay);
+        const visibleEvents = cellEvents.slice(0, hasBand && cellEvents.length > 2 ? 1 : 2);
+        const overflowCount = Math.max(0, cellEvents.length - visibleEvents.length);
+        return <button aria-label={day ? `${day}日` : "空の日付"} className={`calendar-cell${day === calendarFixture.today ? " calendar-cell--today" : ""}${hasBand ? " calendar-cell--has-band" : ""}`} disabled={!day} key={`${day ?? "empty"}-${index}`} onClick={() => { if (day) onDateSelect(day); }} type="button">
+          {day ? <><span className="calendar-cell__date">{day}</span>{overflowCount > 0 ? <span aria-label={`${overflowCount}件の予定を省略`} className="calendar-cell__count">{overflowCount}</span> : null}<span className="calendar-cell__events">{visibleEvents.map((event) => <span className={`calendar-event calendar-event--${event.category} calendar-event--${event.kind === "period" ? "deadline" : event.kind}`} key={`${event.label}-${event.kind}-${event.day}`}>{event.label}</span>)}</span>{money ? <span className={`calendar-cell__money${money.startsWith("+") ? " calendar-cell__money--income" : " calendar-cell__money--expense"}`}>{money}</span> : null}</> : null}
+        </button>;
+      })}<div aria-hidden="true" className="calendar-band-layer">{bandSegments.map((segment, index) => <span className={`calendar-band calendar-band--${segment.kind} calendar-band--${segment.category}${segment.isStart ? " calendar-band--start" : ""}${segment.isEnd ? " calendar-band--end" : ""}`} key={`${segment.kind}-${segment.category}-${segment.row}-${segment.startColumn}-${index}`} style={{ "--band-lane": segment.lane, gridColumn: `${segment.startColumn} / ${segment.endColumn + 1}`, gridRow: segment.row + 1 } as CSSProperties}>{segment.label}</span>)}</div></div>
+    </section>
+  </main>;
+}
+
+function CalendarDateSheet({ day, onClose, onAdd }: { day: number; onClose: () => void; onAdd: () => void }) {
+  const items = [
+    { category: "home", label: "終日：家の予定" },
+    { category: "work", label: "10:00：会議" },
+    { category: "home", label: "12:00：買い物" },
+    { category: "home", label: "18:30：運動" },
+    ...calendarFixture.events.filter((event) => event.day === day && event.kind === "period").map((event) => ({ category: event.category, label: event.label }))
+  ] as const;
+  const moneyItems = calendarFixture.events.filter((event) => event.day === day && event.money);
+  const total = formatFixtureMoney(moneyItems.reduce((sum, event) => sum + parseFixtureMoney(event.money ?? "0"), 0));
+  return <BottomSheet className="calendar-date-sheet" open title={`2026年9月${day}日`} onClose={onClose}><div className="sheet-detail"><div className="sheet-total"><span>今日のお金</span><strong>収支&nbsp; {total}</strong></div><div className="sheet-list">{items.map((item, index) => <div className={`sheet-row sheet-row--${item.category}`} key={`${item.label}-${index}`}>{item.label}</div>)}</div><div className="sheet-footer"><Button onClick={onClose} variant="secondary">1日の詳細を見る</Button><button aria-label="当日に追加" className="sheet-add-button" onClick={onAdd} type="button"><NavIcon name="add" /></button></div></div></BottomSheet>;
+}
+
+function SearchSheet({ onClose, onSelect }: { onClose: () => void; onSelect: (day: number) => void }) {
+  const [query, setQuery] = useState("");
+  const results = searchFixture.filter((result) => !query || result.label.includes(query));
+  const categoryLabel = { home: "家", money: "お金", work: "仕事" } as const;
+  return <BottomSheet className="search-sheet" open title="検索" onClose={onClose}><div className="sheet-detail"><label className="input-field" htmlFor="calendar-search"><span>予定を検索</span><Input id="calendar-search" onChange={setQuery} placeholder="タイトルやメモ" value={query} /></label><div aria-label="検索結果" className="search-results" role="list">{results.map((result) => <button aria-label={`${result.label} ${result.day}日`} className="search-result" key={`${result.label}-${result.day}`} onClick={() => onSelect(result.day)} type="button"><span className={`search-result__category search-result__category--${result.category}`}>{categoryLabel[result.category]}</span><span className="search-result__body"><strong>{result.label}</strong><small>2026年9月{result.day}日{result.time ? ` · ${result.time}` : ""}</small></span><span className="form-row__chevron">›</span></button>)}</div>{results.length === 0 ? <p className="empty-state">見つかりませんでした</p> : null}</div></BottomSheet>;
+}
+
+function DailyShell() {
+  const [filter, setFilter] = useState<CalendarFilter>("all");
+  const showTimeline = filter !== "money";
+  const showOverview = filter === "all";
+  return <main className="screen-page daily-page"><header className="screen-header"><h1>デイリー</h1><button className="today-button" type="button">今日</button></header><FixtureTabs active={filter} onChange={setFilter} />{showTimeline ? <section className="timeline-section"><h2>予定</h2><div className="fixture-group"><h3>終日</h3>{dailyFixture.allDay.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--${item.category}`} key={item.label}><span className="fixture-row__title">{item.label}</span></div>)}</div><div className="fixture-group"><h3>期間</h3>{dailyFixture.period.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--period fixture-row--${item.category}`} key={item.label}><span className="fixture-row__title">{item.label}</span></div>)}</div><div className="fixture-group"><h3>時間あり</h3>{dailyFixture.timed.filter((item) => filter === "all" || filter === item.category).map((item) => <div className={`fixture-row fixture-row--${item.category}`} key={item.label}><time>{item.time}</time><span className="fixture-row__title">{item.label}</span></div>)}</div></section> : null}{filter === "money" || showOverview ? <section className="daily-section"><h2>今日のお金</h2>{dailyFixture.money.map((item) => <div className="fixture-row" key={item.label}><span>{item.label}</span><strong>{item.amount}</strong></div>)}</section> : null}{showOverview ? <section className="daily-section"><h2>今日のメモ</h2><p className="memo-text">{dailyFixture.memo}</p></section> : null}</main>;
+}
+
+function MoneyShell() {
+  return <main className="screen-page money-page"><header className="screen-header"><h1>お金</h1></header><section className="money-summary"><h2>今月</h2><div className="money-summary-list"><div><span>支出見込み</span><strong>{moneyFixture.expense}</strong></div><div><span>収入見込み</span><strong>{moneyFixture.income}</strong></div><div><span>残りそう</span><strong>{moneyFixture.remaining}</strong></div></div></section><section className="money-entries"><h2>明細</h2>{moneyFixture.entries.map((entry) => <div className="fixture-row" key={entry.label}><span>{entry.label}<small>{entry.category}</small></span><strong>{entry.amount}</strong></div>)}</section></main>;
+}
+
+const weekDayLabel = (value: number) => ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"][value] ?? "月曜日";
+
+function SettingsDetailPage({ detail, user, settings, onBack, onLogout }: { detail: SettingsDetail; user: AuthUser; settings: UserSettings | null; onBack: () => void; onLogout: () => void }) {
+  const titles: Record<SettingsDetail, string> = { account: "アカウント", notifications: "通知", calendar: "カレンダー", money: "お金", data: "データ / バックアップ" };
+  const body = detail === "account" ? <><FormRow label="メール" summary={user.email} /><Button onClick={onLogout} variant="secondary">ログアウト</Button></> : detail === "notifications" ? <><FormRow label="朝のまとめ通知" summary="ON · 09:00" /><FormRow label="夜のまとめ通知" summary="ON · 21:00" /><FormRow label="通知テンプレート" summary="標準" /></> : detail === "calendar" ? <><FormRow label="タイムゾーン" summary={settings?.timezone ?? "Asia/Tokyo"} /><FormRow label="週の開始" summary={settings ? weekDayLabel(settings.weekStartsOn) : "月曜日"} /></> : detail === "money" ? <><FormRow label="支出カテゴリ" summary="食費・日用品・固定費" /><FormRow label="収入カテゴリ" summary="給料・臨時収入" /></> : <><FormRow label="バックアップ" summary="JSON" /><FormRow label="ローカルアーカイブ" summary="確認" /></>;
+  return <main className="screen-page settings-page"><header className="screen-header"><button aria-label="設定へ戻る" className="back-button" onClick={onBack} type="button">‹</button><h1>{titles[detail]}</h1><span className="header-spacer" /></header><section className="settings-detail-list">{body}</section></main>;
+}
+
+function SettingsShell({ user, settings, detail, onOpenDetail, onBack, onLogout }: { user: AuthUser; settings: UserSettings | null; detail: SettingsDetail | null; onOpenDetail: (detail: SettingsDetail) => void; onBack: () => void; onLogout: () => void }) {
+  if (detail) return <SettingsDetailPage detail={detail} onBack={onBack} onLogout={onLogout} settings={settings} user={user} />;
+  return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><section className="settings-root-list"><FormRow ariaLabel="アカウントを開く" label="アカウント" onClick={() => onOpenDetail("account")} /><FormRow ariaLabel="通知を開く" label="通知" onClick={() => onOpenDetail("notifications")} /><FormRow ariaLabel="カレンダーを開く" label="カレンダー" onClick={() => onOpenDetail("calendar")} /><FormRow ariaLabel="お金を開く" label="お金" onClick={() => onOpenDetail("money")} /><FormRow ariaLabel="データとバックアップを開く" label="データ / バックアップ" onClick={() => onOpenDetail("data")} /></section></main>;
+}
+
+function AddChoiceSheet({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (choice: AddChoice) => void }) {
+  return <BottomSheet open={open} onClose={onClose} title="追加"><div className="choice-list"><FormRow ariaLabel="家を追加" label="家" onClick={() => onSelect("家")} /><FormRow ariaLabel="仕事を追加" label="仕事" onClick={() => onSelect("仕事")} /><FormRow ariaLabel="お金を追加" label="お金" onClick={() => onSelect("お金")} /></div></BottomSheet>;
+}
 
 export function App() {
-  const [draftLabel, setDraftLabel] = useState("");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [screen, setScreen] = useState<Screen>(screenFromPath);
+  const [settingsDetail, setSettingsDetail] = useState<SettingsDetail | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [selectedChoice, setSelectedChoice] = useState<AddChoice | null>(null);
+  const [calendarDate, setCalendarDate] = useState<number | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  const closeSheet = useCallback(() => setSheetOpen(false), []);
+  useEffect(() => {
+    let active = true;
+    void authMe().then(async ({ user: authenticatedUser }) => {
+      if (!active) return;
+      setUser(authenticatedUser);
+      const result = await getSettings().catch(() => null);
+      if (active && result) setSettings(result.settings);
+    }).catch((error: unknown) => { if (active && apiErrorStatus(error) !== 401) setAuthError("ログイン状態を確認できませんでした。"); }).finally(() => { if (active) setAuthChecked(true); });
+    const onPopState = () => setScreen(screenFromPath());
+    window.addEventListener("popstate", onPopState);
+    return () => { active = false; window.removeEventListener("popstate", onPopState); };
+  }, []);
 
-  return (
-    <MobileShell activeNavigation="calendar" onAdd={() => setSheetOpen(true)}>
-      <header className="app-header">
-        <h1>LifeHub</h1>
-      </header>
+  const navigate = (nextScreen: Screen) => { window.history.pushState({}, "", screenPath[nextScreen]); setScreen(nextScreen); setSettingsDetail(null); setSelectedChoice(null); };
+  const handleAuthenticated = (authenticatedUser: AuthUser) => { setUser(authenticatedUser); setAuthError(""); void getSettings().then(({ settings: nextSettings }) => setSettings(nextSettings)).catch(() => undefined); };
+  const handleLogout = () => { void logout().finally(() => { setUser(null); setSettings(null); setSettingsDetail(null); setScreen("calendar"); window.history.pushState({}, "", "/calendar"); }); };
+  const handleAddSelect = (choice: AddChoice) => { setSelectedChoice(choice); setSheetOpen(false); };
+  const openAdd = () => { setCalendarDate(null); setSheetOpen(true); };
+  const handleSearchSelect = (day: number) => { setSearchOpen(false); setCalendarDate(day); setScreen("calendar"); if (window.location.pathname !== "/calendar") window.history.pushState({}, "", "/calendar"); };
 
-      <main className="foundation-page">
-        <section className="foundation-section" aria-labelledby="components-title">
-          <h2 id="components-title">共通コンポーネント</h2>
-          <form className="foundation-form" onSubmit={(event) => { event.preventDefault(); setSaved(true); }}>
-            <label className="input-field" htmlFor="preview-label">
-              <span>ラベル入力</span>
-              <Input
-                id="preview-label"
-                onChange={(value) => { setDraftLabel(value); setSaved(false); }}
-                placeholder="例: 今日の予定"
-                value={draftLabel}
-              />
-            </label>
+  if (!authChecked) return <div className="auth-page"><header className="app-header"><h1>LifeHub</h1></header><main className="auth-content"><p className="empty-state">読み込み中</p></main></div>;
+  if (!user) return <><LoginPage onAuthenticated={handleAuthenticated} />{authError ? <p className="auth-global-error" role="alert">{authError}</p> : null}</>;
 
-            <FormRow label="フォーム行" summary={draftLabel || "未入力のサマリー"} />
-            <FormRow ariaLabel="表示設定" label="表示設定" onClick={() => setSheetOpen(true)} summary="BottomSheetで開く" />
-
-            <Button type="submit">保存する</Button>
-            {saved ? <p className="success-note" role="status">ローカルプレビューに保存しました。</p> : null}
-          </form>
-        </section>
-      </main>
-
-      <BottomSheet open={sheetOpen} onClose={closeSheet} title="表示設定">
-        <FormRow label="テーマ" summary="オレンジ" />
-        <FormRow label="背景" summary="白" />
-        <Button onClick={closeSheet} variant="secondary">閉じる</Button>
-      </BottomSheet>
-    </MobileShell>
-  );
+  const content = screen === "calendar" ? <CalendarShell onDateSelect={setCalendarDate} onSearch={() => setSearchOpen(true)} /> : screen === "daily" ? <DailyShell /> : screen === "money" ? <MoneyShell /> : <SettingsShell detail={settingsDetail} onBack={() => setSettingsDetail(null)} onLogout={handleLogout} onOpenDetail={setSettingsDetail} settings={settings} user={user} />;
+  return <MobileShell activeNavigation={screen} onAdd={() => setSheetOpen(true)} onNavigate={navigate}>{content}{selectedChoice ? <p className="selection-note" role="status">{selectedChoice}の追加を準備しています。</p> : null}{calendarDate !== null ? <CalendarDateSheet day={calendarDate} onAdd={openAdd} onClose={() => setCalendarDate(null)} /> : null}{searchOpen ? <SearchSheet onClose={() => setSearchOpen(false)} onSelect={handleSearchSelect} /> : null}<AddChoiceSheet onClose={() => setSheetOpen(false)} onSelect={handleAddSelect} open={sheetOpen} /></MobileShell>;
 }

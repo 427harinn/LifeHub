@@ -1,3 +1,95 @@
+# Milestone 2: Auth / Personal Settings / Navigation Shell
+
+## 現在のMilestone
+
+M2を完了。M1の完了記録は下記に保持する。
+
+## 目的
+
+LifeHubを個人アプリとして利用できる骨格にする。User / Session / Cookie認証、UserSettings、userId ownership、migration_locked guardの土台、Calendar / Daily / Money / Settingsへのnavigation shell、中央`+`の選択UIを実装する。
+
+## 明示的な非対象
+
+- Event / Money / DailyNoteの本機能・CRUD
+- recurrence / notification / archive / device migrationの本機能
+- Household / HouseholdMember / invite / owner-member role
+- staging / production deploy、Cloudflare外部リソース作成
+- M3のEvent登録フォーム
+
+## M2完了条件
+
+- login / logout / authenticated user取得 / Cookie sessionがWorkerで動作
+- userId ownershipをUserSettings / LifeHubUserStateで確認
+- UserSettingsが初回取得時に生成され、指定項目をAPI / frontend stateで扱える
+- migration_locked中の通常writeを拒否するguard土台がある
+- 5項目のicons-only Bottom Navigationと4画面shellが390×844で確認できる
+- 中央`+`から家 / 仕事 / お金のBottomSheet選択UIを開ける
+- lint / typecheck / unit / integration / build / Playwright pass
+- 指定Evidence、docs、commit、push、main向けPRを作成（自動mergeなし）
+
+## 進捗
+
+- [x] 最新`main`をfetchし、M1と別のM2 branchを作成
+- [x] 指定docsとHouseToDo auth実装を確認
+- [x] Auth / Session / User / UserSettings / LifeHubUserStateを実装
+- [x] Navigation / screen shell / add choiceを実装
+- [x] test / Evidence / docs更新
+- [x] self-review、commit、push、PR作成
+
+## PR #2 レビュー対応
+
+- [x] 最新の`SCREEN_SPEC.md` / `DEVELOPMENT_POLICY.md` / `DESIGN.md`を確認
+- [x] Calendarを42セルの高密度fixture、タブ、検索placeholder、日付BottomSheetへ更新
+- [x] safe-area top / bottomを主要shellへ反映
+- [x] Settings root → detail shell構造へ更新
+- [x] Daily / Money fixtureと390×844 Evidenceを更新
+- [x] 同じPR #2のbranchへpush。新しいPRは作成しない
+
+## PR #2 レビュー対応（連続帯 / fixture密度 / Date Sheet）
+
+- [x] 最新`DESIGN.md` / `SCREEN_SPEC.md`を確認し、複数日予定・period予定をセル外の週帯レイヤーで連続表示
+- [x] 同一週内・週またぎ・週またぎと通常予定/金額の同居・`+N`をM2表示専用fixtureで確認
+- [x] Calendarセルを日付左上、予定、金額最下部中央へ整理し、金額なしセルは予定領域を拡張
+- [x] Date Sheetを縦長化し、収支を1行表示、追加`＋`を詳細ボタンから離して独立配置
+- [x] Dailyの時間ありfixtureを6件へ増量し、家=オレンジ、仕事=青のカテゴリトーンを反映
+- [x] 390×844の通常 / 複数日帯 / 週またぎ / Date Sheet / Daily / Money / Settings / Add Evidenceを再撮影
+- [x] lint / typecheck / unit・integration / build / Playwrightを再実行し、同じPR #2へpush
+
+## PR #2 レビュー対応（Calendar / fixture / separator）
+
+- [x] 最新`DESIGN.md` / `SCREEN_SPEC.md`を再確認し、Calendarの順序をタブ→年月→中央寄せの`今日`→曜日→42セルへ調整
+- [x] Calendarセルの日付・金額・予定・`+N`の固定配置、支出/収入色、通常予定の背景なし表示を反映
+- [x] 同一週内・週またぎの複数日帯、期間帯、`+N`のM2表示専用fixtureを追加（Worker / D1へ保存しない）
+- [x] Date Sheetの大きな追加テキスト導線を小型オレンジ丸`＋`へ変更し、既存の詳細導線を維持
+- [x] Dailyの区切り線を項目間だけに整理し、個人用文言を`家の予定`へ修正
+- [x] 390×844 Evidence、lint / typecheck / unit・integration / build / Playwrightを再実行
+- [x] 同じPR #2のbranchへpush。mergeと新規PR作成は行わない
+
+## PR #2 レビュー対応（帯色 / 件数バッジ / 検索Sheet）
+
+- [x] `DESIGN.md` / `SCREEN_SPEC.md`を最優先で再確認し、複数日帯を家=オレンジ・仕事=青の連続帯へ調整。開始端・終了端のみ角丸、レーン間に隙間を設定
+- [x] Calendarの`+N`を日付右上の小型件数丸バッジへ変更し、period予定は最終日の期限表示だけに整理
+- [x] Calendarの単日予定とDailyを家=オレンジ・仕事=青の文字色で統一し、Dailyのカテゴリ文字ラベルを削除
+- [x] 検索アイコンから入力欄・結果一覧付きの大きなBottomSheetを開き、結果タップから該当日Sheetへつながるplaceholder導線を追加
+- [x] Date Sheetの収支1行・お金一覧・収支合計・独立した小型`＋`を維持し、390×844 Evidenceを再撮影
+- [x] lint / typecheck / unit・integration / build / Playwrightを再実行し、同じPR #2へpush。mergeと新規PR作成は行わない
+
+## PR #2 レビュー対応（タブ状態 / period開始日 / 1日詳細簡略化）
+
+- [x] 最新の`DESIGN.md` / `SCREEN_SPEC.md`を確認し、Calendarの件数バッジを日付数字より少し下へ配置。バッジなしセルに固定行を確保しない仕様を明文化
+- [x] period予定をCalendarの対象期間開始日にだけ表示し、Calendar上の帯を廃止。Daily / Date Sheetでは期間内の予定を確認できる構造を維持
+- [x] Calendarから開く1日詳細のMoney表示を個別明細なしの収支合計1行へ簡略化し、家=オレンジ・仕事=青の予定色を反映
+- [x] Dailyのすべて / 家 / 仕事 / お金、Calendarのすべて / 家 / 仕事 / お金をfixtureで切り替え、390×844 Evidenceを追加
+- [x] `docs/SCREEN_SPEC.md`と関連する`docs/DESIGN.md`の旧ルールを更新し、lint / typecheck / unit・integration / build / Playwrightを再実行
+
+## PR #2 最終レビュー対応（件数バッジ位置）
+
+- [x] Calendarの日付右上件数バッジを日付数字と同じ高さへ戻し、absolute配置とバッジなしセルの可変予定領域を維持
+- [x] `DESIGN.md` / `SCREEN_SPEC.md`へ日付・バッジ・予定・金額の配置ルールを明記
+- [x] 390×844 Calendar Evidenceを再撮影し、lint / typecheck / unit・integration / build / Playwrightを再実行して同じPR #2へpush
+
+---
+
 # Milestone 1: Application Foundation
 
 ## 目的

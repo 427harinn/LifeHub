@@ -1,3 +1,46 @@
+# Milestone 2 Tasks
+
+## 小タスク
+
+- [x] T1: 最新`main`をfetchし、M1と別のM2 branchを作成
+- [x] T2: 指定docsとHouseToDoの安全な認証方式を確認
+- [x] T3: User / Session / Cookie auth / auth middleware / APIを実装
+- [x] T4: UserSettings / LifeHubUserState / migration_locked guard / ownershipを実装
+- [x] T5: Auth UI、session restore、logout、route shellを実装
+- [x] T6: Bottom Navigation、Calendar / Daily / Money / Settings shell、中央`+`選択UIを実装
+- [x] T7: unit / integration / Playwrightを追加・実行
+- [x] T8: 390×844 Evidenceと必要なdocsを更新
+- [x] T9: self-review、commit、push、main向けPR作成。自動mergeしない
+- [x] T10: PR #2へ反映された最新版docsを確認
+- [x] T11: Calendar / Daily / Money / Settings shellをfixture中心へ更新
+- [x] T12: safe-area、Calendar date sheet、Settings detail、Evidence、Playwrightを更新
+- [x] T13: 最新`DESIGN.md` / `SCREEN_SPEC.md`に合わせてCalendar header / safe-area / cell alignmentを再調整
+- [x] T14: 複数日帯・期間帯・`+N` fixture、Date Sheetの小型`＋`、Daily separator、個人用文言を更新
+- [x] T15: 390×844 Evidenceを再撮影し、lint / typecheck / unit・integration / build / Playwrightを再実行してPR #2へpush
+- [x] T16: 複数日予定を週帯レイヤー化し、同一週内 / 週またぎの連続表示と通常予定・金額の同居を追加
+- [x] T17: Date Sheetを縦長化し、収支1行化、独立した追加`＋`配置、Daily時間fixture6件とカテゴリ色を反映
+- [x] T18: 390×844 Evidenceを再撮影し、lint / typecheck / unit・integration / build / Playwrightを再実行
+- [x] T19: Calendarのカテゴリ色付き連続帯、端部角丸、レーン間隔、件数丸バッジ、period最終日表示を実装
+- [x] T20: Calendar検索BottomSheet、検索結果から該当日へのplaceholder導線、Date Sheetのお金一覧・収支合計を実装
+- [x] T21: Dailyのカテゴリ文字ラベルを削除し、家=オレンジ・仕事=青の色表現へ統一
+- [x] T22: 390×844 Evidenceを再撮影し、lint / typecheck / unit・integration / build / Playwrightを再実行して同じPR #2へpush
+- [x] T23: Calendar件数バッジの位置と可変表示領域、period開始日表示を更新
+- [x] T24: Calendar Date SheetのMoneyを収支合計1行へ簡略化し、家 / 仕事のカテゴリ色を反映
+- [x] T25: Calendar / Dailyの全タブfixture表示と390×844 Evidenceを追加
+- [x] T26: `SCREEN_SPEC.md` / `DESIGN.md`を最新レビュー仕様へ更新し、全テストを再実行
+- [x] T27: Calendar件数バッジを日付数字と同じ高さへ戻し、Evidenceと全テストを再実行
+
+## M2セルフレビュー観点
+
+- userId ownershipが全Auth / Settings / UserState queryにある
+- Household / invite / owner-member role / switchingを持ち込んでいない
+- migration_locked中の通常write guardがWorker側にある
+- English decoration、card-everything、decorative shadow、FAB化を復活させていない
+- Bottom NavigationがCalendar / Daily / + / Money / Settingsの順で、icons only、44px touch target
+- M3のEvent登録機能へ踏み込んでいない
+
+---
+
 # Milestone 1 Tasks
 
 ## 小タスク
