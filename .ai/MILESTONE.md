@@ -49,7 +49,7 @@ React / Vite / TypeScript、Cloudflare Workers + Vite assets、local D1 / `wrang
 - [x] UI foundationと390×844 evidence画面を実装
 - [x] lint / typecheck / unit / build / Playwrightを実行
 - [x] self-reviewとdocs更新
-- [ ] commit / push / PR作成
+- [x] commit / push / PR作成（PR #1 / 自動mergeなし）
 
 ## セルフレビュー観点
 

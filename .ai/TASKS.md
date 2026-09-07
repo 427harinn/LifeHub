@@ -11,7 +11,7 @@
 - [x] T7: 390×844 mobile shellとevidence確認画面を実装
 - [x] T8: unit / Playwrightを作成・実行し、screenshot evidenceを保存
 - [x] T9: 各種self-review、関連docs更新、最終test
-- [ ] T10: commit、push、main向けPR作成。自動mergeしない
+- [x] T10: commit、push、main向けPR作成。自動mergeしない（PR #1）
 
 ## 進捗メモ
 
