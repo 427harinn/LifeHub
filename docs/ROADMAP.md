@@ -9,6 +9,7 @@ LifeHub は完全個人用であり、Household / HouseholdMember / 共有モデ
 設計文書を正として実装し、実装中に仕様変更が発生した場合はコードだけを変更せず、必ず関連文書も同じ作業内で更新する。
 
 開発手順の詳細は `DEVELOPMENT_POLICY.md` を正とする。
+実装Milestoneの詳細は `IMPLEMENTATION_PLAN.md` を正とする。
 
 ---
 
@@ -85,7 +86,9 @@ LifeHub は完全個人用であり、Household / HouseholdMember / 共有モデ
 
 - [x] 開発方針文書
 - [x] 全仕様書の最終整合性確認
-- [ ] MVP milestone / task分割
+- [x] MVP milestone / task分割
+
+**Phase 0 完了。以降は `IMPLEMENTATION_PLAN.md` に従って実装する。**
 
 ---
 
