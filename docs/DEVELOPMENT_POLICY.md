@@ -91,6 +91,7 @@ PRは自動mergeしない。
 - `docs/NOTIFICATION_SPEC.md`
 - `docs/MONEY_SPEC.md`
 - `docs/BACKUP_AND_RETENTION.md`
+- `docs/DESIGN.md`
 - `docs/DESIGN_SYSTEM.md`
 - `docs/CLOUDFLARE_INFRASTRUCTURE.md`
 - `docs/ROADMAP.md`
@@ -119,6 +120,9 @@ LifeHubはスマートフォンファースト。
 
 GUI変更がある場合、Playwright等を使ってスクリーンショットを残す。
 
+デザインの最上位仕様は `docs/DESIGN.md` とする。
+HouseToDoと異なる理由がないUIは、独自のAI的な装飾を足さずHouseToDoのデザイン言語を継承する。
+
 ### 必ず見せたいもの
 
 - 変更した画面の通常状態
@@ -127,6 +131,29 @@ GUI変更がある場合、Playwright等を使ってスクリーンショット�
 - form変更なら主要な分岐状態
 - Calendar変更なら予定が少ない状態と多い状態
 - 複数日帯なら開始 / 継続 / 週またぎが確認できる状態
+
+### 未完成機能のEvidenceルール
+
+機能が後続Milestoneで未実装でも、**デザインレビュー対象の画面を `準備中` や完全なempty stateだけで済ませない。**
+
+最終UIの構成・密度・階層を判断するため、必要に応じてfixture / dummy dataを入れる。
+
+例:
+
+- Calendar shell: 予定名、金額、複数日帯、`+N` の仮データ
+- Daily shell: 終日、期間、時間あり、お金、今日のメモの仮データ
+- Money shell: 支出見込み、収入見込み、残りそう、明細の仮データ
+- Settings shell: root category rowとdetail画面の仮データ
+
+fixtureは本番データやDB仕様と混同しない構造にし、後続実装で削除・差し替えしやすくする。
+
+「まだAPIがない」ことを理由に、画面デザインを確認できない状態でEvidenceを出さない。
+
+### Safe Area
+
+- iPhoneのstatus bar / notch / Dynamic Islandを考慮する
+- `env(safe-area-inset-top)` / `env(safe-area-inset-bottom)` 等を適切に利用する
+- desktop browser上の390×844 screenshotだけでなく、実機で上端が詰まりすぎない構造にする
 
 ### Calendarの特別ルール
 
@@ -326,7 +353,9 @@ PRから以下が分かる状態を目標にする。
 - UIがHouseToDoのspacing/radiusから逸脱していないか
 - greenをハードコードしていないか
 - mobileで操作しにくくないか
--不要な選択肢を最初から見せていないか
+- 不要な選択肢を最初から見せていないか
+- 未完成機能を `準備中` だけで済ませてデザインレビュー不能にしていないか
+- safe-areaを無視していないか
 - test不足がないか
 
 ---
