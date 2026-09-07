@@ -65,6 +65,15 @@ LifeHubを個人アプリとして利用できる骨格にする。User / Sessio
 - [x] 390×844 Evidence、lint / typecheck / unit・integration / build / Playwrightを再実行
 - [x] 同じPR #2のbranchへpush。mergeと新規PR作成は行わない
 
+## PR #2 レビュー対応（帯色 / 件数バッジ / 検索Sheet）
+
+- [x] `DESIGN.md` / `SCREEN_SPEC.md`を最優先で再確認し、複数日帯を家=オレンジ・仕事=青の連続帯へ調整。開始端・終了端のみ角丸、レーン間に隙間を設定
+- [x] Calendarの`+N`を日付右上の小型件数丸バッジへ変更し、period予定は最終日の期限表示だけに整理
+- [x] Calendarの単日予定とDailyを家=オレンジ・仕事=青の文字色で統一し、Dailyのカテゴリ文字ラベルを削除
+- [x] 検索アイコンから入力欄・結果一覧付きの大きなBottomSheetを開き、結果タップから該当日Sheetへつながるplaceholder導線を追加
+- [x] Date Sheetの収支1行・お金一覧・収支合計・独立した小型`＋`を維持し、390×844 Evidenceを再撮影
+- [x] lint / typecheck / unit・integration / build / Playwrightを再実行し、同じPR #2へpush。mergeと新規PR作成は行わない
+
 ---
 
 # Milestone 1: Application Foundation

@@ -77,6 +77,8 @@ describe("LifeHub M2 shell", () => {
     fireEvent.click(within(screen.getByRole("dialog", { name: "追加" })).getByRole("button", { name: "閉じる" }));
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
     expect(screen.getByRole("dialog", { name: "検索" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "予定を検索" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /出張/ })).toBeInTheDocument();
   });
 
   it("shows login failure from the API", async () => {

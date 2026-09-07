@@ -38,7 +38,7 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   await page.screenshot({ path: path.join(evidenceDir, "calendar-390x844.png") });
   await expect(page.getByRole("tab", { name: "すべて" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("週またぎ", { exact: true }).first()).toBeVisible();
-  await expect(page.locator(".calendar-cell__overflow").first()).toBeVisible();
+  await expect(page.locator(".calendar-cell__count").first()).toHaveText(/^\d+$/);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-multi-day-390x844.png") });
   await page.getByRole("tab", { name: "仕事" }).click();
   await expect(page.getByText("週またぎ", { exact: true }).first()).toBeVisible();
@@ -54,7 +54,13 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   await page.getByRole("dialog", { name: "2026年9月7日" }).getByRole("button", { name: "閉じる" }).click();
   await page.getByRole("button", { name: "検索" }).click();
   await expect(page.getByRole("dialog", { name: "検索" })).toBeVisible();
-  await page.getByRole("dialog", { name: "検索" }).getByRole("button", { name: "閉じる" }).first().click();
+  await expect(page.getByRole("dialog", { name: "検索" }).getByRole("textbox", { name: "予定を検索" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "検索" }).getByRole("button", { name: /出張/ })).toBeVisible();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-search-390x844.png") });
+  await page.getByRole("dialog", { name: "検索" }).getByRole("button", { name: /出張/ }).click();
+  await expect(page.getByRole("dialog", { name: "2026年9月10日" })).toBeVisible();
+  await page.getByRole("dialog", { name: "2026年9月10日" }).getByRole("button", { name: "閉じる" }).click();
 
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();

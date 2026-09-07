@@ -70,3 +70,11 @@ export const moneyFixture = {
     { label: "給料", category: "給料", amount: "+280,000円" }
   ]
 };
+
+export const searchFixture = [
+  { category: "home", day: 7, label: "買い物", time: "10:00" },
+  { category: "work", day: 10, label: "出張", time: "終日" },
+  { category: "work", day: 19, label: "移動", time: "14:00" },
+  { category: "money", day: 19, label: "交通費", time: "" },
+  { category: "home", day: 15, label: "今週中：書類を整理", time: "期限" }
+] as const;
