@@ -1,3 +1,36 @@
+# Milestone 4 Tasks
+
+## 小タスク
+
+- [x] T1: 最新`main`から`codex/m4-calendar-daily-staging`を作成し、M3 branchを再利用しない
+- [x] T2: 指定docsとM3 merge済みCalendar / Daily UIを確認
+- [x] T3: Calendar 6週range / Daily指定日を共有するEvent projection serviceを実装
+- [x] T4: `/api/calendar` / `/api/daily` とactive・deleted・ownership条件を実装
+- [x] T5: DailyNote migration / get / create-update / delete / empty handlingを実装
+- [x] T6: Calendar月切替、今日、Date Sheet → Daily、Calendar / Daily returnToを実装
+- [x] T7: Daily前日 / 次日 / 今日、指定日表示、実Event反映を実装
+- [x] T8: 既存Daily tap展開 / 再tap閉じ / swipe edit / direct editを回帰確認
+- [x] T9: low / high / max 2・3・4 / multi-day / Date Sheet / Daily / DailyNote Evidenceを作成
+- [x] T10: Calendar → Daily / Add returnTo / Daily Add returnTo / swipe edit動画を作成
+- [x] T11: projection / DailyNote unit・API・Playwright回帰を追加・実行
+- [x] T12: `lifehub-staging` / `lifehub-staging`確認・必要時作成、staging migration / deploy
+- [x] T13: staging health / login / Event CRUD / Calendar / Daily / DailyNote smoke
+- [x] T14: self-review、docs同期、commit / push、main向けPR作成。自動mergeしない
+
+## M4セルフレビュー観点
+
+- Calendar / Dailyが同一Event projection serviceを使う
+- Calendarはmonth全件ではなく42セルに必要なrangeだけ取得する
+- Dailyは指定日rangeだけ取得する
+- userId ownershipとsoft-deleted Event除外がある
+- M3のCalendar / Daily DOM・CSS・操作grammarを再設計していない
+- Calendar最大表示件数をユーザー確認前に確定していない
+- DailyNoteは`userId + date`一意で、空保存と削除を安全に扱う
+- Money fixture / Search placeholderを本実装と混同していない
+- staging / production / HouseToDoの対象を取り違えない
+
+---
+
 # Milestone 2 Tasks
 
 ## 小タスク

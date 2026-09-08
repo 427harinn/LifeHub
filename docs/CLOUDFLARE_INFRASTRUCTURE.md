@@ -245,3 +245,15 @@ HouseToDo 開発で使っている安全方針を LifeHub にも採用する。
 production は staging で主要機能が安定してから作成する。
 
 R2 は初期版では不要。
+
+## 14. M4 First Staging運用
+
+M4ではLifeHub専用のstagingだけを対象にする。
+
+- Worker: `lifehub-staging`
+- D1: `lifehub-staging`
+- migration: LifeHubリポジトリの全migrationをstaging D1へ適用
+- R2: 作成しない
+- production/default: 作成・変更・deployしない
+
+高密度Calendar確認用のfixtureはauthenticated test accountへ手動/APIで投入し、production seedにはしない。staging smokeではhealth、login、Event CRUD、Calendar range、Daily指定日、DailyNote CRUDを確認する。

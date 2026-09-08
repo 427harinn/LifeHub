@@ -50,3 +50,12 @@ export type Event = {
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
+
+export type DailyNote = {
+  id: string;
+  userId: string;
+  date: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};

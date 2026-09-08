@@ -3,7 +3,7 @@
 interface __BaseEnv_Env {
 	DB: D1Database;
 	ASSETS: Fetcher;
-	APP_ENV: "local";
+	APP_ENV: "staging" | "local";
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}

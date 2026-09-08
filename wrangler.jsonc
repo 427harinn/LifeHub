@@ -19,5 +19,21 @@
   ],
   "vars": {
     "APP_ENV": "local"
+  },
+  "env": {
+    "staging": {
+      "name": "lifehub-staging",
+      "vars": {
+        "APP_ENV": "staging"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "lifehub-staging",
+          "database_id": "da75b9df-dcb6-4e80-991e-6310be3c1933",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
   }
 }

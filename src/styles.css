@@ -73,7 +73,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .calendar-weekdays span:first-child { color: #bd7667; }
 .calendar-weekdays span:last-child { color: #66839b; }
 .calendar-grid { position: relative; min-height: 0; grid-template-rows: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--color-border); border-left: 1px solid var(--color-border); }
-.calendar-cell { position: relative; z-index: 1; display: flex; min-width: 0; min-height: 0; flex-direction: column; align-items: stretch; padding: 4px 3px; overflow: hidden; border: 0; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; font-size: .75rem; text-align: left; cursor: pointer; }
+.calendar-cell { position: relative; z-index: 3; display: flex; min-width: 0; min-height: 0; flex-direction: column; align-items: stretch; padding: 4px 3px; overflow: hidden; border: 0; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; font-size: .75rem; text-align: left; cursor: pointer; }
 .calendar-cell:disabled { cursor: default; }
 .calendar-cell:nth-child(7n + 1) { color: #bd7667; }
 .calendar-cell:nth-child(7n) { color: #66839b; }
@@ -82,7 +82,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .calendar-cell__money { display: block; min-height: 14px; margin-top: auto; color: transparent; font-size: .6875rem; font-weight: 600; line-height: 1.2; text-align: center; white-space: nowrap; }
 .calendar-cell__money--expense { color: #b65445; }
 .calendar-cell__money--income { color: #527c9c; }
-.calendar-cell__events { display: grid; flex: 1; min-height: 0; align-content: start; gap: 2px; margin-top: 2px; }
+.calendar-cell__events { position: relative; z-index: 3; display: grid; flex: 1; min-height: 0; align-content: start; gap: 2px; margin-top: 2px; }
 .calendar-cell--has-band .calendar-cell__events { padding-top: 18px; }
 .calendar-event { display: block; min-width: 0; overflow: hidden; padding: 2px 3px; color: var(--color-text); font-size: .625rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event--single, .calendar-event--recurring { background: transparent; }
@@ -112,6 +112,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 
 .daily-page, .money-page { align-content: start; }
 .daily-page { gap: var(--space-2); }
+.daily-date-label { margin-left: auto; color: var(--color-text-secondary); font-size: .8125rem; white-space: nowrap; }
+.daily-date-actions { display: flex; align-items: center; gap: 2px; }
+.daily-date-button { display: inline-grid; min-width: 36px; min-height: 44px; place-items: center; border: 0; color: var(--color-primary-strong); background: transparent; font-size: 1.5rem; cursor: pointer; }
 .daily-page .fixture-row { min-height: 30px; padding: 3px 0; }
 .daily-page .fixture-group h3 { margin-top: 4px; }
 .timeline-section, .daily-section, .money-summary, .money-entries { display: grid; gap: var(--space-3); padding-top: var(--space-3); }
@@ -129,6 +132,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .fixture-row--home small { color: #c98245; }
 .fixture-row--work small { color: #6f8da5; }
 .memo-text { margin: 0; color: var(--color-text-secondary); font-size: .875rem; }
+.daily-note-body { min-height: 44px; padding: 8px 0; border: 0; color: var(--color-text-secondary); background: transparent; font-size: .875rem; line-height: 1.6; text-align: left; cursor: pointer; white-space: pre-wrap; }
+.daily-note-editor { display: grid; gap: var(--space-2); }
+.daily-note-editor .textarea { min-height: 88px; }
+.daily-note-actions { display: flex; align-items: center; gap: var(--space-2); }
+.daily-note-actions .button { width: auto; min-width: 96px; }
 .money-summary-list { display: grid; border-top: 1px solid var(--color-border); }
 .money-summary-list > div { display: flex; align-items: center; justify-content: space-between; min-height: 52px; border-bottom: 1px solid var(--color-border); font-size: .875rem; }
 .money-summary-list strong { color: var(--color-primary-strong); font-size: 1rem; font-weight: 600; }

@@ -59,11 +59,11 @@ production/defaultは明示的なリリース作業まで触れません。
 
 ## 現在の段階
 
-**Milestone 3: Single Scheduled Eventを実装中です。**
+**Milestone 4: Calendar + Daily MVP / First Stagingを実装中です。**
 
 M1の完了記録を維持したまま、最新`main`からM1とは別のbranchでAuth / Session / UserSettings / navigation shellを実装しています。M2ではEvent登録やMoney本機能には着手しません。
 
-M3では、M2の個人用Cookie sessionと`userId` ownership基盤の上に、家 / 仕事のscheduled Eventの登録・表示・編集・soft delete、Calendar / Dailyへの反映、recent definitions、returnToを実装します。recurrence / period / notification / Money / Searchは後続Milestoneです。
+M3では、M2の個人用Cookie sessionと`userId` ownership基盤の上に、家 / 仕事のscheduled Eventの登録・表示・編集・soft delete、Calendar / Dailyへの反映、recent definitions、returnToを実装しました。M4では共通Event projection、Calendar / Dailyの日付連動、DailyNote、First Stagingを追加します。recurrence / period / notification / Money / Searchの本実装は後続Milestoneです。
 
 以降は `docs/IMPLEMENTATION_PLAN.md` のMilestone順に、branchを切ってCodexで実装・test・Evidence・docs更新・staging確認・PR作成まで行います。
 

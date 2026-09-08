@@ -28,6 +28,8 @@ register / login成功時に `LifeHubUserState` と `UserSettings` が存在し�
 GET /api/calendar?month=2026-09
 ```
 
+M4では月表示の42セルに必要なグリッド範囲（先頭週の日曜日から6週目の土曜日まで）だけを取得する。返却の`range`はこの取得範囲を表す。Calendarは`EventProjectionService`を利用し、Dailyや他の日時解決処理とEventの重なり判定を共有する。
+
 返却対象:
 
 - scheduled Event occurrence
@@ -40,6 +42,16 @@ GET /api/calendar?month=2026-09
 - お金タブ用Money occurrence
 
 Calendar描画に必要な情報を1リクエストで取得する。
+
+返却例:
+
+```json
+{
+  "month": "2026-09",
+  "range": { "startDate": "2026-08-30", "endDate": "2026-10-10" },
+  "events": []
+}
+```
 
 ---
 
@@ -58,6 +70,8 @@ GET /api/daily?date=2026-09-10
 - DailyNote
 
 Calendarと同じProjectionを利用する。
+
+M4では指定日の1日分だけをrangeとして投影する。複数日scheduled Eventは指定日と重なる場合だけ返し、activeでないEvent、`deletedAt`があるEventは返さない。
 
 ---
 
@@ -171,6 +185,8 @@ DELETE /api/daily-notes/:date
 ```
 
 `PUT` はcreate/updateを兼ねる。
+
+`userId + date`を一意キーとする。`content`が空文字または空白だけの場合、PUTはその日付のDailyNoteを削除し`dailyNote: null`を返す。DELETEは対象がなくても成功扱いとする。
 
 Daily画面の取得は `/api/daily` に含め、編集だけ独立APIにする。
 

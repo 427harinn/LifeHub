@@ -392,6 +392,8 @@ DailyNote
 
 `userId + date` は一意。
 
+M4では`daily_notes`をmigration `0004_m4_daily_notes.sql`で追加し、Daily取得に含める。本文が空になった場合は行を削除してempty stateとして扱う。
+
 ---
 
 # 14. MoneyCategory

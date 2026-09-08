@@ -1,3 +1,55 @@
+# Milestone 4: Calendar + Daily MVP / First Staging
+
+## 現在のMilestone
+
+M4実装・local検証・390×844 Evidenceを完了。staging deploy / smoke とPR作成まで進め、ユーザー確認前のCalendar最大表示件数は未確定のまま保持する。
+
+## 目的
+
+M3 merge済みのCalendar / Daily UIを変更せず、共通Event range projection、Calendar / Dailyの日付連動、DailyNote CRUD、First Stagingを追加する。
+
+## 実装内容
+
+- `/api/calendar` は42セルに必要な6週グリッド範囲だけを取得
+- `/api/daily` は指定日だけを取得し、Calendar / Dailyで同じ `EventProjectionService` を利用
+- ownership付きscheduled Event projection、soft-deleted Event除外、複数日帯 / 週またぎ / 複数lane
+- Date Sheetから選択日を維持したDaily遷移
+- Dailyの前日 / 次日 / 今日、選択日表示、既存tap展開 / swipe編集を維持
+- DailyNoteのget / upsert / empty-delete / delete、本文タップ編集
+- M4高密度fixtureはE2E authenticated accountへ投入し、production seedにはしない
+
+## Evidence
+
+- `artifacts/evidence/m4/calendar-low-390x844.png`
+- `artifacts/evidence/m4/calendar-high-390x844.png`
+- `artifacts/evidence/m4/calendar-max-{2,3,4}-390x844.png`
+- `artifacts/evidence/m4/date-sheet-390x844.png`
+- `artifacts/evidence/m4/daily-normal-390x844.png`
+- `artifacts/evidence/m4/daily-expanded-390x844.png`
+- `artifacts/evidence/m4/daily-swipe-edit-390x844.png`
+- `artifacts/evidence/m4/daily-note-edit-390x844.png`
+- `artifacts/evidence/m4/calendar-date-sheet-to-daily-note.webm`
+- `artifacts/evidence/m4/returnTo-calendar-daily-add.webm`
+
+## 未確定
+
+- Calendar最大表示件数と件数バッジへ逃がす閾値は、max 2 / 3 / 4 Evidenceのユーザー確認後に決定する。
+- M4ではMoney / Search / recurrence / period / notificationの本実装を行わない。
+
+## 進捗
+
+- [x] 最新`main`からM3を再利用しないM4 branchを作成
+- [x] 指定docsを確認
+- [x] Event range projection / Calendar / Daily APIを実装
+- [x] DailyNote migration / API / UIを実装
+- [x] Calendar → Daily、前日 / 次日 / 今日、returnToを実装
+- [x] unit / integration / build / local migration / M4 Playwrightを実行
+- [x] 390×844 Evidenceと操作動画を作成
+- [x] LifeHub staging resource確認 / 作成 / migration / deploy / smoke
+- [x] commit / push / main向けPR作成（自動mergeしない）
+
+---
+
 # Milestone 2: Auth / Personal Settings / Navigation Shell
 
 ## 現在のMilestone
