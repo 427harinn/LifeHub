@@ -145,9 +145,9 @@ test("occurrence scopes, projection parity, and ownership", async ({ page, brows
   await page.mouse.move(box.x + 260, box.y + 24); await page.mouse.down(); await page.mouse.move(box.x + 170, box.y + 24, { steps: 4 }); await page.mouse.up();
   await row.getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "編集する範囲" })).toBeVisible();
-  await expect(page.getByText("選択した1回だけ", { exact: true })).toBeVisible();
-  await expect(page.getByText("選択した回から先", { exact: true })).toBeVisible();
-  await expect(page.getByText("系列全体（過去も含む）", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "この予定のみ" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "この予定以降" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "すべての予定" })).toBeVisible();
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(evidenceDir, "scope-selection-390x844.png") });
   await page.getByRole("dialog").getByRole("button", { name: "この予定のみ" }).click();

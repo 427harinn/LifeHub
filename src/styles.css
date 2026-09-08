@@ -262,9 +262,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .weekday-picker label:has(input:checked) { border-color: var(--color-primary-strong); color: var(--color-primary-strong); background: var(--color-primary-soft); }
 .weekday-picker input { position: absolute; opacity: 0; }
 .recurrence-end-options { display: grid; gap: 0; padding-left: var(--space-2); border-left: 2px solid var(--color-border); }
-.scope-option__body { display: grid; gap: 2px; }
-.scope-option__body strong { font-size: .875rem; font-weight: 500; }
-.scope-option__body small { color: var(--color-text-secondary); font-size: .75rem; line-height: 1.4; }
 .event-toggle-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; min-height: 48px; align-items: center; gap: var(--space-2); padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .875rem; }
 .event-toggle-row input { width: 22px; height: 22px; accent-color: var(--color-primary-strong); }
 .event-toggle-value { width: 28px; color: var(--color-text); font-size: .8125rem; text-align: right; }
