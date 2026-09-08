@@ -10,17 +10,17 @@
 - [x] T6: Calendar月切替、今日、Date Sheet → Daily、Calendar / Daily returnToを実装
 - [x] T7: Daily前日 / 次日 / 今日、指定日表示、実Event反映を実装
 - [x] T8: 既存Daily tap展開 / 再tap閉じ / swipe edit / direct editを回帰確認
-- [x] T9: low / high / max 2・3・4 / multi-day / Date Sheet / Daily / DailyNote Evidenceを作成
+- [x] T9: low / high / adaptive row / Money tab / multi-day / Date Sheet / Daily / DailyNote Evidenceを作成。max 2・3・4は履歴比較として保持
 - [x] T10: Calendar → Daily / Add returnTo / Daily Add returnTo / swipe edit動画を作成
 - [x] T11: projection / DailyNote unit・API・Playwright回帰を追加・実行
-- [x] T12: `lifehub-staging` / `lifehub-staging`確認・必要時作成、staging migration / deploy
+- [x] T12: `lifehub-staging` / `lifehub-staging`確認・必要時作成、staging deploy（既存schemaで確認）
 - [x] T13: staging health / login / Event CRUD / Calendar / Daily / DailyNote smoke
 - [x] T14: self-review、docs同期、commit / push、main向けPR作成。自動mergeしない
 
 ## PR #4 UI修正
 
 - [x] Calendarのstacking orderとmulti-day / single-day領域を分離
-- [x] hidden件数のvisible / hidden計算をmax2・3・4で回帰
+- [x] adaptive `availableRows`のvisible / hidden計算、Money summary最終row予約、Money明細hidden countを回帰
 - [x] 390×844の縦余白・日付数字・3件目標を調整
 - [x] Event formの予定種類 / 繰り返し / 通知rowとsheet開閉を修正
 - [x] 16px入力、HouseToDo式の軸判定付き月スワイプを追加
@@ -33,10 +33,18 @@
 - Dailyは指定日rangeだけ取得する
 - userId ownershipとsoft-deleted Event除外がある
 - M3のCalendar / Daily DOM・CSS・操作grammarを再設計していない
-- Calendar最大表示件数をユーザー確認前に確定していない
+- Calendarは固定maxを採用せず、実測セル高から`availableRows`を算出する
+- `all`はMoney summary最終row予約、`home` / `work`はMoney予約なし、`money`はMoney名称 + 最終row日計
+- multi-day / single-day / Money row競合、Date Sheet / Dailyのday swipe、inline expand / swipe edit、quick-add popup、outside tap close、BottomSheet drag-down closeを完了
 - DailyNoteは`userId + date`一意で、空保存と削除を安全に扱う
 - Money fixture / Search placeholderを本実装と混同していない
 - staging / production / HouseToDoの対象を取り違えない
+
+## M4完了時点の文書同期
+
+- 390×844だけで固定2 / 3 / 4件を決める方式は、iPhone Safariのsafe-area / browser UI差で崩れるため不採用とした。
+- 現在は実測セル高から`availableRows`を求め、超過Event / Money明細だけをhidden countへ送る。
+- staging remote migrationではCloudflare API `7403` permission errorが発生したが、今回新規migrationはなく既存schemaのsmokeは成功しているためM4 blockerではない。
 
 ---
 

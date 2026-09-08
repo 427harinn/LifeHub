@@ -8,6 +8,12 @@ Calendar / Daily / Notification / Search日時解決では、**Event + Recurrenc
 
 すべての個人データは `userId` ownershipを確認する。
 
+## M4時点の実装範囲
+
+M4で実API / DB projectionの対象になるのは、`timingType=scheduled`のEventとDailyNoteである。CalendarとDailyは同じEvent projection / range serviceを利用し、`userId` ownershipを条件に含め、activeでないEventと`deletedAt`があるEventを除外する。
+
+period / recurrence / notification / Money / Searchの本実装は後続Milestoneとする。M4 UIで確認するperiod / Moneyの一部はfixture / placeholderであり、将来のAPI仕様と現在の永続化範囲を混同しない。
+
 M2で実装する認証APIは以下。Session tokenはD1へ平文保存せずSHA-256 hashとして保存し、ブラウザにはHttpOnly / SameSite=Lax Cookieだけを返す。
 
 ```text
@@ -32,14 +38,17 @@ M4では月表示の42セルに必要なグリッド範囲（先頭週の日曜�
 
 返却対象:
 
-- scheduled Event occurrence
-- recurrence occurrence
-- EventOccurrenceOverride適用後の予定
-- cancelled occurrenceの除外
-- 複数日予定
-- period Event
-- 日ごとのMoney収支差額
-- お金タブ用Money occurrence
+M4実装済み:
+
+- activeなscheduled Event occurrence
+- cancelled / deleted Eventの除外
+- scheduledの複数日予定
+
+M4 UI確認用または後続範囲:
+
+- period Eventの表示fixture
+- 日ごとのMoney収支差額 / お金タブ用Money明細の表示fixture
+- recurrence occurrence / EventOccurrenceOverride
 
 Calendar描画に必要な情報を1リクエストで取得する。
 
@@ -63,11 +72,16 @@ GET /api/daily?date=2026-09-10
 
 返却対象:
 
-- 終日予定
-- period予定
-- 時間あり予定
-- 当日Money集計 / 明細
+M4実装済み:
+
+- scheduledの終日予定 / 時間あり予定
+- 指定日と重なるscheduled複数日予定
 - DailyNote
+
+M4 UI確認用または後続範囲:
+
+- period予定
+- 当日Money集計 / 明細
 
 Calendarと同じProjectionを利用する。
 
@@ -84,7 +98,7 @@ PATCH  /api/events/:id
 DELETE /api/events/:id
 ```
 
-M3ではscheduled Eventのみを扱う。Calendar / Dailyの実データ取得用に、指定期間と重なる自分のactive Eventを取得するlist APIも利用する。
+M3 / M4ではscheduled Eventのみを永続化・実データ取得する。Calendar / Dailyの実データ取得用に、指定期間と重なる自分のactive Eventを取得するlist APIも利用する。period / recurrenceのフィールドは将来設計として保持し、M4のperiod表示はfixture / placeholderである。
 
 ```text
 GET /api/events?startDate=2026-09-01&endDate=2026-09-30
@@ -118,7 +132,9 @@ M3のrecent候補は現在ユーザーのactiveなEventから返し、フォー�
 
 ---
 
-## 6. Money
+## 6. Money（後続Milestone）
+
+Moneyモデル / APIの本実装はM8以降の対象とする。M4のCalendar / Daily UIに表示するMoneyはfixture / placeholderを含む確認用projectionであり、productionのMoney永続化を意味しない。
 
 ```text
 GET    /api/money/month?month=2026-09
@@ -184,7 +200,7 @@ PUT    /api/daily-notes/:date
 DELETE /api/daily-notes/:date
 ```
 
-`PUT` はcreate/updateを兼ねる。
+`PUT` はcreate/updateを兼ねる。DailyNoteのmigration / API / UIはM4で実装済みである。
 
 `userId + date`を一意キーとする。`content`が空文字または空白だけの場合、PUTはその日付のDailyNoteを削除し`dailyNote: null`を返す。DELETEは対象がなくても成功扱いとする。
 

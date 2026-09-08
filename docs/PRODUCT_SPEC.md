@@ -179,11 +179,10 @@ UI上は分かりやすさのため:
 LifeHubの中心画面。
 
 - 390×844で大きく月Calendarを表示する
-- 日セル最上部にMoney金額
-- その下に予定
+- 日セルは複数日帯 / 単日予定をrow allocationし、Money summaryがある場合は利用可能rowの最終rowへ置く
 - 複数日予定はTimeTreeのような連続帯
-- 表示しきれない場合は `+N`
-- 最大表示件数は実装後の密度Evidenceを見て決める
+- 実測セル高から`availableRows`を算出し、表示しきれないEvent / Money明細は `+N` へ送る
+- `すべて`ではMoney summaryのみを表示し、家 / 仕事ではMoneyを表示せず、`お金`ではMoney名称と最終rowの日計を表示する
 
 Calendarタブ:
 

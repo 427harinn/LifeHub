@@ -2,7 +2,7 @@
 
 ## 現在のMilestone
 
-M4実装・local検証・390×844 Evidenceを完了。staging deploy / smoke とPR作成まで進め、ユーザー確認前のCalendar最大表示件数は未確定のまま保持する。
+M4実装・local検証・390×844 Evidence・LifeHub staging deploy / smokeを完了。PR #4のmerge前最終状態として、Calendarは固定maxを採用せず、実測セル高から`availableRows`を算出するadaptive row allocationを正とする。
 
 ## 目的
 
@@ -19,7 +19,12 @@ PR #4 UI修正では、既存のCalendar / Dailyの色・構造を維持した�
 - Dailyの前日 / 次日 / 今日、選択日表示、既存tap展開 / swipe編集を維持
 - DailyNoteのget / upsert / empty-delete / delete、本文タップ編集
 - M4高密度fixtureはE2E authenticated accountへ投入し、production seedにはしない
-- Calendarのmax 2 / 3 / 4候補を同一の非帯高密度セルでも比較できるEvidenceを追加
+- Calendarは端末ごとの実測セル高から`availableRows`を算出し、超過Event / Money明細をhidden件数へ送る。固定max 2 / 3 / 4は採用しない
+- `すべて`ではMoney summaryがある日の最終rowをMoney専用に予約し、Eventは残りrowへ配置する。Money summaryはhidden countに含めない
+- `家` / `仕事`ではMoneyを表示せず、Money用row予約もMoney由来hidden countも行わない
+- `お金`ではMoney名称を表示し、最終rowに日計を固定する
+- multi-day帯、single-day Event、Moneyのrow競合を解消し、帯は罫線より上のlayer、開始 / 終了端のみ短縮・角丸とする
+- Calendar month swipe、Date Sheet day swipe / inline expand / swipe edit / 小型quick-add、Daily day swipe、period row interaction、outside tap close、BottomSheet drag-down close、iPhone input zoom preventionを完了
 - HouseToDoのaxis判定付き月スワイプとrow hit area方針をLifeHubへ適用
 
 ## Evidence
@@ -27,20 +32,34 @@ PR #4 UI修正では、既存のCalendar / Dailyの色・構造を維持した�
 - `artifacts/evidence/m4/calendar-low-390x844.png`
 - `artifacts/evidence/m4/calendar-high-390x844.png`
 - `artifacts/evidence/m4/calendar-max-{2,3,4}-390x844.png`
+- `artifacts/evidence/m4/calendar-money-390x844.png`
+- `artifacts/evidence/m4/date-sheet-home-390x844.png`
+- `artifacts/evidence/m4/date-sheet-work-390x844.png`
+- `artifacts/evidence/m4/date-sheet-money-390x844.png`
 - `artifacts/evidence/m4/date-sheet-390x844.png`
 - `artifacts/evidence/m4/daily-normal-390x844.png`
 - `artifacts/evidence/m4/daily-expanded-390x844.png`
+- `artifacts/evidence/m4/daily-period-week-390x844.png`
+- `artifacts/evidence/m4/daily-period-month-390x844.png`
+- `artifacts/evidence/m4/daily-work-tab-390x844.png`
 - `artifacts/evidence/m4/daily-swipe-edit-390x844.png`
 - `artifacts/evidence/m4/daily-note-edit-390x844.png`
 - `artifacts/evidence/m4/form-tap-targets-zoom-prevention-390x844.png`
 - `artifacts/evidence/m4/calendar-month-swipe-{before,after}-390x844.png`
 - `artifacts/evidence/m4/calendar-date-sheet-to-daily-note.webm`
 - `artifacts/evidence/m4/returnTo-calendar-daily-add.webm`
+- `artifacts/evidence/m4/calendar-date-sheet-daily-interactions.webm`
+- `artifacts/evidence/m4/calendar-date-sheet-daily-swipe.webm`
+- `artifacts/evidence/m4/date-sheet-quick-add-and-bottom-sheet.webm`
+- `artifacts/evidence/m4/bottom-sheet-drag-close.webm`
 
-## 未確定
+## M4完了時点の判断
 
-- Calendar最大表示件数と件数バッジへ逃がす閾値は、max 2 / 3 / 4 Evidenceのユーザー確認後に決定する。
-- M4ではMoney / Search / recurrence / period / notificationの本実装を行わない。
+- Calendarは固定の最大表示件数を持たない。safe-areaやbrowser UIを含む端末ごとの実測セル高から`availableRows`を求める。
+- `availableRows = 3`でEvent 4件 + Money summaryの場合はEvent 2件、最終rowにMoney summary、hidden Event 2件となる。Event 0件でも空rowを保ち、Money summaryを最終rowに置く。
+- 390×844のmax 2 / 3 / 4候補比較は履歴Evidenceとして保持するが、固定maxを決めるためのOpen decisionではない。
+- M4でscheduled Event projectionとDailyNote migration / API / UIは実装済み。period / recurrence / notification / Money / Searchの本実装は後続Milestoneで行い、M4 UIのperiod / Moneyの一部はfixture / placeholderである。
+- staging remote migrationの実行時にCloudflare API `7403` permission errorが発生した。新規remote migrationはなく既存staging schemaでsmokeが成功しているためM4 blockerではない。次回migration適用前に権限を解決する。
 
 ## 進捗
 
@@ -51,7 +70,10 @@ PR #4 UI修正では、既存のCalendar / Dailyの色・構造を維持した�
 - [x] Calendar → Daily、前日 / 次日 / 今日、returnToを実装
 - [x] unit / integration / build / local migration / M4 Playwrightを実行
 - [x] 390×844 Evidenceと操作動画を作成
-- [x] LifeHub staging resource確認 / 作成 / migration / deploy / smoke
+- [x] LifeHub staging resource確認 / 作成 / deploy / smoke（既存staging schemaで確認）
+- [x] adaptive row allocation / multi-day・single-day・Money row競合 / Money最下段固定 / tab別Money表示 / hidden countを確定
+- [x] Date Sheet day swipe / inline expand / swipe edit / quick-add small popup、Daily day swipe、period row interaction、outside tap close、BottomSheet drag-down closeを確認
+- [x] iPhone input zoom preventionと390×844 Evidenceを確認
 - [x] commit / push / main向けPR作成（自動mergeしない）
 
 ---

@@ -135,6 +135,15 @@ LifeHub 専用 Worker に Cron Trigger を設定する。
 - 個別 Event notification
 - 必要に応じた Money の月次確定処理
 
+### M4 First Staging実績
+
+- Worker: `lifehub-staging`
+- D1: `lifehub-staging`
+- staging deploy済み、health / login / Event CRUD / Calendar / Daily / DailyNote smoke成功
+- M4では既存staging schemaを利用し、新規remote migrationは適用していない
+- remote migration操作でCloudflare API `7403` permission errorが発生した。M4 blockerではないが、次回新しいremote migrationを適用する前に権限を解決する
+- production/defaultとHouseToDoのWorker / D1 / R2 / Cron / secretsは操作しない
+
 HouseToDo の Cron Trigger とは独立する。
 
 Cron 自体は UTC で動作するため、実際に通知対象かどうかはユーザーの timezone と設定時刻をアプリ側で判定する。
@@ -252,8 +261,10 @@ M4ではLifeHub専用のstagingだけを対象にする。
 
 - Worker: `lifehub-staging`
 - D1: `lifehub-staging`
-- migration: LifeHubリポジトリの全migrationをstaging D1へ適用
+- migration: M4では既存staging schemaを利用し、新規remote migrationは適用していない
 - R2: 作成しない
 - production/default: 作成・変更・deployしない
 
 高密度Calendar確認用のfixtureはauthenticated test accountへ手動/APIで投入し、production seedにはしない。staging smokeではhealth、login、Event CRUD、Calendar range、Daily指定日、DailyNote CRUDを確認する。
+
+remote migration操作ではCloudflare API `7403` permission errorが発生した。既存schemaでM4 smokeは成功しているためM4 blockerではないが、次回新しいremote migrationを適用する前に権限問題を解決する。

@@ -396,7 +396,8 @@ Requirements:
 - overflowは日付右上の小型丸バッジ
 - 件数バッジは日付数字と同じ高さに置き、予定領域を圧迫しない
 - バッジがないセルは固定行を空けず、予定表示へ高さを使う
-- moneyはセル最下部中央、その上に予定
+- CalendarのMoney summaryは通常row allocationの一部として扱い、`すべて`では利用可能rowの最終rowを予約する。Moneyをabsolute overlayとして配置しない
+- `家` / `仕事`ではMoneyを表示せず、`お金`ではMoney名称と最終rowの日計を表示する
 - multi-day scheduled eventはTimeTree型の横帯
 - period eventは対象期間の開始日にだけ表示し、Calendar上で帯にしない
 - 今日の強調は日付数字周辺だけを控えめに
