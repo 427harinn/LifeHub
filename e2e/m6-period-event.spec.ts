@@ -31,7 +31,13 @@ test("period form states and Calendar/Daily/Date Sheet evidence", async ({ page 
   await openAdd(page);
   await page.screenshot({ path: path.join(evidenceDir, "period-scheduled-default-390x844.png") });
   await page.getByRole("button", { name: "予定の種類" }).click();
-  await page.getByRole("dialog", { name: "予定の種類" }).getByRole("button", { name: "期間中にやりたい" }).click();
+  const typeSheet = page.getByRole("dialog", { name: "予定の種類" });
+  await expect(typeSheet).toBeVisible();
+  await expect(typeSheet).toHaveCSS("opacity", "1");
+  await expect(typeSheet.getByRole("button", { name: "日時が決まっている" })).toBeVisible();
+  await expect(typeSheet.getByRole("button", { name: "期間中にやりたい" })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "type-sheet-390x844.png") });
+  await typeSheet.getByRole("button", { name: "期間中にやりたい" }).click();
   await expect(page.getByRole("button", { name: "実施時期" })).toContainText("今週中");
   await expect(page.getByRole("button", { name: /^日付/ })).toHaveCount(0);
   await page.screenshot({ path: path.join(evidenceDir, "period-this-week-390x844.png") });
@@ -69,12 +75,15 @@ test("period form states and Calendar/Daily/Date Sheet evidence", async ({ page 
   await expect(page.getByText("今週中UI", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "period-calendar-week-start-390x844.png") });
   await page.getByRole("button", { name: "9日", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("dialog").getByText("今週中UI", { exact: true })).toHaveCount(1);
+  const dateSheet = page.getByRole("dialog");
+  await expect(dateSheet).toBeVisible();
+  await expect(dateSheet).toHaveCSS("opacity", "1");
+  await expect(dateSheet.getByText("今週中UI", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-period-mid-range-390x844.png") });
-  await page.getByRole("dialog").getByRole("button", { name: "閉じる" }).click();
+  await dateSheet.getByRole("button", { name: "閉じる" }).click();
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByText("今週中UI", { exact: true })).toHaveCount(1);
+  await page.screenshot({ path: path.join(evidenceDir, "daily-period-390x844.png") });
   await page.screenshot({ path: path.join(evidenceDir, "period-daily-in-range-390x844.png") });
 });
 
