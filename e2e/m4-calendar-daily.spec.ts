@@ -46,6 +46,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await createEvent(page, { category: "home", title: "週またぎ家", startDate: shiftDate(today, -2), endDate: shiftDate(today, 2), allDay: true, startTime: null, endTime: null });
   await createEvent(page, { category: "work", title: "週またぎ仕事", startDate: shiftDate(today, -1), endDate: shiftDate(today, 5), allDay: true, startTime: null, endTime: null });
   await createEvent(page, { category: "home", title: "重なり帯", startDate: shiftDate(today, -1), endDate: shiftDate(today, 3), allDay: true, startTime: null, endTime: null });
+  for (let index = 0; index < 2; index += 1) await createEvent(page, { category: index === 0 ? "home" : "work", title: `帯2条件${index + 1}`, startDate: shiftDate(today, 3), endDate: shiftDate(today, 3), startTime: `${String(9 + index).padStart(2, "0")}:00`, endTime: `${String(9 + index).padStart(2, "0")}:30` });
+  for (let index = 0; index < 2; index += 1) await createEvent(page, { category: index === 0 ? "home" : "work", title: `帯1条件${index + 1}`, startDate: shiftDate(today, 4), endDate: shiftDate(today, 4), startTime: `${String(9 + index).padStart(2, "0")}:00`, endTime: `${String(9 + index).padStart(2, "0")}:30` });
   for (let index = 0; index < 6; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `多数予定${index + 1}`, startDate: today, endDate: today, startTime: `${String(12 + index).padStart(2, "0")}:00`, endTime: `${String(12 + index).padStart(2, "0")}:30` });
   for (let index = 0; index < 5; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `候補比較${index + 1}`, startDate: shiftDate(today, 10), endDate: shiftDate(today, 10), startTime: `${String(8 + index).padStart(2, "0")}:00`, endTime: `${String(8 + index).padStart(2, "0")}:30` });
 
@@ -88,6 +90,30 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.getByRole("button", { name: `${todayDay}日`, exact: true }).click();
   await expect(page.getByRole("dialog", { name: new RegExp(`${todayDay}日`) })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-390x844.png") });
+  const dateSheetEvent = page.getByRole("dialog").locator(".event-swipe-row").filter({ hasText: "朝の家予定" }).first();
+  await dateSheetEvent.locator(".event-swipe-row__main").click();
+  await expect(dateSheetEvent.locator(".event-inline-detail")).toContainText("駅");
+  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-inline-expand-390x844.png") });
+  const dateSheetEventBox = await dateSheetEvent.boundingBox();
+  if (!dateSheetEventBox) throw new Error("Date Sheet event bounds unavailable");
+  await page.mouse.move(dateSheetEventBox.x + 260, dateSheetEventBox.y + 24);
+  await page.mouse.down();
+  await page.mouse.move(dateSheetEventBox.x + 170, dateSheetEventBox.y + 24, { steps: 4 });
+  await page.mouse.up();
+  await expect(dateSheetEvent.getByRole("button", { name: "編集", exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-swipe-edit-390x844.png") });
+  await page.getByRole("dialog").locator(".calendar-date-sheet__day-nav span").click();
+  await expect(dateSheetEvent.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
+  const dateSheetGesture = page.getByRole("dialog").locator(".calendar-date-sheet__gesture");
+  const dateSheetGestureBox = await dateSheetGesture.boundingBox();
+  if (!dateSheetGestureBox) throw new Error("Date Sheet gesture bounds unavailable");
+  await page.mouse.move(dateSheetGestureBox.x + 270, dateSheetGestureBox.y + 24);
+  await page.mouse.down();
+  await page.mouse.move(dateSheetGestureBox.x + 180, dateSheetGestureBox.y + 24, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.getByRole("dialog")).toContainText(`${dateNumber(shiftDate(today, 1))}日`);
+  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-next-day-swipe-390x844.png") });
+  await page.getByRole("dialog").getByRole("button", { name: "前の日" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "1日の詳細を見る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await expect(page.locator(".daily-date-label")).toHaveText(`${Number(today.slice(5, 7))}月${todayDay}日`);
@@ -116,6 +142,19 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  await page.locator(".daily-page .fixture-group").filter({ hasText: "期間" }).locator(".event-swipe-row").filter({ hasText: "今週中：書類を整理" }).locator(".event-swipe-row__main").click();
+  const periodRow = page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first();
+  await expect(periodRow.locator(".event-inline-detail")).toBeVisible();
+  const periodBox = await periodRow.boundingBox();
+  if (!periodBox) throw new Error("Daily period row bounds unavailable");
+  await page.mouse.move(periodBox.x + 260, periodBox.y + 24);
+  await page.mouse.down();
+  await page.mouse.move(periodBox.x + 170, periodBox.y + 24, { steps: 4 });
+  await page.mouse.up();
+  await expect(periodRow.getByRole("button", { name: "編集", exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "daily-period-swipe-edit-390x844.png") });
+  await page.locator(".daily-page .timeline-section h2").click();
+  await expect(periodRow.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "今日のメモを編集" }).click();
   await page.getByLabel("今日のメモ").fill("更新した今日メモ");
@@ -129,6 +168,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
 });
 
 test("Calendar and Daily add preserve returnTo date", async ({ page }) => {
+  await mkdir(evidenceDir, { recursive: true });
   await registerThroughUi(page);
   const today = isoToday();
   const dayNumber = dateNumber(today);
@@ -163,4 +203,13 @@ test("Calendar and Daily add preserve returnTo date", async ({ page }) => {
   await page.screenshot({ path: path.join(evidenceDir, "form-tap-targets-zoom-prevention-390x844.png") });
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
+  const addSheet = page.getByRole("dialog", { name: "追加" });
+  const addSheetBox = await addSheet.boundingBox();
+  if (!addSheetBox) throw new Error("Add sheet bounds unavailable");
+  await page.mouse.move(addSheetBox.x + 200, addSheetBox.y + 24);
+  await page.mouse.down();
+  await page.mouse.move(addSheetBox.x + 200, addSheetBox.y + 110, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.getByRole("dialog", { name: "追加" })).toHaveCount(0);
 });

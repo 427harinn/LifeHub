@@ -1,13 +1,14 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { App } from "./App";
+import { allocateCalendarCellRows, App } from "./App";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "2026-09-07T00:00:00.000Z", updatedAt: "2026-09-07T00:00:00.000Z" };
 
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const requestPath = (input: RequestInfo | URL) => typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+const projectedEvent = (id: string) => ({ category: "home" as const, day: 1, date: "2026-09-01", eventId: id, kind: "single" as const, label: id });
 
 describe("LifeHub M2 shell", () => {
   beforeEach(() => {
@@ -92,5 +93,25 @@ describe("LifeHub M2 shell", () => {
     fireEvent.change(screen.getByLabelText("パスワード"), { target: { value: "invalid-password" } });
     fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("ログインできません。"));
+  });
+});
+
+describe("Calendar four-row allocation", () => {
+  it("shares rows across bands and single-day events", () => {
+    expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b")], 2, null, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [{ eventId: "a" }, { eventId: "b" }], visibleMoney: false });
+    expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 2, null, 4).hiddenCount).toBe(1);
+  });
+
+  it("keeps money in the final row and counts mixed overflow", () => {
+    const money = { amount: "-1,500円", kind: "expense" as const, label: "食費" };
+    const mixed = allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 1, money, 4);
+    expect(mixed.hiddenCount).toBe(1);
+    expect(mixed.visibleEvents).toHaveLength(2);
+    expect(mixed.visibleMoney).toBe(true);
+    const fourEventsAndMoney = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 4);
+    expect(fourEventsAndMoney.hiddenCount).toBe(1);
+    expect(fourEventsAndMoney.visibleEvents).toHaveLength(3);
+    expect(fourEventsAndMoney.visibleMoney).toBe(true);
+    expect(allocateCalendarCellRows([], 3, money, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [], visibleMoney: true });
   });
 });

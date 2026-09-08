@@ -10,8 +10,17 @@ type BottomSheetProps = {
 
 export function BottomSheet({ className, open, title, onClose, children }: BottomSheetProps) {
   const titleId = useId();
-  const dragStartY = useRef<number | null>(null);
+  const dragStart = useRef<{ x: number; y: number; axis: "pending" | "vertical" } | null>(null);
+  const dragOffsetRef = useRef(0);
   const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      dragStart.current = null;
+      dragOffsetRef.current = 0;
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -29,20 +38,45 @@ export function BottomSheet({ className, open, title, onClose, children }: Botto
 
   if (!open) return null;
 
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    dragStartY.current = event.clientY;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+  const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const content = target?.closest(".bottom-sheet__content");
+    if (content instanceof HTMLElement && content.scrollTop > 0) return;
+    dragStart.current = { axis: "pending", x: event.clientX, y: event.clientY };
+    dragOffsetRef.current = 0;
   };
 
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (dragStartY.current === null) return;
-    setDragOffset(Math.max(0, Math.min(180, event.clientY - dragStartY.current)));
+  const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
+    const gesture = dragStart.current;
+    if (!gesture) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    if (gesture.axis === "pending") {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+      if (dy <= 0 || Math.abs(dy) <= Math.abs(dx)) {
+        dragStart.current = null;
+        return;
+      }
+      gesture.axis = "vertical";
+      setDragging(true);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+    if (gesture.axis === "vertical") {
+      event.preventDefault();
+      const nextOffset = Math.max(0, Math.min(220, dy));
+      dragOffsetRef.current = nextOffset;
+      setDragOffset(nextOffset);
+    }
   };
 
-  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (dragStartY.current === null) return;
-    const shouldClose = dragOffset > 64;
-    dragStartY.current = null;
+  const handlePointerUp = (event: PointerEvent<HTMLElement>) => {
+    const gesture = dragStart.current;
+    if (!gesture) return;
+    const shouldClose = gesture.axis === "vertical" && dragOffsetRef.current > 64;
+    dragStart.current = null;
+    dragOffsetRef.current = 0;
+    setDragging(false);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     setDragOffset(0);
     if (shouldClose) onClose();
@@ -54,18 +88,15 @@ export function BottomSheet({ className, open, title, onClose, children }: Botto
       <section
         aria-labelledby={titleId}
         aria-modal="true"
-        className={`bottom-sheet${className ? ` ${className}` : ""}`}
+        className={`bottom-sheet${className ? ` ${className}` : ""}${dragging ? " is-dragging" : ""}`}
+        onPointerCancel={handlePointerUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         role="dialog"
         style={{ "--sheet-drag-offset": `${dragOffset}px` } as CSSProperties}
       >
-        <div
-          aria-hidden="true"
-          className="bottom-sheet__handle"
-          onPointerCancel={handlePointerUp}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-        />
+        <div aria-hidden="true" className="bottom-sheet__handle" />
         <div className="bottom-sheet__header">
           <h2 id={titleId}>{title}</h2>
           <button className="bottom-sheet__close" onClick={onClose} type="button">閉じる</button>
