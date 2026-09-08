@@ -17,6 +17,15 @@
 - [x] T13: staging health / login / Event CRUD / Calendar / Daily / DailyNote smoke
 - [x] T14: self-review、docs同期、commit / push、main向けPR作成。自動mergeしない
 
+## PR #4 UI修正
+
+- [x] Calendarのstacking orderとmulti-day / single-day領域を分離
+- [x] hidden件数のvisible / hidden計算をmax2・3・4で回帰
+- [x] 390×844の縦余白・日付数字・3件目標を調整
+- [x] Event formの予定種類 / 繰り返し / 通知rowとsheet開閉を修正
+- [x] 16px入力、HouseToDo式の軸判定付き月スワイプを追加
+- [x] 実機相当EvidenceとM2/M3/M4回帰を更新
+
 ## M4セルフレビュー観点
 
 - Calendar / Dailyが同一Event projection serviceを使う

@@ -8,6 +8,8 @@ M4実装・local検証・390×844 Evidenceを完了。staging deploy / smoke と
 
 M3 merge済みのCalendar / Daily UIを変更せず、共通Event range projection、Calendar / Dailyの日付連動、DailyNote CRUD、First Stagingを追加する。
 
+PR #4 UI修正では、既存のCalendar / Dailyの色・構造を維持したまま、Calendarの罫線・帯・単日行の重なり、hidden件数、390×844の密度、月スワイプ、Event formのrow hit area、iPhone入力ズームを調整した。
+
 ## 実装内容
 
 - `/api/calendar` は42セルに必要な6週グリッド範囲だけを取得
@@ -17,6 +19,8 @@ M3 merge済みのCalendar / Daily UIを変更せず、共通Event range projecti
 - Dailyの前日 / 次日 / 今日、選択日表示、既存tap展開 / swipe編集を維持
 - DailyNoteのget / upsert / empty-delete / delete、本文タップ編集
 - M4高密度fixtureはE2E authenticated accountへ投入し、production seedにはしない
+- Calendarのmax 2 / 3 / 4候補を同一の非帯高密度セルでも比較できるEvidenceを追加
+- HouseToDoのaxis判定付き月スワイプとrow hit area方針をLifeHubへ適用
 
 ## Evidence
 
@@ -28,6 +32,8 @@ M3 merge済みのCalendar / Daily UIを変更せず、共通Event range projecti
 - `artifacts/evidence/m4/daily-expanded-390x844.png`
 - `artifacts/evidence/m4/daily-swipe-edit-390x844.png`
 - `artifacts/evidence/m4/daily-note-edit-390x844.png`
+- `artifacts/evidence/m4/form-tap-targets-zoom-prevention-390x844.png`
+- `artifacts/evidence/m4/calendar-month-swipe-{before,after}-390x844.png`
 - `artifacts/evidence/m4/calendar-date-sheet-to-daily-note.webm`
 - `artifacts/evidence/m4/returnTo-calendar-daily-add.webm`
 

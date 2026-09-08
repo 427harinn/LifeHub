@@ -47,6 +47,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await createEvent(page, { category: "work", title: "週またぎ仕事", startDate: shiftDate(today, -1), endDate: shiftDate(today, 5), allDay: true, startTime: null, endTime: null });
   await createEvent(page, { category: "home", title: "重なり帯", startDate: shiftDate(today, -1), endDate: shiftDate(today, 3), allDay: true, startTime: null, endTime: null });
   for (let index = 0; index < 6; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `多数予定${index + 1}`, startDate: today, endDate: today, startTime: `${String(12 + index).padStart(2, "0")}:00`, endTime: `${String(12 + index).padStart(2, "0")}:30` });
+  for (let index = 0; index < 5; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `候補比較${index + 1}`, startDate: shiftDate(today, 10), endDate: shiftDate(today, 10), startTime: `${String(8 + index).padStart(2, "0")}:00`, endTime: `${String(8 + index).padStart(2, "0")}:30` });
 
   const calendarResponse = await page.request.get(`/api/calendar?month=${today.slice(0, 7)}`);
   expect(calendarResponse.status()).toBe(200);
@@ -60,16 +61,30 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(page.locator(".calendar-cell")).toHaveCount(42);
   await expect(page.locator(".calendar-band--home").first()).toBeVisible();
   await expect(page.locator(".calendar-band--work").first()).toBeVisible();
-  await expect(page.locator(".calendar-cell__count")).toBeVisible();
+  await expect(page.locator(".calendar-cell__count").first()).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-high-390x844.png") });
 
+  const candidateDay = dateNumber(shiftDate(today, 10));
   for (const candidate of [2, 3, 4]) {
     await page.goto(`/calendar?calendarMax=${candidate}`);
     await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
+    await expect(page.getByRole("button", { name: `${candidateDay}日`, exact: true }).locator(".calendar-cell__count")).toHaveText(String(5 - candidate));
     await page.screenshot({ path: path.join(evidenceDir, `calendar-max-${candidate}-390x844.png`) });
   }
 
   await page.goto("/calendar");
+  const initialMonth = await page.locator(".calendar-month h2").textContent();
+  const calendarBox = await page.locator(".calendar-grid").boundingBox();
+  if (!calendarBox) throw new Error("Calendar bounds unavailable");
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-month-swipe-before-390x844.png") });
+  await page.mouse.move(calendarBox.x + 270, calendarBox.y + 120);
+  await page.mouse.down();
+  await page.mouse.move(calendarBox.x + 190, calendarBox.y + 120, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator(".calendar-month h2")).not.toHaveText(initialMonth ?? "");
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-month-swipe-after-390x844.png") });
+  await page.getByRole("button", { name: "前の月", exact: true }).click();
+  await expect(page.locator(".calendar-month h2")).toHaveText(initialMonth ?? "");
   await page.getByRole("button", { name: `${todayDay}日`, exact: true }).click();
   await expect(page.getByRole("dialog", { name: new RegExp(`${todayDay}日`) })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-390x844.png") });
@@ -133,6 +148,19 @@ test("Calendar and Daily add preserve returnTo date", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await openAdd(page, "仕事");
   await expect(page.locator(".event-form").getByRole("button", { name: /^日付/ })).toContainText(`${dayNumber}`);
+  const form = page.locator(".event-form");
+  for (const option of ["予定の種類", "繰り返し", "通知"]) {
+    await form.getByRole("button", { name: option, exact: true }).click();
+    await expect(page.getByRole("dialog", { name: option })).toBeVisible();
+    await page.getByRole("button", { name: `${option}を閉じる` }).click();
+  }
+  await form.getByRole("button", { name: "以前の項目から選ぶ", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "以前の項目から選ぶ" })).toBeVisible();
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  const controlFontSizes = await form.locator("input:not([type='checkbox']), textarea, select").evaluateAll((controls) => controls.map((control) => Number.parseFloat(getComputedStyle(control).fontSize)));
+  expect(controlFontSizes.length).toBeGreaterThan(0);
+  expect(Math.min(...controlFontSizes)).toBeGreaterThanOrEqual(16);
+  await page.screenshot({ path: path.join(evidenceDir, "form-tap-targets-zoom-prevention-390x844.png") });
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
 });
