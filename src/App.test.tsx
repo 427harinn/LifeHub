@@ -74,8 +74,10 @@ describe("LifeHub M2 shell", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /\d+日$/ })[0]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "当日に追加" }));
-    expect(screen.getByRole("dialog", { name: "追加" })).toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole("dialog", { name: "追加" })).getByRole("button", { name: "閉じる" }));
+    expect(screen.getByRole("menu", { name: "この日に追加" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("menu", { name: "この日に追加" })).getByRole("menuitem", { name: "家" }));
+    expect(await screen.findByRole("heading", { name: "予定を追加" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "予定一覧へ戻る" }));
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
     expect(screen.getByRole("dialog", { name: "検索" })).toBeInTheDocument();
     expect(screen.getByText("検索は後のMilestoneで追加します。")).toBeInTheDocument();

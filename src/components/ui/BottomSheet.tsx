@@ -2,13 +2,14 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEve
 
 type BottomSheetProps = {
   className?: string;
+  headerActions?: ReactNode;
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
 };
 
-export function BottomSheet({ className, open, title, onClose, children }: BottomSheetProps) {
+export function BottomSheet({ className, headerActions, open, title, onClose, children }: BottomSheetProps) {
   const titleId = useId();
   const dragStart = useRef<{ x: number; y: number; axis: "pending" | "vertical" } | null>(null);
   const dragOffsetRef = useRef(0);
@@ -99,6 +100,7 @@ export function BottomSheet({ className, open, title, onClose, children }: Botto
         <div aria-hidden="true" className="bottom-sheet__handle" />
         <div className="bottom-sheet__header">
           <h2 id={titleId}>{title}</h2>
+          {headerActions ? <div className="bottom-sheet__header-actions">{headerActions}</div> : null}
           <button className="bottom-sheet__close" onClick={onClose} type="button">閉じる</button>
         </div>
         <div className="bottom-sheet__content">{children}</div>
