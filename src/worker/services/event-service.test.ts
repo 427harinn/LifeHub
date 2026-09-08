@@ -68,6 +68,7 @@ describe("period Event validation", () => {
   });
   it("rejects invalid period combinations and scheduled fields", () => {
     expect(() => validateEventInput({ ...base, periodStartDate: "2026-09-10", periodEndDate: "2026-09-09", periodWindowType: "custom_range", periodAnchorDate: null })).toThrow();
+    expect(() => validateEventInput({ ...base, periodStartDate: "2026-09-10", periodEndDate: "2026-09-10", periodWindowType: "custom_range", periodAnchorDate: null })).toThrow();
     expect(() => validateEventInput({ ...base, startDate: "2026-09-10" })).toThrow();
     expect(() => validatePeriodEventInput({ ...base, periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: "2026-09-10", periodEndDate: "2026-09-11" }, { frequency: "weekly" })).toThrow();
     expect(() => validatePeriodEventInput(base, { frequency: "monthly" })).toThrow();

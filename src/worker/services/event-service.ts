@@ -69,7 +69,7 @@ export const validatePeriodEventInput = (value: Partial<PeriodEventInput>, recur
     if (anchor !== null) details.periodAnchorDate = "日付範囲では基準日を設定できません。";
     if (!start || !isDateKey(start)) details.periodStartDate = "開始日を入力してください。";
     if (!end || !isDateKey(end)) details.periodEndDate = "終了日を入力してください。";
-    if (isDateKey(start ?? "") && isDateKey(end ?? "") && (start as string) > (end as string)) details.period = "終了日は開始日以降にしてください。";
+    if (isDateKey(start ?? "") && isDateKey(end ?? "") && (start as string) >= (end as string)) details.period = "期間は2日以上で指定してください。";
     if (recurrence !== null && recurrence !== undefined) details.recurrence = "日付範囲に繰り返しは設定できません。";
   }
   if (windowType === "this_week" && recurrence && typeof recurrence === "object" && (recurrence as { frequency?: string }).frequency !== "weekly") details.recurrence = "今週中は毎週だけ設定できます。";
