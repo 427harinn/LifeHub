@@ -49,18 +49,20 @@ const calendarMoneyForCell = (date: string | null, filter: CalendarFilter, today
 };
 
 export function allocateCalendarCellRows(events: CalendarProjectedEvent[], bandCount: number, money: CalendarMoneyItem[] | null, rowCapacity = 4, maxVisibleEvents = rowCapacity) {
-  const visibleBandCount = Math.min(Math.max(0, rowCapacity), bandCount);
-  const eventCapacity = Math.max(0, rowCapacity - visibleBandCount);
-  const visibleEvents = events.slice(0, Math.min(maxVisibleEvents, eventCapacity));
-  const moneyCapacity = Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length);
   const moneyItems = money ?? [];
   const summary = moneyItems.find((item) => item.isSummary);
   const details = moneyItems.filter((item) => !item.isSummary);
+  const eventCapacity = Math.max(0, rowCapacity - (summary ? 1 : 0));
+  const visibleBandCount = Math.min(eventCapacity, bandCount);
+  const singleEventCapacity = Math.max(0, eventCapacity - visibleBandCount);
+  const visibleEvents = events.slice(0, Math.min(maxVisibleEvents, singleEventCapacity));
+  const moneyCapacity = Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length);
   const visibleMoney = moneyCapacity > 0
     ? [...details.slice(0, Math.max(0, moneyCapacity - (summary ? 1 : 0))), ...(summary && moneyCapacity > 0 ? [summary] : [])]
     : [];
-  const hiddenCount = Math.max(0, bandCount - visibleBandCount) + Math.max(0, events.length - visibleEvents.length) + Math.max(0, (money?.length ?? 0) - visibleMoney.length);
-  return { hiddenCount, visibleEvents, visibleMoney };
+  const hiddenDetailCount = Math.max(0, details.length - visibleMoney.filter((item) => !item.isSummary).length);
+  const hiddenCount = Math.max(0, bandCount - visibleBandCount) + Math.max(0, events.length - visibleEvents.length) + hiddenDetailCount;
+  return { emptyRows: Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length - visibleMoney.length), hiddenCount, visibleEvents, visibleMoney };
 }
 
 function toCalendarFixtureEvents(events: Event[], month: string): CalendarProjectedEvent[] {
@@ -130,9 +132,9 @@ function CalendarShell({ events, filter, month, onDateSelect, onFilterChange, on
   const cells = useMemo(() => Array.from({ length: 42 }, (_, index) => { const day = index - firstWeekday + 1; return day > 0 && day <= daysInMonth ? day : null; }), [daysInMonth, firstWeekday]);
   const projectedEvents = useMemo(() => toCalendarFixtureEvents(events, month), [events, month]);
   const filteredEvents = useMemo(() => projectedEvents.filter((event) => fixtureEventMatchesFilter(event, filter)), [filter, projectedEvents]);
+  const today = todayDateKey();
   const bands = useMemo(() => filter === "money" ? [] : buildCalendarBandSegments(filteredEvents, firstWeekday), [filteredEvents, filter, firstWeekday]);
   const bandLaneCountByCell = useMemo(() => bands.reduce<Record<string, number>>((counts, segment) => { for (let column = segment.startColumn; column <= segment.endColumn; column += 1) { const key = `${segment.row}:${column}`; counts[key] = Math.max(counts[key] ?? 0, segment.lane + 1); } return counts; }, {}), [bands]);
-  const today = todayDateKey();
   const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const [calendarCellHeight, setCalendarCellHeight] = useState(0);
   useEffect(() => {
@@ -148,6 +150,19 @@ function CalendarShell({ events, filter, month, onDateSelect, onFilterChange, on
   const candidateValue = Number(new URLSearchParams(window.location.search).get("calendarMax"));
   const autoRowCapacity = calendarCellHeight > 0 ? Math.max(1, Math.min(4, Math.floor((calendarCellHeight - 33) / 14))) : 4;
   const rowCapacity = candidateValue === 2 || candidateValue === 3 || candidateValue === 4 ? Math.min(autoRowCapacity, candidateValue) : autoRowCapacity;
+  const bandFitsRowAllocation = (segment: CalendarBandSegment) => {
+    if (filter !== "all") return segment.lane < rowCapacity;
+    const moneyReservedLane = rowCapacity - 1;
+    if (moneyReservedLane < 0 || segment.lane >= moneyReservedLane) {
+      for (let column = segment.startColumn; column <= segment.endColumn; column += 1) {
+        const cellIndex = segment.row * 7 + column - 1;
+        const day = cells[cellIndex];
+        const cellDate = day ? `${year}-${pad(monthIndex + 1)}-${pad(day)}` : null;
+        if (calendarMoneyForCell(cellDate, filter, today).some((item) => item.isSummary)) return false;
+      }
+    }
+    return segment.lane < rowCapacity;
+  };
   const pointerDown = (pointerEvent: ReactPointerEvent<HTMLElement>) => { if (pointerEvent.pointerType === "mouse" && pointerEvent.button !== 0) return; monthGesture.current = { axis: "pending", x: pointerEvent.clientX, y: pointerEvent.clientY }; suppressMonthClick.current = false; };
   const pointerMove = (pointerEvent: ReactPointerEvent<HTMLElement>) => { const gesture = monthGesture.current; if (!gesture) return; const dx = pointerEvent.clientX - gesture.x; const dy = pointerEvent.clientY - gesture.y; if (gesture.axis === "pending") { if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return; if (Math.abs(dx) <= Math.abs(dy) + 4) { gesture.axis = "vertical"; setMonthDragging(false); return; } gesture.axis = "horizontal"; pointerEvent.currentTarget.setPointerCapture?.(pointerEvent.pointerId); setMonthDragging(true); } if (gesture.axis === "horizontal") { pointerEvent.preventDefault(); setMonthOffset(Math.max(-96, Math.min(96, dx))); } };
   const pointerUp = (pointerEvent: ReactPointerEvent<HTMLElement>) => { const gesture = monthGesture.current; if (!gesture) return; const dx = pointerEvent.clientX - gesture.x; const dy = pointerEvent.clientY - gesture.y; if (gesture.axis === "horizontal") { pointerEvent.preventDefault(); suppressMonthClick.current = true; if (Math.abs(dx) >= 56 && Math.abs(dx) > Math.abs(dy)) onMonthChange(shiftMonth(month, dx < 0 ? 1 : -1)); pointerEvent.currentTarget.releasePointerCapture?.(pointerEvent.pointerId); } monthGesture.current = null; setMonthDragging(false); setMonthOffset(0); };
@@ -170,11 +185,12 @@ function CalendarShell({ events, filter, month, onDateSelect, onFilterChange, on
           return <button aria-label={day ? `${day}日` : "空の日付"} className={`calendar-cell${cellDate === today ? " calendar-cell--today" : ""}${hasBand ? " calendar-cell--has-band" : ""}`} disabled={!day} key={`${day ?? "empty"}-${index}`} onClick={() => { if (cellDate) onDateSelect(cellDate, filter); }} style={{ "--calendar-band-lanes": Math.min(rowCapacity, bandLaneCount) } as CSSProperties} type="button">
             {day ? <><span className="calendar-cell__date">{day}</span>{allocation.hiddenCount > 0 ? <span aria-label={`${allocation.hiddenCount}件の予定を省略`} className="calendar-cell__count">{allocation.hiddenCount}</span> : null}<span className="calendar-cell__single-events">
               {allocation.visibleEvents.map((event) => <span className={`calendar-event calendar-event--${event.category} calendar-event--${event.kind}`} key={`${event.eventId}-${event.date}`}>{event.label}</span>)}
+              {Array.from({ length: allocation.emptyRows }, (_, emptyIndex) => <span aria-hidden="true" className="calendar-event" key={`empty-${emptyIndex}`} />)}
               {allocation.visibleMoney.map((entry, moneyIndex) => <span className={`calendar-cell__money calendar-cell__money--${entry.category}${entry.isSummary ? " calendar-cell__money--summary" : " calendar-cell__money--detail"}`} key={`${entry.label}-${entry.amount}-${moneyIndex}`}>{entry.isSummary ? moneyAmountLabel(entry.amount) : entry.label}</span>)}
             </span></> : null}
           </button>;
         })}
-        <div aria-hidden="true" className="calendar-band-layer">{bands.filter((segment) => segment.lane < rowCapacity).map((segment, index) => <span className={`calendar-band calendar-band--multi calendar-band--${segment.category}${segment.isStart ? " calendar-band--start" : ""}${segment.isEnd ? " calendar-band--end" : ""}`} key={`${segment.category}-${segment.row}-${segment.startColumn}-${index}`} style={{ "--band-lane": segment.lane, gridColumn: `${segment.startColumn} / ${segment.endColumn + 1}`, gridRow: segment.row + 1 } as CSSProperties}>{segment.label}</span>)}</div>
+        <div aria-hidden="true" className="calendar-band-layer">{bands.filter(bandFitsRowAllocation).map((segment, index) => <span className={`calendar-band calendar-band--multi calendar-band--${segment.category}${segment.isStart ? " calendar-band--start" : ""}${segment.isEnd ? " calendar-band--end" : ""}`} key={`${segment.category}-${segment.row}-${segment.startColumn}-${index}`} style={{ "--band-lane": segment.lane, gridColumn: `${segment.startColumn} / ${segment.endColumn + 1}`, gridRow: segment.row + 1 } as CSSProperties}>{segment.label}</span>)}</div>
       </div>
     </section>
   </main>;
