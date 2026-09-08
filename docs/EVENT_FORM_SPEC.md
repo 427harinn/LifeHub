@@ -64,7 +64,7 @@ HouseToDoのフォーム思想を継承し、**入力に必要のない項目は
 
 Calendar / Dailyから特定日を指定して追加した場合は、その日を初期日として引き継ぐ。
 
-M5では`日時が決まっている` scheduled Eventへ、繰り返しrowを接続する。period Eventとnotificationは後続範囲のため、scheduled recurrence以外の設定画面は開かない。
+M6では`日時が決まっている` scheduled Eventに加えて`期間中にやりたい` period Eventを有効化する。periodでは日時・終日・時間を表示せず、`実施時期`を表示する。
 
 ---
 
@@ -199,6 +199,8 @@ form rowの右側は、選択した内容を人間向けsummaryで表示する�
 毎月25日
 2か月ごと15日
 ```
+
+開始日と終了日を指定したときだけ開始日・終了日のrowを表示する。`periodStartDate <= periodEndDate`を必須とし、このmodeでは繰り返しrowを表示しない。
 
 **カスタムはDB上のfrequencyではない。**
 

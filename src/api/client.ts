@@ -19,12 +19,17 @@ export type Event = {
   title: string;
   place: string | null;
   memo: string | null;
-  timingType: "scheduled";
-  allDay: boolean;
-  startDate: string;
+  timingType: "scheduled" | "period";
+  allDay: boolean | null;
+  startDate: string | null;
   startTime: string | null;
-  endDate: string;
+  endDate: string | null;
   endTime: string | null;
+  periodWindowType: "this_week" | "this_month" | "custom_range" | null;
+  periodAnchorDate: string | null;
+  periodStartDate: string | null;
+  periodEndDate: string | null;
+  deadlineTime: string | null;
   recurrenceRuleId?: string | null;
   active: boolean;
   deletedAt: string | null;
@@ -35,11 +40,12 @@ export type Event = {
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
+export type PeriodEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime" | "periodWindowType" | "periodAnchorDate" | "periodStartDate" | "periodEndDate" | "deadlineTime">;
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly";
 export type RecurrenceRule = { id: string; userId: string; frequency: RecurrenceFrequency; interval: number; weekdays: number[] | null; dayOfMonth: number | null; startsOn: string; endsOn: string | null; createdAt: string; updatedAt: string };
 export type RecurrenceRuleInput = Pick<RecurrenceRule, "frequency" | "interval" | "weekdays" | "dayOfMonth" | "startsOn" | "endsOn">;
 export type EventScope = "occurrence" | "following" | "series";
-export type EventCommandInput = ScheduledEventInput & { recurrence?: RecurrenceRuleInput | null; scope?: EventScope; occurrenceKey?: string };
+export type EventCommandInput = Partial<ScheduledEventInput & PeriodEventInput> & { recurrence?: RecurrenceRuleInput | null; scope?: EventScope; occurrenceKey?: string };
 export type DailyNote = { id: string; userId: string; date: string; content: string; createdAt: string; updatedAt: string };
 export type CalendarRange = { startDate: string; endDate: string };
 

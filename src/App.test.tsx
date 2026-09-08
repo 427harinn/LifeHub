@@ -104,6 +104,32 @@ describe("Calendar adaptive row allocation", () => {
     expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 2, null, 4).hiddenCount).toBe(1);
   });
 
+  it("switches the form to period and only offers valid window recurrence", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
+      if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      return Promise.resolve(response({ events: [] }));
+    });
+    render(<App />);
+    await screen.findByRole("heading", { name: "カレンダー" });
+    fireEvent.click(screen.getByRole("button", { name: "追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "家を追加" }));
+    await screen.findByRole("heading", { name: "予定を追加" });
+    fireEvent.click(screen.getByRole("button", { name: /^予定の種類$/ }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "予定の種類" })).getByRole("button", { name: "期間中にやりたい" }));
+    expect(screen.getByRole("button", { name: "実施時期" })).toHaveTextContent("今週中");
+    expect(screen.queryByRole("button", { name: /^日付$/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "実施時期" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "実施時期" })).getByRole("button", { name: "日付範囲を指定" }));
+    expect(screen.getByRole("button", { name: /^期間/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^開始日/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^繰り返し$/ })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "同日範囲" } });
+    fireEvent.click(screen.getByRole("button", { name: "登録" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("期間は2日以上で指定してください。"));
+  });
+
   it("keeps money in the final row and counts mixed overflow", () => {
     const money = [{ amount: 699, category: "income" as const, isSummary: true, label: "収支" }];
     const threeRowsFourEvents = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 3);
@@ -171,5 +197,11 @@ describe("recurrence form summaries", () => {
 
   it("uses the event start weekday when weekly weekdays are omitted", () => {
     expect(recurrenceSummary({ frequency: "weekly", interval: 1, weekdays: null, dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("毎週火曜");
+  });
+
+  it("keeps period recurrence summaries independent from the anchor date", () => {
+    expect(recurrenceSummary({ frequency: "weekly", interval: 1, weekdays: [2], dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08", true)).toBe("毎週");
+    expect(recurrenceSummary({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 8, startsOn: "2026-09-08", endsOn: null }, "2026-09-08", true)).toBe("毎月");
+    expect(recurrenceSummary({ frequency: "weekly", interval: 2, weekdays: [1, 3], dayOfMonth: null, startsOn: "2026-09-08", endsOn: "2026-09-22" }, "2026-09-08", true)).toBe("2週間ごと（〜9月22日(火)）");
   });
 });

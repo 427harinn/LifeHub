@@ -147,7 +147,8 @@ const getDaily = requireAuth(async ({ request, env, user }) => {
     new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE)
   ]);
   const projectedEvents = await eventProjection(env).project(user.id, dayToRange(date), { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
-  return json({ date, events: projectedEvents, dailyNote });
+  const dailyEvents = [...new Map(projectedEvents.map((event) => [event.occurrenceKey ?? event.id, event])).values()];
+  return json({ date, events: dailyEvents, dailyNote });
 });
 
 const putDailyNote = requireAuth(async ({ request, env, user }) => {

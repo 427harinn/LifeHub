@@ -8,12 +8,19 @@ export { isDateKey } from "./recurrence-service";
 export type DateRange = { startDate: string; endDate: string };
 export type ProjectedEvent = Event & { occurrenceKey: string | null; recurrence: RecurrenceRule | null };
 type Definition = { event: Event; rule: RecurrenceRule | null; overrides: EventOccurrenceOverride[] };
+type PeriodRange = { startDate: string; endDate: string; occurrenceKey: string };
 
-const occurrenceKey = (eventId: string, startDate: string, startTime: string | null) => `event:${eventId}:${startDate}T${startTime ?? "00:00"}`;
-export const stableOccurrenceKey = occurrenceKey;
+const scheduledOccurrenceKey = (eventId: string, startDate: string, startTime: string | null) => `event:${eventId}:${startDate}T${startTime ?? "00:00"}`;
+export const stableOccurrenceKey = scheduledOccurrenceKey;
+export const stablePeriodWeekOccurrenceKey = (eventId: string, weekStart: string) => `event:${eventId}:week:${weekStart}`;
+export const stablePeriodMonthOccurrenceKey = (eventId: string, month: string) => `event:${eventId}:month:${month.slice(0, 7)}`;
+export const stablePeriodRangeOccurrenceKey = (eventId: string, periodStartDate: string) => `event:${eventId}:range:${periodStartDate}`;
 
 const within = (date: string, range: DateRange) => date >= range.startDate && date <= range.endDate;
-const eventOverlaps = (event: Event, range: DateRange) => event.startDate <= range.endDate && event.endDate >= range.startDate;
+const overlaps = (left: DateRange, right: DateRange) => left.startDate <= right.endDate && left.endDate >= right.startDate;
+const eventOverlaps = (event: Event, range: DateRange) => event.timingType === "period"
+  ? Boolean(event.periodStartDate && event.periodEndDate && overlaps({ startDate: event.periodStartDate, endDate: event.periodEndDate }, range))
+  : Boolean(event.startDate && event.endDate && overlaps({ startDate: event.startDate, endDate: event.endDate }, range));
 
 const dailyDates = (rule: RecurrenceRule, range: DateRange) => {
   const firstDate = rule.startsOn > range.startDate ? rule.startsOn : range.startDate;
@@ -52,6 +59,12 @@ const nextMonth = (value: string) => {
   return month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
 };
 
+const nextMonthBy = (value: string, interval: number) => {
+  let result = value;
+  for (let index = 0; index < interval; index += 1) result = nextMonth(result);
+  return result;
+};
+
 const monthlyDates = (rule: RecurrenceRule, range: DateRange) => {
   const firstMonth = `${range.startDate.slice(0, 7)}-01`;
   const lastMonth = `${range.endDate.slice(0, 7)}-01`;
@@ -75,23 +88,109 @@ export const occurrenceDates = (rule: RecurrenceRule, range: DateRange, weekStar
   return monthlyDates(rule, range);
 };
 
+const addDays = (startDate: string, endDate: string, range: DateRange) => {
+  const first = startDate > range.startDate ? startDate : range.startDate;
+  const last = endDate < range.endDate ? endDate : range.endDate;
+  const dates: string[] = [];
+  if (first > last) return dates;
+  for (let date = first; date <= last; date = shiftDate(date, 1)) dates.push(date);
+  return dates;
+};
+
+const monthEnd = (month: string) => {
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(5, 7)) - 1;
+  return `${month.slice(0, 7)}-${String(monthDayClamped(year, monthIndex, 31)).padStart(2, "0")}`;
+};
+
+const periodRangeForEvent = (event: Event, weekStartsOn: number): PeriodRange | null => {
+  if (event.periodWindowType === "this_week" && event.periodAnchorDate) {
+    const startDate = startOfWeek(event.periodAnchorDate, weekStartsOn);
+    return { startDate, endDate: shiftDate(startDate, 6), occurrenceKey: stablePeriodWeekOccurrenceKey(event.id, startDate) };
+  }
+  if (event.periodWindowType === "this_month" && event.periodAnchorDate) {
+    const startDate = `${event.periodAnchorDate.slice(0, 7)}-01`;
+    return { startDate, endDate: monthEnd(startDate), occurrenceKey: stablePeriodMonthOccurrenceKey(event.id, startDate) };
+  }
+  if (event.periodWindowType === "custom_range" && event.periodStartDate && event.periodEndDate) {
+    return { startDate: event.periodStartDate, endDate: event.periodEndDate, occurrenceKey: stablePeriodRangeOccurrenceKey(event.id, event.periodStartDate) };
+  }
+  return null;
+};
+
+const recurringPeriodRanges = (event: Event, rule: RecurrenceRule, range: DateRange, weekStartsOn: number): PeriodRange[] => {
+  if (event.periodWindowType === "this_week" && rule.frequency === "weekly" && event.periodAnchorDate) {
+    const anchor = startOfWeek(event.periodAnchorDate, weekStartsOn);
+    const firstWeek = startOfWeek(range.startDate, weekStartsOn);
+    let candidate = anchor;
+    if (candidate < firstWeek) {
+      const offset = Math.floor(dateDifference(candidate, firstWeek) / 7);
+      const remainder = offset % rule.interval;
+      candidate = shiftDate(candidate, (offset + (remainder === 0 ? 0 : rule.interval - remainder)) * 7);
+    }
+    const result: PeriodRange[] = [];
+    for (; candidate <= range.endDate; candidate = shiftDate(candidate, rule.interval * 7)) {
+      if (rule.endsOn && candidate > rule.endsOn) break;
+      const endDate = shiftDate(candidate, 6);
+      if (overlaps({ startDate: candidate, endDate }, range)) result.push({ startDate: candidate, endDate, occurrenceKey: stablePeriodWeekOccurrenceKey(event.id, candidate) });
+    }
+    return result;
+  }
+  if (event.periodWindowType === "this_month" && rule.frequency === "monthly" && event.periodAnchorDate) {
+    const anchor = `${event.periodAnchorDate.slice(0, 7)}-01`;
+    const firstMonth = `${range.startDate.slice(0, 7)}-01`;
+    let candidate = anchor;
+    if (candidate < firstMonth) {
+      const offset = (Number(firstMonth.slice(0, 4)) - Number(anchor.slice(0, 4))) * 12 + Number(firstMonth.slice(5, 7)) - Number(anchor.slice(5, 7));
+      candidate = nextMonthBy(anchor, Math.max(0, Math.ceil(offset / rule.interval) * rule.interval));
+    }
+    const result: PeriodRange[] = [];
+    for (; candidate <= range.endDate; candidate = nextMonthBy(candidate, rule.interval)) {
+      if (rule.endsOn && candidate > rule.endsOn) break;
+      const endDate = monthEnd(candidate);
+      if (overlaps({ startDate: candidate, endDate }, range)) result.push({ startDate: candidate, endDate, occurrenceKey: stablePeriodMonthOccurrenceKey(event.id, candidate) });
+    }
+    return result;
+  }
+  return [];
+};
+
 const applyOverride = (event: Event, override: EventOccurrenceOverride | undefined): Event | null => {
   if (!override || override.overrideType === "cancelled") return override ? null : event;
   return { ...event, ...(override.patch ?? {}) };
 };
 
+const projectPeriodOccurrence = (event: Event, rule: RecurrenceRule | null, range: DateRange, weekStartsOn: number, override: EventOccurrenceOverride | undefined): ProjectedEvent[] => {
+  const baseRanges = rule ? recurringPeriodRanges(event, rule, range, weekStartsOn) : (() => {
+    const value = periodRangeForEvent(event, weekStartsOn);
+    return value && overlaps(value, range) ? [value] : [];
+  })();
+  return baseRanges.flatMap((baseRange) => {
+    const base = { ...event, startDate: baseRange.startDate, endDate: baseRange.endDate, allDay: true, startTime: null, endTime: null, periodAnchorDate: event.periodWindowType === "custom_range" ? null : baseRange.startDate, periodStartDate: baseRange.startDate, periodEndDate: baseRange.endDate, occurrenceKey: baseRange.occurrenceKey, recurrence: rule } as ProjectedEvent;
+    const projected = applyOverride(base, override);
+    if (!projected) return [];
+    const modifiedRange = periodRangeForEvent(projected, weekStartsOn) ?? { startDate: projected.periodStartDate ?? baseRange.startDate, endDate: projected.periodEndDate ?? baseRange.endDate, occurrenceKey: baseRange.occurrenceKey };
+    return addDays(modifiedRange.startDate, modifiedRange.endDate, range).map((date) => ({ ...projected, startDate: date, endDate: date, allDay: true, startTime: null, endTime: null, periodStartDate: modifiedRange.startDate, periodEndDate: modifiedRange.endDate, occurrenceKey: baseRange.occurrenceKey, recurrence: rule }));
+  });
+};
+
 export const projectDefinitions = (definitions: Definition[], range: DateRange, weekStartsOn = 1): ProjectedEvent[] => definitions.flatMap<ProjectedEvent>(({ event, rule, overrides }) => {
-  if (!rule) return eventOverlaps(event, range) ? [{ ...event, occurrenceKey: null, recurrence: null }] : [];
   const overrideByKey = new Map(overrides.map((override) => [override.occurrenceKey, override]));
-  const duration = Math.max(0, dateDifference(event.startDate, event.endDate));
+  if (event.timingType === "period") {
+    const base = projectPeriodOccurrence(event, rule, range, weekStartsOn, undefined);
+    return base.flatMap((item) => projectPeriodOccurrence(event, rule, range, weekStartsOn, overrideByKey.get(item.occurrenceKey ?? "")).filter((candidate) => candidate.occurrenceKey === item.occurrenceKey && candidate.startDate === item.startDate));
+  }
+  if (!rule) return eventOverlaps(event, range) ? [{ ...event, occurrenceKey: null, recurrence: null }] : [];
+  const duration = Math.max(0, dateDifference(event.startDate ?? range.startDate, event.endDate ?? event.startDate ?? range.startDate));
   const projectionRange = { startDate: shiftDate(range.startDate, -duration), endDate: range.endDate };
   const projectDate = (date: string, override: EventOccurrenceOverride | undefined) => {
-    const base = { ...event, startDate: date, endDate: shiftDate(date, duration), occurrenceKey: occurrenceKey(event.id, date, event.startTime), recurrence: rule };
+    const key = scheduledOccurrenceKey(event.id, date, event.startTime);
+    const base = { ...event, startDate: date, endDate: shiftDate(date, duration), occurrenceKey: key, recurrence: rule };
     const projected = applyOverride(base, override);
     if (!projected || !eventOverlaps(projected, range)) return [];
-    return [{ ...projected, occurrenceKey: base.occurrenceKey, recurrence: rule }];
+    return [{ ...projected, occurrenceKey: key, recurrence: rule } as ProjectedEvent];
   };
-  const generated = occurrenceDates(rule, projectionRange, weekStartsOn).flatMap((date) => projectDate(date, overrideByKey.get(occurrenceKey(event.id, date, event.startTime))));
+  const generated = occurrenceDates(rule, projectionRange, weekStartsOn).flatMap((date) => projectDate(date, overrideByKey.get(scheduledOccurrenceKey(event.id, date, event.startTime))));
   const generatedKeys = new Set(generated.map((item) => item.occurrenceKey));
   const movedOverrides = overrides.flatMap((override) => {
     if (override.overrideType !== "modified" || !override.patch?.startDate || generatedKeys.has(override.occurrenceKey)) return [];
@@ -121,11 +220,7 @@ export class EventProjectionService {
 
   async project(userId: string, range: DateRange, options: { timezone?: string; weekStartsOn?: number } = {}): Promise<ProjectedEvent[]> {
     const events = await this.repository.listForRange(userId, range.startDate, range.endDate);
-    const definitions = await Promise.all(events.map(async (event) => ({
-      event,
-      rule: event.recurrenceRuleId ? await this.recurrenceRepository.getById(userId, event.recurrenceRuleId) : null,
-      overrides: event.recurrenceRuleId ? await this.overrideRepository.listForEvent(userId, event.id) : []
-    })));
-    return projectDefinitions(definitions, range, options.weekStartsOn ?? 1).sort((left, right) => `${left.startDate}T${left.startTime ?? "00:00"}`.localeCompare(`${right.startDate}T${right.startTime ?? "00:00"}`));
+    const definitions = await Promise.all(events.map(async (event) => ({ event, rule: event.recurrenceRuleId ? await this.recurrenceRepository.getById(userId, event.recurrenceRuleId) : null, overrides: event.recurrenceRuleId ? await this.overrideRepository.listForEvent(userId, event.id) : [] })));
+    return projectDefinitions(definitions, range, options.weekStartsOn ?? 1).sort((left, right) => `${left.startDate ?? "9999-12-31"}T${left.startTime ?? left.deadlineTime ?? "00:00"}`.localeCompare(`${right.startDate ?? "9999-12-31"}T${right.startTime ?? right.deadlineTime ?? "00:00"}`));
   }
 }

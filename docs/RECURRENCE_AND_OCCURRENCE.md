@@ -232,7 +232,7 @@ HouseToDoから参考にするもの:
 - TaskRecord
 - complete / skip workflow
 
-## 15. M5 scheduled実装
+## 15. M5 scheduled / M6 period実装
 
 M5では`timingType=scheduled`だけを実装する。`Event + RecurrenceRule + EventOccurrenceOverride`からCalendar / Dailyの要求rangeだけを`EventProjectionService`で生成し、将来occurrenceをDBへ事前生成しない。
 
@@ -244,4 +244,4 @@ event:{eventId}:{startDate}T{startTime}
 
 Calendar / Dailyで同じkeyを使い、overrideの対象とUIの行identityを一致させる。日付演算はtimezoneに依存しないdate keyとして行い、API projectionにはUserSettingsのtimezone / weekStartsOnを渡す。
 
-period Event、notification、Money recurrenceはM5の対象外とする。
+M6ではperiod Eventも同じ`EventProjectionService`と`EventOccurrenceOverride`を使用する。periodはCalendarでは帯にせず、週開始日 / 月初 / custom range開始日にだけ表示し、Daily / Date Sheetでは期間内の日に表示する。notificationとMoney recurrenceは未実装で、M7以降の対象とする。

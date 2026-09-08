@@ -98,7 +98,7 @@ PATCH  /api/events/:id
 DELETE /api/events/:id
 ```
 
-M3 / M4ではscheduled Eventのみを永続化・実データ取得し、recurrenceは未実装だった。M5ではscheduled recurrenceを含めてCalendar / Dailyへprojectionする。period / notification / Money recurrenceのフィールドは将来設計として保持し、period表示はfixture / placeholderである。
+M6では`timingType=period`も永続化・projectionする。scheduledとperiodは互いの日時フィールドを持たず、periodは`periodWindowType`、anchorまたはcustom range、`deadlineTime`を使用する。
 
 ```text
 GET /api/events?startDate=2026-09-01&endDate=2026-09-30
@@ -127,6 +127,15 @@ occurrence対象ではstableな `occurrenceKey` を必須とする。
 scope指定時もEvent、Rule、Overrideすべてで認証userId ownershipを確認し、他ユーザーのIDは404とする。
 
 period Eventの `this_week / this_month` 作成時は `periodAnchorDate` を保存する。
+
+periodの作成・更新validationは次を適用する。
+
+- `this_week / this_month` は`periodAnchorDate`必須
+- `custom_range` は`periodStartDate <= periodEndDate`、`periodAnchorDate = null`、recurrence不可
+- `this_week` はなし / weekly、`this_month`はなし / monthlyだけを許可
+- periodではscheduledのdate/time fieldをnullにし、scheduledではperiod fieldをnullにする
+
+period recurrenceのprojectionは、Calendarでは週開始日 / 月初 / custom range開始日にだけ表示し、Daily / Date Sheetでは対象期間内の日に表示する。stable keyは`event:{eventId}:week:{weekStart}`、`event:{eventId}:month:{YYYY-MM}`、`event:{eventId}:range:{periodStartDate}`を使用する。
 
 ---
 

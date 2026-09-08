@@ -272,3 +272,9 @@ remote migration操作ではCloudflare API `7403` permission errorが発生し�
 M5では`0005_m5_recurrence.sql`が新規remote migrationとなるため、7403の再確認が完了するまで`lifehub-staging`へのmigration / deploy / smokeを実行しない。2026-09-08に再確認した結果、Wrangler 4.129.0はOAuth認証で`d1 (write)` scopeを持ち、account `1ea7a50f1aef89d4159a26ca825386af`、D1 `lifehub-staging`、database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`、`wrangler.jsonc`のstaging bindingが整合していた。`npx wrangler d1 migrations list lifehub-staging --env staging --remote`と`DB` binding形式はいずれも成功し、7403は再現しなかった。
 
 7403は過去に発生したが現在は再現せず、OAuth/account認可状態またはCloudflare側一時状態の可能性があるため、解決済みとは断定しない。再発時は`wrangler whoami`、`wrangler d1 list`、database name / bindingのmigration list、config ID照合を同じ順序で行う。今回のstaging検証では`0005_m5_recurrence.sql`適用、staging deploy、health / auth / recurrence create / Calendar / Daily / occurrence edit / occurrence delete smokeが成功し、最終migration listは`No migrations to apply!`となった。production/defaultとHouseToDoは未操作である。
+
+## M6 Period Event staging
+
+M6では`0006_m6_period_events.sql`で既存scheduled Eventを保持したままperiod用列とnullable date/time schemaへ移行する。remote migration前にOAuth、`d1 (write)` scope、account、`lifehub-staging`、database ID、staging bindingの一致を再確認し、7403が再発した場合はmigration / deployを停止して同じ切り分けを行う。production/defaultとHouseToDoは対象外とする。
+
+2026-09-08のM6作業では、`npx wrangler whoami`を実行した結果、OAuth tokenが期限切れでrefreshできず非対話環境では再認証が必要と表示された。`npx wrangler d1 list`と`npx wrangler d1 migrations list lifehub-staging --env staging --remote`も認証要求で停止し、7403は再現していない。OAuth再認証が完了するまでremote migration / deploy / smokeは実行しない。

@@ -1,4 +1,4 @@
-import type { Event, EventCategory, EventTimingType, ScheduledEventInput } from "../types";
+import type { Event, EventCategory, EventInput, EventTimingType } from "../types";
 
 type EventRow = {
   id: string;
@@ -8,11 +8,16 @@ type EventRow = {
   place: string | null;
   memo: string | null;
   timing_type: EventTimingType;
-  all_day: number;
-  start_date: string;
+  all_day: number | null;
+  start_date: string | null;
   start_time: string | null;
-  end_date: string;
+  end_date: string | null;
   end_time: string | null;
+  period_window_type: Event["periodWindowType"];
+  period_anchor_date: string | null;
+  period_start_date: string | null;
+  period_end_date: string | null;
+  deadline_time: string | null;
   recurrence_rule_id: string | null;
   active: number;
   deleted_at: string | null;
@@ -20,7 +25,7 @@ type EventRow = {
   updated_at: string;
 };
 
-export const eventSelect = "id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, recurrence_rule_id, active, deleted_at, created_at, updated_at";
+export const eventSelect = "id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, period_window_type, period_anchor_date, period_start_date, period_end_date, deadline_time, recurrence_rule_id, active, deleted_at, created_at, updated_at";
 
 const toEvent = (row: EventRow): Event => ({
   id: row.id,
@@ -30,11 +35,16 @@ const toEvent = (row: EventRow): Event => ({
   place: row.place,
   memo: row.memo,
   timingType: row.timing_type,
-  allDay: row.all_day === 1,
+  allDay: row.all_day === null ? null : row.all_day === 1,
   startDate: row.start_date,
   startTime: row.start_time,
   endDate: row.end_date,
   endTime: row.end_time,
+  periodWindowType: row.period_window_type,
+  periodAnchorDate: row.period_anchor_date,
+  periodStartDate: row.period_start_date,
+  periodEndDate: row.period_end_date,
+  deadlineTime: row.deadline_time,
   recurrenceRuleId: row.recurrence_rule_id,
   active: row.active === 1,
   deletedAt: row.deleted_at,
@@ -45,11 +55,11 @@ const toEvent = (row: EventRow): Event => ({
 export class EventRepository {
   constructor(private readonly db: D1Database) {}
 
-  async create(userId: string, input: ScheduledEventInput, recurrenceRuleId: string | null, now: string): Promise<Event> {
+  async create(userId: string, input: EventInput, recurrenceRuleId: string | null, now: string): Promise<Event> {
     const id = crypto.randomUUID();
     await this.db.prepare(
-      "INSERT INTO events (id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, recurrence_rule_id, active, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)"
-    ).bind(id, userId, input.category, input.title, input.place, input.memo, input.timingType, input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, recurrenceRuleId, now, now).run();
+      "INSERT INTO events (id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, period_window_type, period_anchor_date, period_start_date, period_end_date, deadline_time, recurrence_rule_id, active, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)"
+    ).bind(id, userId, input.category, input.title, input.place, input.memo, input.timingType, input.allDay === null ? null : input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, input.periodWindowType, input.periodAnchorDate, input.periodStartDate, input.periodEndDate, input.deadlineTime, recurrenceRuleId, now, now).run();
     const created = await this.getById(userId, id);
     if (!created) throw new Error("Event could not be created");
     return created;
@@ -61,7 +71,7 @@ export class EventRepository {
   }
 
   async listForRange(userId: string, startDate: string, endDate: string): Promise<Event[]> {
-    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL AND (recurrence_rule_id IS NOT NULL OR (start_date <= ? AND end_date >= ?)) ORDER BY start_date ASC, COALESCE(start_time, '00:00') ASC, created_at ASC`).bind(userId, endDate, startDate).all<EventRow>();
+    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL AND (timing_type = 'period' OR recurrence_rule_id IS NOT NULL OR (start_date <= ? AND end_date >= ?)) ORDER BY COALESCE(start_date, period_start_date, period_anchor_date, '9999-12-31') ASC, COALESCE(start_time, deadline_time, '00:00') ASC, created_at ASC`).bind(userId, endDate, startDate).all<EventRow>();
     return result.results.map(toEvent);
   }
 
@@ -70,10 +80,10 @@ export class EventRepository {
     return result.results.map(toEvent);
   }
 
-  async update(userId: string, id: string, input: ScheduledEventInput, recurrenceRuleId: string | null, now: string): Promise<Event | null> {
+  async update(userId: string, id: string, input: EventInput, recurrenceRuleId: string | null, now: string): Promise<Event | null> {
     const result = await this.db.prepare(
-      "UPDATE events SET category = ?, title = ?, place = ?, memo = ?, timing_type = ?, all_day = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, recurrence_rule_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL"
-    ).bind(input.category, input.title, input.place, input.memo, input.timingType, input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, recurrenceRuleId, now, id, userId).run();
+      "UPDATE events SET category = ?, title = ?, place = ?, memo = ?, timing_type = ?, all_day = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, period_window_type = ?, period_anchor_date = ?, period_start_date = ?, period_end_date = ?, deadline_time = ?, recurrence_rule_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL"
+    ).bind(input.category, input.title, input.place, input.memo, input.timingType, input.allDay === null ? null : input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, input.periodWindowType, input.periodAnchorDate, input.periodStartDate, input.periodEndDate, input.deadlineTime, recurrenceRuleId, now, id, userId).run();
     if (!result.meta.changes) return null;
     return this.getById(userId, id);
   }
