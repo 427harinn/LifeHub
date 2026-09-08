@@ -104,6 +104,28 @@ describe("Calendar adaptive row allocation", () => {
     expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 2, null, 4).hiddenCount).toBe(1);
   });
 
+  it("switches the form to period and only offers valid window recurrence", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
+      if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      return Promise.resolve(response({ events: [] }));
+    });
+    render(<App />);
+    await screen.findByRole("heading", { name: "カレンダー" });
+    fireEvent.click(screen.getByRole("button", { name: "追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "家を追加" }));
+    await screen.findByRole("heading", { name: "予定を追加" });
+    fireEvent.click(screen.getByRole("button", { name: /^予定の種類$/ }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "予定の種類" })).getByRole("button", { name: "期間中にやりたい" }));
+    expect(screen.getByRole("button", { name: "実施時期" })).toHaveTextContent("今週中");
+    expect(screen.queryByRole("button", { name: /^日付$/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "実施時期" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "実施時期" })).getByRole("button", { name: "日付範囲を指定" }));
+    expect(screen.getByRole("button", { name: /^開始日/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^繰り返し$/ })).not.toBeInTheDocument();
+  });
+
   it("keeps money in the final row and counts mixed overflow", () => {
     const money = [{ amount: 699, category: "income" as const, isSummary: true, label: "収支" }];
     const threeRowsFourEvents = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 3);

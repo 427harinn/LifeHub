@@ -2,7 +2,15 @@
 
 ## 現在のMilestone
 
-M5実装済み・PR #5 merge前。対象はscheduled Eventのrecurrenceのみ。period Event / notification / Money recurrenceは対象外。
+M6実装中・PR #6作成前。対象はperiod Eventのみ。M7 notification / Money recurrenceは対象外。
+
+## Milestone 6: Period Event
+
+- `timingType=period`、`this_week` / `this_month` / `custom_range`を実装
+- `periodAnchorDate`をcontext日として保存し、`weekStartsOn`に従って週を決定。custom rangeはanchorを保存しない
+- this_week + weekly、this_month + monthlyだけをperiod recurrenceとして許可し、M5と同じprojection / scope / overrideを再利用
+- Calendarはperiodを帯にせず、週開始日 / 月初 / custom range開始日にだけ表示。Daily / Date Sheetは期間内の日に表示
+- periodは完了状態を持たず、home=オレンジ、work=青を使用する
 
 ## 目的
 

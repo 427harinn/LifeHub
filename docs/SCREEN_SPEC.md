@@ -155,6 +155,8 @@ Daily / Date Sheetでは、選択日が期間内であれば従来通り確認�
 期間予定に完了チェックは表示しない。
 対象期間を過ぎたら過去の予定としてその位置にそのまま残る。
 
+M6のperiod Eventもこの表示仕様を使う。Calendarは帯にせず、`this_week`は対象週開始日、`this_month`は対象月初、`custom_range`は`periodStartDate`にだけ表示する。Daily / Date Sheetは同じprojection結果から対象期間内の日に表示する。カテゴリ色はscheduledと同じ家=オレンジ、仕事=青で、period専用色は持たない。
+
 ### 予定が多い日
 
 availableRowsを超えた予定、または`お金`タブで表示しきれないMoney明細は無理に詰め込まず、日付セル右上の小型丸バッジに件数数字を表示する。

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateScheduledEventInput } from "./event-service";
+import { validateEventInput, validatePeriodEventInput, validateScheduledEventInput } from "./event-service";
 import type { ScheduledEventInput } from "../types";
 import { normalizeRecurrenceInput } from "./recurrence-service";
 
@@ -57,5 +57,19 @@ describe("recurrence input normalization", () => {
     expect(() => normalizeRecurrenceInput({ frequency: "weekly", weekdays: [] }, "2026-09-01")).toThrow();
     expect(() => normalizeRecurrenceInput({ frequency: "monthly", dayOfMonth: 32 }, "2026-09-01")).toThrow();
     expect(() => normalizeRecurrenceInput({ frequency: "daily", endsOn: "2026-08-31" }, "2026-09-01")).toThrow();
+  });
+});
+
+describe("period Event validation", () => {
+  const base = { category: "home" as const, title: "書類", place: null, memo: null, timingType: "period" as const, allDay: null, startDate: null, startTime: null, endDate: null, endTime: null, periodWindowType: "this_week" as const, periodAnchorDate: "2026-09-10", periodStartDate: null, periodEndDate: null, deadlineTime: "21:00" };
+  it("accepts anchor windows and custom ranges", () => {
+    expect(validatePeriodEventInput(base)).toMatchObject({ periodWindowType: "this_week", periodAnchorDate: "2026-09-10" });
+    expect(validatePeriodEventInput({ ...base, periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: "2026-09-10", periodEndDate: "2026-09-15" })).toMatchObject({ periodWindowType: "custom_range" });
+  });
+  it("rejects invalid period combinations and scheduled fields", () => {
+    expect(() => validateEventInput({ ...base, periodStartDate: "2026-09-10", periodEndDate: "2026-09-09", periodWindowType: "custom_range", periodAnchorDate: null })).toThrow();
+    expect(() => validateEventInput({ ...base, startDate: "2026-09-10" })).toThrow();
+    expect(() => validatePeriodEventInput({ ...base, periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: "2026-09-10", periodEndDate: "2026-09-11" }, { frequency: "weekly" })).toThrow();
+    expect(() => validatePeriodEventInput(base, { frequency: "monthly" })).toThrow();
   });
 });

@@ -152,11 +152,11 @@ scheduledではperiod系フィールドはnull。
 
 M3では`timing_type=scheduled`の行だけを作成し、period系・recurrenceRule・notificationの保存は行わなかった。M5ではscheduled EventのrecurrenceRuleを保存する。`allDay=1`の行は`start_time`と`end_time`をnullにし、`allDay=0`の行は両時刻を必須とする。Eventの通常削除は`active=0 + deletedAt`で表す。
 
-## M5時点の実装範囲
+## M6時点の実装範囲
 
 - scheduled Eventのschema / migration / repository / projectionはM4の実データ対象である。
 - DailyNoteはM4でmigration / API / UIを実装し、`userId + date`を一意とする。空保存は削除として扱う。
-- scheduled recurrenceのschema / projection / overrideはM5で実装済み。period / notification / Money recurrenceは将来設計として以下に残す。period / Money UIの一部はfixture / placeholderであり、本実装ではない。
+- scheduled recurrenceとperiod Eventのschema / projection / overrideは実装済み。notification / Money recurrenceは将来設計として残す。
 
 M5のseries scopeはbase Event / Ruleを更新するため、過去を含む未override occurrenceのprojectionも新しい定義に従う。過去occurrenceを保護する必要がある1回はmodified overrideとして保持する。following scopeは元Ruleを対象直前で終了し、過去projectionを変更しない。
 

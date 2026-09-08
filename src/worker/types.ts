@@ -29,6 +29,7 @@ export type LifeHubUserState = {
 
 export type EventCategory = "home" | "work";
 export type EventTimingType = "scheduled" | "period";
+export type PeriodWindowType = "this_week" | "this_month" | "custom_range";
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly";
 
 export type RecurrenceRule = {
@@ -54,11 +55,16 @@ export type Event = {
   place: string | null;
   memo: string | null;
   timingType: EventTimingType;
-  allDay: boolean;
-  startDate: string;
+  allDay: boolean | null;
+  startDate: string | null;
   startTime: string | null;
-  endDate: string;
+  endDate: string | null;
   endTime: string | null;
+  periodWindowType: PeriodWindowType | null;
+  periodAnchorDate: string | null;
+  periodStartDate: string | null;
+  periodEndDate: string | null;
+  deadlineTime: string | null;
   recurrenceRuleId: string | null;
   active: boolean;
   deletedAt: string | null;
@@ -70,6 +76,8 @@ export type Event = {
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
+export type PeriodEventInput = ScheduledEventInput & Pick<Event, "periodWindowType" | "periodAnchorDate" | "periodStartDate" | "periodEndDate" | "deadlineTime">;
+export type EventInput = ScheduledEventInput & Partial<Pick<Event, "periodWindowType" | "periodAnchorDate" | "periodStartDate" | "periodEndDate" | "deadlineTime">>;
 
 export type EventOccurrenceOverrideType = "modified" | "cancelled";
 export type EventOccurrenceOverride = {
@@ -78,7 +86,7 @@ export type EventOccurrenceOverride = {
   eventId: string;
   occurrenceKey: string;
   overrideType: EventOccurrenceOverrideType;
-  patch: Partial<ScheduledEventInput> | null;
+  patch: Partial<EventInput> | null;
   createdAt: string;
   updatedAt: string;
 };

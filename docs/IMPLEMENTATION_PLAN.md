@@ -301,16 +301,16 @@ LifeHub固有の `期間中にやりたい` 予定を完成させる。
 - custom_range recurrence禁止
 - period Projection
 - periodの今回のみ / これ以降 / すべて
-- Calendar period帯
+- Calendarでは週開始日 / 月初 / custom range開始日にだけ表示（帯にしない）
 - Dailyで終日の下にperiodを表示
-- period専用色
+- Calendar / Daily / Date Sheetはhome=オレンジ、work=青。period専用色は追加しない
 
 ## Evidence
 
 - 今週中
 - 今月中
 - custom range
-- Calendarの横断帯
+- Calendarの開始日限定表示、Daily / Date Sheetの期間内表示
 - 月/週境界
 - Daily上部
 - period Form分岐

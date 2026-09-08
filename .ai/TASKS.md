@@ -39,6 +39,31 @@
 
 ---
 
+# Milestone 6 Tasks
+
+## 小タスク
+
+- [x] 最新`main`から`codex/m6-period-event`を作成し、M5 branchを再利用しない
+- [x] 指定docsを確認し、M6のperiod表示仕様を同期
+- [x] Event schema / migration `0006_m6_period_events.sql`、period validation、ownershipを実装
+- [x] M5共通projectionへperiod window / weekly / monthly projection、stable key、overrideを追加
+- [x] EventFormの予定種別 / 実施時期 / period recurrence分岐を実装
+- [x] Calendar / Daily / Date Sheetへperiod projectionを接続し、既存interaction grammarを維持
+- [x] period projection / key / validation / override回帰テストを追加
+- [ ] 390×844 Evidence / staging migration / deploy / period smoke / PR作成（OAuth token期限切れのためstagingはSTOP）
+
+## M6セルフレビュー
+
+- Calendar period帯・period専用色を追加していない
+- Calendarはperiod開始日、Daily / Date Sheetは期間内の日を表示する
+- custom_rangeではrecurrence rowを表示せず、無効なrecurrence選択肢を出さない
+- periodにcomplete / checkbox / skip / pass / completion historyを追加していない
+- M4のCalendar adaptive row、Money最終row、Date Sheet、Daily inline、swipe、day swipe、BottomSheet drag closeを置換していない
+- production/default / HouseToDoには触れていない
+- M6 remote確認では`whoami`がOAuth token期限切れでrefreshできず、D1 list / migration listも認証要求で停止。7403は再現していないため、OAuth再認証後に同じ切り分けを行う
+
+---
+
 # Milestone 4 Tasks
 
 ## 小タスク
