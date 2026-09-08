@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, weekEnd } from "./App";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "2026-09-07T00:00:00.000Z", updatedAt: "2026-09-07T00:00:00.000Z" };
@@ -98,22 +98,40 @@ describe("LifeHub M2 shell", () => {
   });
 });
 
-describe("Calendar four-row allocation", () => {
+describe("Calendar adaptive row allocation", () => {
   it("shares rows across bands and single-day events", () => {
-    expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b")], 2, null, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [{ eventId: "a" }, { eventId: "b" }], visibleMoney: false });
+    expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b")], 2, null, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [{ eventId: "a" }, { eventId: "b" }], visibleMoney: [] });
     expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 2, null, 4).hiddenCount).toBe(1);
   });
 
   it("keeps money in the final row and counts mixed overflow", () => {
-    const money = { amount: "-1,500円", kind: "expense" as const, label: "食費" };
+    const money = [{ amount: -1500, category: "expense" as const, label: "食費" }];
     const mixed = allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 1, money, 4);
     expect(mixed.hiddenCount).toBe(1);
     expect(mixed.visibleEvents).toHaveLength(2);
-    expect(mixed.visibleMoney).toBe(true);
+    expect(mixed.visibleMoney).toHaveLength(1);
     const fourEventsAndMoney = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 4);
     expect(fourEventsAndMoney.hiddenCount).toBe(1);
     expect(fourEventsAndMoney.visibleEvents).toHaveLength(3);
-    expect(fourEventsAndMoney.visibleMoney).toBe(true);
-    expect(allocateCalendarCellRows([], 3, money, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [], visibleMoney: true });
+    expect(fourEventsAndMoney.visibleMoney).toHaveLength(1);
+    expect(allocateCalendarCellRows([], 3, money, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [], visibleMoney: money });
+  });
+});
+
+describe("Calendar date and money projections", () => {
+  it("formats weekdays and period boundaries from weekStartsOn", () => {
+    expect(formatDate("2026-09-10")).toBe("9月10日(木)");
+    expect(formatDate("2026-09-10", true)).toBe("2026年9月10日(木)");
+    expect(formatDateRange("2026-09-10", "2026-09-13")).toBe("9月10日(木)〜9月13日(日)");
+    expect(weekEnd("2026-09-10", 0)).toBe("2026-09-12");
+    expect(weekEnd("2026-09-10", 1)).toBe("2026-09-13");
+    expect(weekEnd("2026-09-10", 6)).toBe("2026-09-11");
+  });
+
+  it("projects money details and the daily total separately", () => {
+    const entries = calendarMoneyEntriesForDate("2026-09-10", "2026-09-10");
+    expect(entries.map((entry) => entry.amount)).toEqual([-1500, 2999, -800]);
+    expect(calendarMoneySummaryForDate("2026-09-10", "2026-09-10")).toMatchObject({ amount: 699, category: "income" });
+    expect(calendarMoneySummaryForDate("2026-09-11", "2026-09-10")).toBeNull();
   });
 });
