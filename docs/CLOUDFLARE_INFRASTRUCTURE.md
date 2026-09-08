@@ -269,4 +269,6 @@ M4ではLifeHub専用のstagingだけを対象にする。
 
 remote migration操作ではCloudflare API `7403` permission errorが発生した。既存schemaでM4 smokeは成功しているためM4 blockerではないが、次回新しいremote migrationを適用する前に権限問題を解決する。
 
-M5では`0005_m5_recurrence.sql`が新規remote migrationとなるため、7403が解決するまで`lifehub-staging`へのmigration / deploy / smokeを実行しない。production/defaultとHouseToDoは引き続き未操作とする。必要権限は、対象アカウントのCloudflare AccountでD1 database `lifehub-staging`のmigration適用に必要なD1 write権限（少なくともD1 edit相当）であり、Account read-only / D1 read-onlyでは不足する。
+M5では`0005_m5_recurrence.sql`が新規remote migrationとなるため、7403の再確認が完了するまで`lifehub-staging`へのmigration / deploy / smokeを実行しない。2026-09-08に再確認した結果、Wrangler 4.129.0はOAuth認証で`d1 (write)` scopeを持ち、account `1ea7a50f1aef89d4159a26ca825386af`、D1 `lifehub-staging`、database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`、`wrangler.jsonc`のstaging bindingが整合していた。`npx wrangler d1 migrations list lifehub-staging --env staging --remote`と`DB` binding形式はいずれも成功し、7403は再現しなかった。
+
+7403は過去に発生したが現在は再現せず、OAuth/account認可状態またはCloudflare側一時状態の可能性があるため、解決済みとは断定しない。再発時は`wrangler whoami`、`wrangler d1 list`、database name / bindingのmigration list、config ID照合を同じ順序で行う。今回のstaging検証では`0005_m5_recurrence.sql`適用、staging deploy、health / auth / recurrence create / Calendar / Daily / occurrence edit / occurrence delete smokeが成功し、最終migration listは`No migrations to apply!`となった。production/defaultとHouseToDoは未操作である。

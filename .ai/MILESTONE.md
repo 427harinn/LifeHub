@@ -2,7 +2,7 @@
 
 ## 現在のMilestone
 
-M5実装中。対象はscheduled Eventのrecurrenceのみ。period Event / notification / Money recurrenceは対象外。
+M5実装済み・PR #5 merge前。対象はscheduled Eventのrecurrenceのみ。period Event / notification / Money recurrenceは対象外。
 
 ## 目的
 
@@ -39,21 +39,21 @@ M5実装中。対象はscheduled Eventのrecurrenceのみ。period Event / notif
 - [x] M4 UIを維持したrecurrence form / scope BottomSheetを実装
 - [x] recurrence UI review対応: `[数値] 単位`表示、weekly開始曜日の自動選択、人間向けsummary、終了なし / 終了日、scope補助文、曜日0件validationを追加
 - [x] unit / build / local migration / M5 Playwrightを実行
-- [ ] 7403解決確認後のstaging migration / deploy / smoke
+- [x] 7403再確認後のstaging migration / deploy / recurrence smoke
 - [x] self-review、docs同期、commit / push / PR #5更新（自動mergeなし）
 
 ## M5 UI review update（2026-09-08）
 
 - recurrence form rowは`カスタム`や生の`間隔 2`を表示せず、`2週間ごと 月・水`などのsummaryを表示する。
 - weeklyはscheduled Eventの開始日の曜日を初期選択し、終了は`なし`または日付rowで設定する。
-- scope sheetは3択を維持し、選択した1回 / 選択した回から先 / 系列全体（過去も含む）を短い補助文で示す。
+- scope sheetは3択の簡潔な1行表示を維持し、scopeの意味はdocs / API / testで定義する。
 - 390×844 Evidenceはrecurrence summary、終了なし / 終了日、開始曜日、同一seriesのCalendar複数occurrenceを含める。
 
 ## STOP条件
 
-M4記録のCloudflare API `7403` permission errorが解決していない場合、production/default・HouseToDo・staging schema手作業変更には進まない。local migration / test / Evidenceまでを完了範囲として報告する。
+M4で記録したCloudflare API `7403`は、2026-09-08の再実行では再現しなかった。WranglerはOAuth認証で、`d1 (write)` scope、account、`lifehub-staging` D1、database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`の整合を確認した。`npx wrangler d1 migrations list lifehub-staging --env staging --remote`とbinding名`DB`の同コマンドはいずれも成功した。
 
-2026-09-08に`npx wrangler d1 migrations list DB --env staging --remote`を実行したが、Cloudflare API `/accounts/1ea7a50f1aef89d4159a26ca825386af/d1/database/da75b9df-dcb6-4e80-991e-6310be3c1933/query`で`code: 7403`（account invalid / unauthorized）が再発したため、remote migration / deploy / smokeは実行していない。
+7403は過去に発生したが現在は再現せず、OAuth/account認可状態またはCloudflare側一時状態の可能性がある。解決済みとは断定せず、今後再発時は`wrangler whoami`、`wrangler d1 list`、staging database name / bindingのmigration list、config ID照合の順に同じ切り分けを行う。今回の検証では`0005_m5_recurrence.sql`のstaging適用、staging deploy、health / auth / recurrence create / Calendar / Daily / occurrence edit / occurrence delete smokeが成功し、最終migration listは`No migrations to apply!`となった。production/defaultとHouseToDoは未操作。
 
 ---
 
