@@ -280,7 +280,7 @@ test("Calendar and Daily add preserve returnTo date", async ({ page }) => {
   for (const option of ["予定の種類", "繰り返し", "通知"]) {
     await form.getByRole("button", { name: option, exact: true }).click();
     await expect(page.getByRole("dialog", { name: option })).toBeVisible();
-    await page.getByRole("button", { name: `${option}を閉じる` }).click();
+    await page.getByRole("dialog", { name: option }).getByRole("button", { name: "閉じる", exact: true }).click();
   }
   await form.getByRole("button", { name: "以前の項目から選ぶ", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "以前の項目から選ぶ" })).toBeVisible();
