@@ -1,3 +1,62 @@
+# Milestone 5: Scheduled Recurrence Engine
+
+## 現在のMilestone
+
+M5実装済み・PR #5 merge前。対象はscheduled Eventのrecurrenceのみ。period Event / notification / Money recurrenceは対象外。
+
+## 目的
+
+`Event + RecurrenceRule + EventOccurrenceOverride`から要求rangeだけを共通projectionし、Calendar / Dailyで同じoccurrenceを表示・編集できる状態にする。
+
+## 実装内容
+
+- daily / weekly / monthly、interval、weekdays、dayOfMonth、startsOn / endsOn
+- UI上の「カスタム」詳細設定とprogressive disclosure
+- stable occurrenceKey（`event:{eventId}:{date}T{time}`）
+- 月末clamp、week boundary、timezone-safe date projection
+- occurrence / following / seriesの編集・削除scope
+- 今回のみmodified / cancelled override、series split、series soft delete
+- M4 Calendar adaptive row、Daily inline expand、swipe edit、day swipe、Date Sheet、BottomSheet drag-down closeを維持
+
+## Evidence
+
+- `artifacts/evidence/m5/recurrence-{none,options,daily,weekly,monthly}-390x844.png`
+- `artifacts/evidence/m5/recurrence-custom-weekdays-interval2-endsOn-390x844.png`
+- `artifacts/evidence/m5/recurrence-end-none-390x844.png`
+- `artifacts/evidence/m5/recurrence-form-summary-390x844.png`
+- `artifacts/evidence/m5/{calendar,daily}-recurring-event-390x844.png`
+- `artifacts/evidence/m5/{scope-selection,occurrence-modified,occurrence-cancelled,following-series}-390x844.png`
+- `artifacts/evidence/m5/recurrence-registration-calendar-daily.webm`
+- `artifacts/evidence/m5/swipe-scope-occurrence-edit.webm`
+
+## 進捗
+
+- [x] 最新`origin/main`をfetchし、M4を再利用しない`codex/m5-scheduled-recurrence-engine`を作成
+- [x] 指定docsと7403 permission error記録を確認
+- [x] RecurrenceRule / EventOccurrenceOverride migration、repository、validationを実装
+- [x] 共通projectionとstable occurrenceKeyを実装
+- [x] occurrence / following / seriesのAPI操作とownershipを実装
+- [x] M4 UIを維持したrecurrence form / scope BottomSheetを実装
+- [x] recurrence UI review対応: `[数値] 単位`表示、weekly開始曜日の自動選択、人間向けsummary、終了なし / 終了日、scope補助文、曜日0件validationを追加
+- [x] unit / build / local migration / M5 Playwrightを実行
+- [x] 7403再確認後のstaging migration / deploy / recurrence smoke
+- [x] self-review、docs同期、commit / push / PR #5更新（自動mergeなし）
+
+## M5 UI review update（2026-09-08）
+
+- recurrence form rowは`カスタム`や生の`間隔 2`を表示せず、`2週間ごと 月・水`などのsummaryを表示する。
+- weeklyはscheduled Eventの開始日の曜日を初期選択し、終了は`なし`または日付rowで設定する。
+- scope sheetは3択の簡潔な1行表示を維持し、scopeの意味はdocs / API / testで定義する。
+- 390×844 Evidenceはrecurrence summary、終了なし / 終了日、開始曜日、同一seriesのCalendar複数occurrenceを含める。
+
+## STOP条件
+
+M4で記録したCloudflare API `7403`は、2026-09-08の再実行では再現しなかった。WranglerはOAuth認証で、`d1 (write)` scope、account、`lifehub-staging` D1、database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`の整合を確認した。`npx wrangler d1 migrations list lifehub-staging --env staging --remote`とbinding名`DB`の同コマンドはいずれも成功した。
+
+7403は過去に発生したが現在は再現せず、OAuth/account認可状態またはCloudflare側一時状態の可能性がある。解決済みとは断定せず、今後再発時は`wrangler whoami`、`wrangler d1 list`、staging database name / bindingのmigration list、config ID照合の順に同じ切り分けを行う。今回の検証では`0005_m5_recurrence.sql`のstaging適用、staging deploy、health / auth / recurrence create / Calendar / Daily / occurrence edit / occurrence delete smokeが成功し、最終migration listは`No migrations to apply!`となった。production/defaultとHouseToDoは未操作。
+
+---
+
 # Milestone 4: Calendar + Daily MVP / First Staging
 
 ## 現在のMilestone

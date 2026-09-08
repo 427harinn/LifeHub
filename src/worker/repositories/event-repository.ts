@@ -13,13 +13,14 @@ type EventRow = {
   start_time: string | null;
   end_date: string;
   end_time: string | null;
+  recurrence_rule_id: string | null;
   active: number;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export const eventSelect = "id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, active, deleted_at, created_at, updated_at";
+export const eventSelect = "id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, recurrence_rule_id, active, deleted_at, created_at, updated_at";
 
 const toEvent = (row: EventRow): Event => ({
   id: row.id,
@@ -34,6 +35,7 @@ const toEvent = (row: EventRow): Event => ({
   startTime: row.start_time,
   endDate: row.end_date,
   endTime: row.end_time,
+  recurrenceRuleId: row.recurrence_rule_id,
   active: row.active === 1,
   deletedAt: row.deleted_at,
   createdAt: row.created_at,
@@ -43,11 +45,11 @@ const toEvent = (row: EventRow): Event => ({
 export class EventRepository {
   constructor(private readonly db: D1Database) {}
 
-  async create(userId: string, input: ScheduledEventInput, now: string): Promise<Event> {
+  async create(userId: string, input: ScheduledEventInput, recurrenceRuleId: string | null, now: string): Promise<Event> {
     const id = crypto.randomUUID();
     await this.db.prepare(
-      "INSERT INTO events (id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, active, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)"
-    ).bind(id, userId, input.category, input.title, input.place, input.memo, input.timingType, input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, now, now).run();
+      "INSERT INTO events (id, user_id, category, title, place, memo, timing_type, all_day, start_date, start_time, end_date, end_time, recurrence_rule_id, active, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?)"
+    ).bind(id, userId, input.category, input.title, input.place, input.memo, input.timingType, input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, recurrenceRuleId, now, now).run();
     const created = await this.getById(userId, id);
     if (!created) throw new Error("Event could not be created");
     return created;
@@ -59,7 +61,7 @@ export class EventRepository {
   }
 
   async listForRange(userId: string, startDate: string, endDate: string): Promise<Event[]> {
-    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL AND start_date <= ? AND end_date >= ? ORDER BY start_date ASC, COALESCE(start_time, '00:00') ASC, created_at ASC`).bind(userId, endDate, startDate).all<EventRow>();
+    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL AND (recurrence_rule_id IS NOT NULL OR (start_date <= ? AND end_date >= ?)) ORDER BY start_date ASC, COALESCE(start_time, '00:00') ASC, created_at ASC`).bind(userId, endDate, startDate).all<EventRow>();
     return result.results.map(toEvent);
   }
 
@@ -68,10 +70,10 @@ export class EventRepository {
     return result.results.map(toEvent);
   }
 
-  async update(userId: string, id: string, input: ScheduledEventInput, now: string): Promise<Event | null> {
+  async update(userId: string, id: string, input: ScheduledEventInput, recurrenceRuleId: string | null, now: string): Promise<Event | null> {
     const result = await this.db.prepare(
-      "UPDATE events SET category = ?, title = ?, place = ?, memo = ?, timing_type = ?, all_day = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, updated_at = ? WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL"
-    ).bind(input.category, input.title, input.place, input.memo, input.timingType, input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, now, id, userId).run();
+      "UPDATE events SET category = ?, title = ?, place = ?, memo = ?, timing_type = ?, all_day = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, recurrence_rule_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL"
+    ).bind(input.category, input.title, input.place, input.memo, input.timingType, input.allDay ? 1 : 0, input.startDate, input.startTime, input.endDate, input.endTime, recurrenceRuleId, now, id, userId).run();
     if (!result.meta.changes) return null;
     return this.getById(userId, id);
   }

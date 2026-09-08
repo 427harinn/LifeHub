@@ -25,13 +25,21 @@ export type Event = {
   startTime: string | null;
   endDate: string;
   endTime: string | null;
+  recurrenceRuleId?: string | null;
   active: boolean;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  occurrenceKey?: string | null;
+  recurrence?: RecurrenceRule | null;
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly";
+export type RecurrenceRule = { id: string; userId: string; frequency: RecurrenceFrequency; interval: number; weekdays: number[] | null; dayOfMonth: number | null; startsOn: string; endsOn: string | null; createdAt: string; updatedAt: string };
+export type RecurrenceRuleInput = Pick<RecurrenceRule, "frequency" | "interval" | "weekdays" | "dayOfMonth" | "startsOn" | "endsOn">;
+export type EventScope = "occurrence" | "following" | "series";
+export type EventCommandInput = ScheduledEventInput & { recurrence?: RecurrenceRuleInput | null; scope?: EventScope; occurrenceKey?: string };
 export type DailyNote = { id: string; userId: string; date: string; content: string; createdAt: string; updatedAt: string };
 export type CalendarRange = { startDate: string; endDate: string };
 
@@ -65,6 +73,6 @@ export const upsertDailyNote = (date: string, content: string) => request<{ dail
 export const deleteDailyNote = (date: string) => request<{ dailyNote: null }>(`/api/daily-notes/${encodeURIComponent(date)}`, { method: "DELETE" });
 export const getEvent = (id: string) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`);
 export const getRecentEventDefinitions = (limit = 20) => request<{ events: Event[] }>(`/api/events/recent-definitions?limit=${limit}`);
-export const createEvent = (input: ScheduledEventInput) => request<{ event: Event }>("/api/events", { method: "POST", body: JSON.stringify(input) });
-export const updateEvent = (id: string, input: ScheduledEventInput) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
-export const deleteEvent = (id: string) => request<{ deleted: boolean }>(`/api/events/${encodeURIComponent(id)}`, { method: "DELETE" });
+export const createEvent = (input: EventCommandInput) => request<{ event: Event }>("/api/events", { method: "POST", body: JSON.stringify(input) });
+export const updateEvent = (id: string, input: EventCommandInput) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
+export const deleteEvent = (id: string, scope: EventScope = "series", occurrenceKey?: string) => request<{ deleted: boolean }>(`/api/events/${encodeURIComponent(id)}?scope=${scope}${occurrenceKey ? `&occurrenceKey=${encodeURIComponent(occurrenceKey)}` : ""}`, { method: "DELETE" });

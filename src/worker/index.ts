@@ -5,6 +5,8 @@ import { requireAuth, type Handler, type RequestContext } from "./middleware/aut
 import { requireWritableUserState } from "./middleware/migration-guard";
 import { SettingsRepository } from "./repositories/settings-repository";
 import { EventRepository } from "./repositories/event-repository";
+import { EventOccurrenceOverrideRepository } from "./repositories/event-occurrence-override-repository";
+import { RecurrenceRepository } from "./repositories/recurrence-repository";
 import { DailyNoteRepository } from "./repositories/daily-note-repository";
 import { UserStateRepository } from "./repositories/user-state-repository";
 import { AuthService } from "./services/auth-service";
@@ -102,8 +104,8 @@ const getUserState = requireAuth(async ({ env, user }) => {
   return json({ state });
 });
 
-const eventService = (env: Env) => new EventService(new EventRepository(env.DB));
-const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB));
+const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
+const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env));
 
 const requireDate = (value: string, field = "date") => {
   if (!isDateKey(value)) throw validationError({ [field]: "日付をYYYY-MM-DD形式で指定してください。" });
@@ -124,7 +126,8 @@ const listEvents = requireAuth(async ({ request, env, user }) => {
   requireDate(startDate, "startDate");
   requireDate(endDate, "endDate");
   if (startDate > endDate) throw validationError({ date: "表示期間が不正です。" });
-  const events = await eventProjection(env).project(user.id, { startDate, endDate });
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  const events = await eventProjection(env).project(user.id, { startDate, endDate }, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
   return json({ events });
 });
 
@@ -132,17 +135,19 @@ const getCalendar = requireAuth(async ({ request, env, user }) => {
   const month = stringValue(new URL(request.url).searchParams.get("month"));
   const range = monthKeyToGridRange(month);
   if (!range) throw validationError({ month: "表示月をYYYY-MM形式で指定してください。" });
-  const events = await eventProjection(env).project(user.id, range);
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  const events = await eventProjection(env).project(user.id, range, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
   return json({ month, range, events });
 });
 
 const getDaily = requireAuth(async ({ request, env, user }) => {
   const date = requireDate(stringValue(new URL(request.url).searchParams.get("date")));
-  const [events, dailyNote] = await Promise.all([
-    eventProjection(env).project(user.id, dayToRange(date)),
-    new DailyNoteRepository(env.DB).getByDate(user.id, date)
+  const [dailyNote, settings] = await Promise.all([
+    new DailyNoteRepository(env.DB).getByDate(user.id, date),
+    new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE)
   ]);
-  return json({ date, events, dailyNote });
+  const projectedEvents = await eventProjection(env).project(user.id, dayToRange(date), { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
+  return json({ date, events: projectedEvents, dailyNote });
 });
 
 const putDailyNote = requireAuth(async ({ request, env, user }) => {
@@ -171,14 +176,17 @@ const listRecentEventDefinitions = requireAuth(async ({ request, env, user }) =>
   const parsedLimit = Number(url.searchParams.get("limit") ?? "20");
   const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 20;
   const events = await new EventRepository(env.DB).recentDefinitions(user.id, limit);
-  return json({ events });
+  const recurrenceRepository = new RecurrenceRepository(env.DB);
+  const enrichedEvents = await Promise.all(events.map(async (event) => ({ ...event, recurrence: event.recurrenceRuleId ? await recurrenceRepository.getById(user.id, event.recurrenceRuleId) : null })));
+  return json({ events: enrichedEvents });
 });
 
 const getEvent = requireAuth(async ({ env, user, request }) => {
   const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
   const event = await new EventRepository(env.DB).getById(user.id, id);
   if (!event) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
-  return json({ event });
+  const recurrence = event.recurrenceRuleId ? await new RecurrenceRepository(env.DB).getById(user.id, event.recurrenceRuleId) : null;
+  return json({ event: { ...event, recurrence } });
 });
 
 const updateEvent = requireAuth(async ({ request, env, user }) => {
@@ -191,7 +199,10 @@ const updateEvent = requireAuth(async ({ request, env, user }) => {
 const deleteEvent = requireAuth(async ({ request, env, user }) => {
   await requireWritableUserState({ request, env, user });
   const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
-  await eventService(env).delete(user.id, id, nowIso());
+  const url = new URL(request.url);
+  const scope = stringValue(url.searchParams.get("scope")) as "occurrence" | "following" | "series" | "";
+  const occurrenceKey = url.searchParams.get("occurrenceKey") ?? undefined;
+  await eventService(env).delete(user.id, id, { scope: scope || undefined, occurrenceKey }, nowIso());
   return json({ deleted: true });
 });
 

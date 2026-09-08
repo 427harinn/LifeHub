@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateScheduledEventInput } from "./event-service";
 import type { ScheduledEventInput } from "../types";
+import { normalizeRecurrenceInput } from "./recurrence-service";
 
 const valid = {
   category: "home" as const,
@@ -41,5 +42,20 @@ describe("scheduled Event validation", () => {
   it("clears time for an all-day event and rejects supplied time values", () => {
     expect(validateScheduledEventInput({ ...valid, allDay: true, startTime: null, endTime: null })).toMatchObject({ allDay: true, startTime: null, endTime: null });
     expect(() => validateScheduledEventInput({ ...valid, allDay: true })).toThrow();
+  });
+});
+
+describe("recurrence input normalization", () => {
+  it("normalizes custom daily, weekly, and monthly settings", () => {
+    expect(normalizeRecurrenceInput({ frequency: "daily", interval: 2 }, "2026-09-01")).toMatchObject({ frequency: "daily", interval: 2, weekdays: null, dayOfMonth: null, startsOn: "2026-09-01" });
+    expect(normalizeRecurrenceInput({ frequency: "weekly", interval: 2, weekdays: [3, 1, 3] }, "2026-09-01")).toMatchObject({ frequency: "weekly", interval: 2, weekdays: [1, 3] });
+    expect(normalizeRecurrenceInput({ frequency: "monthly", dayOfMonth: 31 }, "2026-09-01")).toMatchObject({ frequency: "monthly", dayOfMonth: 31, weekdays: null });
+  });
+
+  it("rejects invalid range and custom values", () => {
+    expect(() => normalizeRecurrenceInput({ frequency: "weekly", interval: 0 }, "2026-09-01")).toThrow();
+    expect(() => normalizeRecurrenceInput({ frequency: "weekly", weekdays: [] }, "2026-09-01")).toThrow();
+    expect(() => normalizeRecurrenceInput({ frequency: "monthly", dayOfMonth: 32 }, "2026-09-01")).toThrow();
+    expect(() => normalizeRecurrenceInput({ frequency: "daily", endsOn: "2026-08-31" }, "2026-09-01")).toThrow();
   });
 });

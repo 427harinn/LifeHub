@@ -277,6 +277,8 @@ M4のstaging smoke（health / login / Event CRUD / Calendar / Daily / DailyNote�
 
 動作確認はstagingへ反映して行う。
 
+M5 implementation note: local migration `0005_m5_recurrence.sql`、共通projection、scope API、EventForm / Evidence、unit / Playwrightは実装済み。M4で記録されたCloudflare API `7403`は過去に発生したが、2026-09-08の再実行では再現しなかった。Wrangler OAuth認証、`d1 (write)` scope、account / D1 / database IDの整合を確認したうえで、`0005_m5_recurrence.sql`のstaging適用、staging deploy、health / auth / recurrence create / Calendar / Daily / occurrence edit / occurrence delete smokeを成功させ、最終migration listは`No migrations to apply!`となった。7403はOAuth/account認可状態またはCloudflare側一時状態の可能性があるため解決済みとは断定せず、再発時は同じ切り分けを行う。production/default / HouseToDoは未操作。period / notification / Money recurrenceは未着手。
+
 ---
 
 # Milestone 6: Period Event

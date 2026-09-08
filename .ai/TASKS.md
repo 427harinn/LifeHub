@@ -1,3 +1,44 @@
+# Milestone 5 Tasks
+
+## 小タスク
+
+- [x] T1: 最新`main`からM4を再利用しないM5 branchを作成し、指定docsを確認
+- [x] T2: M4のCloudflare API `7403` permission error記録とstaging対象を確認
+- [x] T3: RecurrenceRule / EventOccurrenceOverride migration、type、repository、validationを実装
+- [x] T4: daily / weekly / monthly projection、interval、weekdays、month clamp、startsOn / endsOn、stable keyを実装
+- [x] T5: Calendar / Dailyを共通projectionへ接続し、M4 UI interactionを維持
+- [x] T6: EventFormのなし / 毎日 / 毎週 / 毎月 / カスタムとinterval / weekdays / endsOnを実装
+- [x] T7: occurrence / following / seriesの編集・削除、override、series split、soft delete、ownershipを実装
+- [x] T8: recurrence unit、scope、projection parity、timezone/date boundary、ownership testを追加
+- [x] T9: 390×844 Evidenceとrecurrence登録 / scope操作動画を作成
+- [x] T10: local migration、lint / typecheck / unit / build / Playwrightを実行
+- [x] T11: `npx wrangler d1 migrations list DB --env staging --remote`で過去の7403発生箇所を確認。再実行では再現しなかった
+- [x] T11a: recurrence UI review対応（human summary、interval単位表示、weekly開始曜日、終了row、scope補助文、曜日0件validation、Evidence更新）
+- [x] T12: `0005_m5_recurrence.sql`の`lifehub-staging` migration / deploy / recurrence smokeを実行。最終migration listは`No migrations to apply!`
+- [x] T13: self-review、docs同期、同じPR #5へcommit / push。自動mergeしない
+
+## M5セルフレビュー観点
+
+- Calendar / Dailyは同じEventProjectionServiceを利用している
+- recurrence occurrenceを大量生成せず、要求rangeだけprojectionしている
+- occurrenceKeyは再projectionしても同じで、Calendar / Dailyの表示・編集keyに利用している
+- monthly day 31は短い月末へclampする
+- overrideはuserId + eventId + occurrenceKey ownershipを満たし、cancelledは完了扱いにしない
+- followingは元Ruleを対象直前で終了し、新系列を対象occurrenceから開始する
+- series deleteはactive=false + deletedAt、過去occurrenceを壊さない
+- M4 Calendar adaptive row、Money最下段、Date Sheet、Daily inline、swipe、day swipe、BottomSheet drag closeを置換していない
+- period / notification / Money recurrenceを実装していない
+- production/default / HouseToDoには触れていない
+
+## M5 staging / 7403 final record
+
+- WranglerはOAuth認証、`d1 (write)` scopeあり。account / `lifehub-staging` / database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`の整合を確認した。
+- 7403は過去に発生したが現在は再現せず。OAuth/account認可状態またはCloudflare側一時状態の可能性があるため、解決済みとは断定せず、再発時は同じ切り分けを行う。
+- stagingでmigration、deploy、health / auth / recurrence create / Calendar / Daily / occurrence edit / occurrence delete smokeに成功した。
+- production/default / HouseToDoは未操作。
+
+---
+
 # Milestone 4 Tasks
 
 ## 小タスク

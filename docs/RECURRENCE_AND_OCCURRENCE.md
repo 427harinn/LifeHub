@@ -205,6 +205,10 @@ event:{eventId}:month:2026-09
 
 単発予定では出さない。
 
+scopeの意味は次のとおり。`この予定のみ`は選択したoccurrenceだけ、`この予定以降`は選択したoccurrenceから先（過去occurrenceは変更しない）、`すべての予定`はseries全体である。series全体には過去occurrenceも含まれ、base Event / Ruleを変更した結果、過去を含む未overrideのprojectionも新しい定義に従う。series削除は`active=false + deletedAt`のsoft deleteであり、過去・将来を含むseriesをactive projectionから除外する。
+
+form rowでは`interval`を生値で表示せず、`毎日`、`2日ごと`、`毎週火曜`、`毎週 月・水`、`2週間ごと 月・水`、`毎月25日`のようなsummaryを表示する。weeklyの未指定曜日は`startsOn`の曜日を初期選択し、明示的な曜日0件はvalidation errorとする。終了は`なし / 日付`として表示する。
+
 ---
 
 ## 14. 共通Projection
@@ -227,3 +231,17 @@ HouseToDoから参考にするもの:
 - monthly_flexible
 - TaskRecord
 - complete / skip workflow
+
+## 15. M5 scheduled実装
+
+M5では`timingType=scheduled`だけを実装する。`Event + RecurrenceRule + EventOccurrenceOverride`からCalendar / Dailyの要求rangeだけを`EventProjectionService`で生成し、将来occurrenceをDBへ事前生成しない。
+
+`occurrenceKey`は次の形式で、時刻ありは開始時刻、終日は`00:00`を使用する。
+
+```text
+event:{eventId}:{startDate}T{startTime}
+```
+
+Calendar / Dailyで同じkeyを使い、overrideの対象とUIの行identityを一致させる。日付演算はtimezoneに依存しないdate keyとして行い、API projectionにはUserSettingsのtimezone / weekStartsOnを渡す。
+
+period Event、notification、Money recurrenceはM5の対象外とする。
