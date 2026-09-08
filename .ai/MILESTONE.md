@@ -1,3 +1,52 @@
+# Milestone 5: Scheduled Recurrence Engine
+
+## 現在のMilestone
+
+M5実装中。対象はscheduled Eventのrecurrenceのみ。period Event / notification / Money recurrenceは対象外。
+
+## 目的
+
+`Event + RecurrenceRule + EventOccurrenceOverride`から要求rangeだけを共通projectionし、Calendar / Dailyで同じoccurrenceを表示・編集できる状態にする。
+
+## 実装内容
+
+- daily / weekly / monthly、interval、weekdays、dayOfMonth、startsOn / endsOn
+- UI上の「カスタム」詳細設定とprogressive disclosure
+- stable occurrenceKey（`event:{eventId}:{date}T{time}`）
+- 月末clamp、week boundary、timezone-safe date projection
+- occurrence / following / seriesの編集・削除scope
+- 今回のみmodified / cancelled override、series split、series soft delete
+- M4 Calendar adaptive row、Daily inline expand、swipe edit、day swipe、Date Sheet、BottomSheet drag-down closeを維持
+
+## Evidence
+
+- `artifacts/evidence/m5/recurrence-{none,options,daily,weekly,monthly}-390x844.png`
+- `artifacts/evidence/m5/recurrence-custom-weekdays-interval2-endsOn-390x844.png`
+- `artifacts/evidence/m5/{calendar,daily}-recurring-event-390x844.png`
+- `artifacts/evidence/m5/{scope-selection,occurrence-modified,occurrence-cancelled,following-series}-390x844.png`
+- `artifacts/evidence/m5/recurrence-registration-calendar-daily.webm`
+- `artifacts/evidence/m5/swipe-scope-occurrence-edit.webm`
+
+## 進捗
+
+- [x] 最新`origin/main`をfetchし、M4を再利用しない`codex/m5-scheduled-recurrence-engine`を作成
+- [x] 指定docsと7403 permission error記録を確認
+- [x] RecurrenceRule / EventOccurrenceOverride migration、repository、validationを実装
+- [x] 共通projectionとstable occurrenceKeyを実装
+- [x] occurrence / following / seriesのAPI操作とownershipを実装
+- [x] M4 UIを維持したrecurrence form / scope BottomSheetを実装
+- [x] unit / build / local migration / M5 Playwrightを実行
+- [ ] 7403解決確認後のstaging migration / deploy / smoke
+- [ ] self-review、docs同期、commit / push / PR作成
+
+## STOP条件
+
+M4記録のCloudflare API `7403` permission errorが解決していない場合、production/default・HouseToDo・staging schema手作業変更には進まない。local migration / test / Evidenceまでを完了範囲として報告する。
+
+2026-09-08に`npx wrangler d1 migrations list DB --env staging --remote`を実行したが、Cloudflare API `/accounts/1ea7a50f1aef89d4159a26ca825386af/d1/database/da75b9df-dcb6-4e80-991e-6310be3c1933/query`で`code: 7403`（account invalid / unauthorized）が再発したため、remote migration / deploy / smokeは実行していない。
+
+---
+
 # Milestone 4: Calendar + Daily MVP / First Staging
 
 ## 現在のMilestone

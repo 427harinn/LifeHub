@@ -277,6 +277,8 @@ M4のstaging smoke（health / login / Event CRUD / Calendar / Daily / DailyNote�
 
 動作確認はstagingへ反映して行う。
 
+M5 implementation note: local migration `0005_m5_recurrence.sql`、共通projection、scope API、EventForm / Evidence、unit / Playwrightは実装済み。M4で記録されたCloudflare API `7403` permission errorが新規remote migrationのSTOP条件となるため、remote migration / staging deploy / smokeは権限解決後へ保留する。period / notification / Money recurrenceは未着手。
+
 ---
 
 # Milestone 6: Period Event

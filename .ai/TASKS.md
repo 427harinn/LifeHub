@@ -1,3 +1,36 @@
+# Milestone 5 Tasks
+
+## 小タスク
+
+- [x] T1: 最新`main`からM4を再利用しないM5 branchを作成し、指定docsを確認
+- [x] T2: M4のCloudflare API `7403` permission error記録とstaging対象を確認
+- [x] T3: RecurrenceRule / EventOccurrenceOverride migration、type、repository、validationを実装
+- [x] T4: daily / weekly / monthly projection、interval、weekdays、month clamp、startsOn / endsOn、stable keyを実装
+- [x] T5: Calendar / Dailyを共通projectionへ接続し、M4 UI interactionを維持
+- [x] T6: EventFormのなし / 毎日 / 毎週 / 毎月 / カスタムとinterval / weekdays / endsOnを実装
+- [x] T7: occurrence / following / seriesの編集・削除、override、series split、soft delete、ownershipを実装
+- [x] T8: recurrence unit、scope、projection parity、timezone/date boundary、ownership testを追加
+- [x] T9: 390×844 Evidenceとrecurrence登録 / scope操作動画を作成
+- [x] T10: local migration、lint / typecheck / unit / build / Playwrightを実行
+- [x] T11: `npx wrangler d1 migrations list DB --env staging --remote`で7403権限を再確認。未解決のためstaging操作をSTOP
+- [ ] T12: 7403解決時のみ`lifehub-staging` migration / deploy / recurrence smoke
+- [ ] T13: self-review、docs同期、commit / push / PR作成。自動mergeしない
+
+## M5セルフレビュー観点
+
+- Calendar / Dailyは同じEventProjectionServiceを利用している
+- recurrence occurrenceを大量生成せず、要求rangeだけprojectionしている
+- occurrenceKeyは再projectionしても同じで、Calendar / Dailyの表示・編集keyに利用している
+- monthly day 31は短い月末へclampする
+- overrideはuserId + eventId + occurrenceKey ownershipを満たし、cancelledは完了扱いにしない
+- followingは元Ruleを対象直前で終了し、新系列を対象occurrenceから開始する
+- series deleteはactive=false + deletedAt、過去occurrenceを壊さない
+- M4 Calendar adaptive row、Money最下段、Date Sheet、Daily inline、swipe、day swipe、BottomSheet drag closeを置換していない
+- period / notification / Money recurrenceを実装していない
+- production/default / HouseToDoには触れていない
+
+---
+
 # Milestone 4 Tasks
 
 ## 小タスク

@@ -320,9 +320,9 @@ M4ではDailyNoteの本文を初期表示し、本文タップで同じ場所に
 
 M3では、中央`+`の家 / 仕事からscheduled Event formへ進む。Calendar Date SheetまたはDailyから追加した場合は、選択日を初期日とし、登録後は同じ画面・日付へ戻る。Calendar Date SheetとDailyの実Eventはinline展開とswipe revealから編集へ進み、専用詳細ページへは遷移しない。
 
-フォームのカテゴリは入口で固定し、上部に家（オレンジ）または仕事（青）の小さなマーカーと短いカテゴリ表示だけを置く。M3では予定種類は`日時が決まっている`、繰り返しと通知は`なし`固定とする。M4 UI修正ではこれらのrow自体はHouseToDo同様に全幅のbutton hit areaとして扱い、タップ時は現在の対応範囲を説明する小さなsheetを開閉できる。場所・メモは未入力時にcompact rowで隠す。
+フォームのカテゴリは入口で固定し、上部に家（オレンジ）または仕事（青）の小さなマーカーと短いカテゴリ表示だけを置く。繰り返しrowは`なし >`を初期表示し、BottomSheetで`なし / 毎日 / 毎週 / 毎月 / カスタム`を選ぶ。カスタムは必要なfrequency、interval、weekdays、dayOfMonth、endsOnだけを段階的に表示する。場所・メモは未入力時にcompact rowで隠す。
 
-M4ではEventFormの再設計を行わない。recurrence / notification等の本実装MilestoneでまとめてUIレビューする。
+M5ではrecurrence周辺だけをUIレビュー対象とし、M4のフォーム全体・Calendar・DailyのDOM / CSS / interaction grammarは再設計しない。繰り返し予定の編集・削除時だけscope BottomSheetを表示し、単発予定では表示しない。
 
 通常予定は詳細画面から編集・削除できる。
 繰り返し予定は `今回のみ / これ以降 / すべて` を選択して編集・削除する。

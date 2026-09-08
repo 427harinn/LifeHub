@@ -64,7 +64,7 @@ HouseToDoのフォーム思想を継承し、**入力に必要のない項目は
 
 Calendar / Dailyから特定日を指定して追加した場合は、その日を初期日として引き継ぐ。
 
-M3では`日時が決まっている`を固定表示し、`期間中にやりたい`へ遷移する選択肢は表示しない。繰り返しと通知は`なし`固定とし、未完成の設定画面は開かない。
+M5では`日時が決まっている` scheduled Eventへ、繰り返しrowを接続する。period Eventとnotificationは後続範囲のため、scheduled recurrence以外の設定画面は開かない。
 
 ---
 
@@ -203,6 +203,16 @@ UI候補:
 ```text
 2週間ごとの月・水
 → frequency=weekly, interval=2, weekdays=[mon, wed]
+
+M5の画面状態は次の5つをEvidence対象とする。
+
+- なし: 詳細設定を表示しない
+- 毎日: daily / interval=1
+- 毎週: weekly / interval=1 / startsOnの曜日
+- 毎月: monthly / interval=1 / dayOfMonth
+- カスタム: frequency、interval、必要なweekdaysまたはdayOfMonth、終了日だけを段階的に表示する
+
+フォーム上では「カスタム」と表示してよいが、保存payloadでは必ずDBの`daily / weekly / monthly`へ正規化する。
 ```
 
 ## 8.2 period Event

@@ -250,6 +250,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .event-option-sheet__option { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 8px 0; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
 .event-option-sheet__option span:first-child { font-size: .875rem; line-height: 1.5; }
 .event-option-sheet__option span:last-child { color: var(--color-primary-strong); font-size: 1rem; }
+.event-option-sheet__close { min-height: 44px; padding: 8px 0; border: 0; color: var(--color-primary-strong); background: transparent; text-align: right; cursor: pointer; }
+.recurrence-details { display: grid; gap: var(--space-3); padding: var(--space-2) 0 var(--space-3); border-top: 1px solid var(--color-border); }
+.recurrence-details select { min-height: 44px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text); background: var(--color-surface); }
+.weekday-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.weekday-picker legend { width: 100%; margin-bottom: 2px; color: var(--color-text-secondary); font-size: .875rem; }
+.weekday-picker label { display: inline-flex; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; gap: 4px; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-text-secondary); font-size: .875rem; }
+.weekday-picker label:has(input:checked) { border-color: var(--color-primary-strong); color: var(--color-primary-strong); background: var(--color-primary-soft); }
+.weekday-picker input { position: absolute; opacity: 0; }
 .event-toggle-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; min-height: 48px; align-items: center; gap: var(--space-2); padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .875rem; }
 .event-toggle-row input { width: 22px; height: 22px; accent-color: var(--color-primary-strong); }
 .event-toggle-value { width: 28px; color: var(--color-text); font-size: .8125rem; text-align: right; }

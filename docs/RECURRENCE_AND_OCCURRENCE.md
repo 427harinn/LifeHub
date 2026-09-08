@@ -227,3 +227,17 @@ HouseToDoから参考にするもの:
 - monthly_flexible
 - TaskRecord
 - complete / skip workflow
+
+## 15. M5 scheduled実装
+
+M5では`timingType=scheduled`だけを実装する。`Event + RecurrenceRule + EventOccurrenceOverride`からCalendar / Dailyの要求rangeだけを`EventProjectionService`で生成し、将来occurrenceをDBへ事前生成しない。
+
+`occurrenceKey`は次の形式で、時刻ありは開始時刻、終日は`00:00`を使用する。
+
+```text
+event:{eventId}:{startDate}T{startTime}
+```
+
+Calendar / Dailyで同じkeyを使い、overrideの対象とUIの行identityを一致させる。日付演算はtimezoneに依存しないdate keyとして行い、API projectionにはUserSettingsのtimezone / weekStartsOnを渡す。
+
+period Event、notification、Money recurrenceはM5の対象外とする。

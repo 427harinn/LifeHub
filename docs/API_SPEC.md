@@ -8,11 +8,11 @@ Calendar / Daily / Notification / Search日時解決では、**Event + Recurrenc
 
 すべての個人データは `userId` ownershipを確認する。
 
-## M4時点の実装範囲
+## M5時点の実装範囲
 
 M4で実API / DB projectionの対象になるのは、`timingType=scheduled`のEventとDailyNoteである。CalendarとDailyは同じEvent projection / range serviceを利用し、`userId` ownershipを条件に含め、activeでないEventと`deletedAt`があるEventを除外する。
 
-period / recurrence / notification / Money / Searchの本実装は後続Milestoneとする。M4 UIで確認するperiod / Moneyの一部はfixture / placeholderであり、将来のAPI仕様と現在の永続化範囲を混同しない。
+period / notification / Money / Searchの本実装は後続Milestoneとする。M4 UIで確認するperiod / Moneyの一部はfixture / placeholderであり、M5ではscheduled recurrenceだけを永続化・projectionする。
 
 M2で実装する認証APIは以下。Session tokenはD1へ平文保存せずSHA-256 hashとして保存し、ブラウザにはHttpOnly / SameSite=Lax Cookieだけを返す。
 
@@ -98,7 +98,7 @@ PATCH  /api/events/:id
 DELETE /api/events/:id
 ```
 
-M3 / M4ではscheduled Eventのみを永続化・実データ取得する。Calendar / Dailyの実データ取得用に、指定期間と重なる自分のactive Eventを取得するlist APIも利用する。period / recurrenceのフィールドは将来設計として保持し、M4のperiod表示はfixture / placeholderである。
+M3 / M4ではscheduled Eventのみを永続化・実データ取得し、recurrenceは未実装だった。M5ではscheduled recurrenceを含めてCalendar / Dailyへprojectionする。period / notification / Money recurrenceのフィールドは将来設計として保持し、period表示はfixture / placeholderである。
 
 ```text
 GET /api/events?startDate=2026-09-01&endDate=2026-09-30
@@ -115,6 +115,14 @@ scope = occurrence | following | series
 を指定する。
 
 occurrence対象ではstableな `occurrenceKey` を必須とする。
+
+作成・series編集のpayloadでは`recurrence`を指定する。なしは`null`で、指定時は`frequency / interval / weekdays / dayOfMonth / startsOn / endsOn`を含める。PATCH / DELETEのscopeは次の動作とする。
+
+- `occurrence`: `occurrenceKey`必須。PATCHはmodified override、DELETEはcancelled override
+- `following`: `occurrenceKey`必須。元Ruleを対象日直前で終了し、PATCHだけ新Event + Ruleを作成
+- `series`: base Event / Ruleを編集、DELETEは`active=false + deletedAt`
+
+scope指定時もEvent、Rule、Overrideすべてで認証userId ownershipを確認し、他ユーザーのIDは404とする。
 
 period Eventの `this_week / this_month` 作成時は `periodAnchorDate` を保存する。
 

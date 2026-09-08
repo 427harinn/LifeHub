@@ -268,3 +268,5 @@ M4ではLifeHub専用のstagingだけを対象にする。
 高密度Calendar確認用のfixtureはauthenticated test accountへ手動/APIで投入し、production seedにはしない。staging smokeではhealth、login、Event CRUD、Calendar range、Daily指定日、DailyNote CRUDを確認する。
 
 remote migration操作ではCloudflare API `7403` permission errorが発生した。既存schemaでM4 smokeは成功しているためM4 blockerではないが、次回新しいremote migrationを適用する前に権限問題を解決する。
+
+M5では`0005_m5_recurrence.sql`が新規remote migrationとなるため、7403が解決するまで`lifehub-staging`へのmigration / deploy / smokeを実行しない。production/defaultとHouseToDoは引き続き未操作とする。必要権限は、対象アカウントのCloudflare AccountでD1 database `lifehub-staging`のmigration適用に必要なD1 write権限（少なくともD1 edit相当）であり、Account read-only / D1 read-onlyでは不足する。
