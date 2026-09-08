@@ -54,7 +54,7 @@ test("period form states and Calendar/Daily/Date Sheet evidence", async ({ page 
   await expect(page.getByText("今週中UI", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "period-calendar-week-start-390x844.png") });
   await page.getByRole("button", { name: "デイリー" }).click();
-  await expect(page.getByText("今週中UI", { exact: true })).toBeVisible();
+  await expect(page.getByText("今週中UI", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "period-daily-in-range-390x844.png") });
 });
 

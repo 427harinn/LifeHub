@@ -18,7 +18,7 @@ const valid = {
 
 describe("scheduled Event validation", () => {
   it("normalizes optional empty fields and accepts a multi-day timed event", () => {
-    expect(validateScheduledEventInput({ ...valid, place: "  駅  ", memo: "  持ち物  ", endDate: "2026-09-22" })).toMatchObject({ place: "駅", memo: "持ち物", endDate: "2026-09-22" });
+    expect(validateScheduledEventInput({ ...valid, place: "  駅  ", memo: "  持ち物  ", endDate: "2026-09-22" })).toMatchObject({ place: "駅", memo: "持ち物", endDate: "2026-09-22", periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null });
   });
 
   const invalidCases: Array<[string, Partial<ScheduledEventInput>]> = [

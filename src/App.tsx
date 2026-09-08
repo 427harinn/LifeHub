@@ -226,7 +226,7 @@ function CalendarShell({ events, filter, month, onDateSelect, onFilterChange, on
 
 function CalendarDateSheet({ date, events, filter, settings, onClose, onAddCategory, onAddMoney, onOpenDaily, onEditEvent, onEditPeriod, onDateChange }: { date: string; events: Event[]; filter: CalendarFilter; settings: UserSettings | null; onClose: () => void; onAddCategory: (category: Event["category"]) => void; onAddMoney: () => void; onOpenDaily: () => void; onEditEvent: (event: Event) => void; onEditPeriod?: (label: string) => void; onDateChange: (date: string) => void }) {
   void onEditPeriod;
-  const scheduledEvents = filter === "money" ? [] : events.filter((event) => eventOverlapsDate(event, date) && (filter === "all" || event.category === filter));
+  const scheduledEvents = filter === "money" ? [] : [...new Map(events.filter((event) => eventOverlapsDate(event, date) && (filter === "all" || event.category === filter)).map((event) => [eventIdentity(event), event])).values()];
   const periodEvents = filter === "money" ? [] : dailyFixture.period.filter((item) => filter === "all" || item.category === filter).map((item, index) => periodFixtureEvent(item, date, settings?.weekStartsOn ?? 1, index));
   const dayEvents = [...periodEvents, ...scheduledEvents].sort((left, right) => (left.allDay ? "00:00" : left.startTime ?? "00:00").localeCompare(right.allDay ? "00:00" : right.startTime ?? "00:00"));
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);

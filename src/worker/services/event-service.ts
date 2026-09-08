@@ -47,7 +47,7 @@ export const validateScheduledEventInput = (value: Partial<EventInput>): Schedul
     if (typeof startTime === "string" && typeof endTime === "string" && TIME_PATTERN.test(startTime) && TIME_PATTERN.test(endTime) && startDate === endDate && startTime > endTime) details.time = "終了時間は開始時間以降にしてください。";
   }
   if (Object.keys(details).length > 0) throw validationError(details);
-  return { category: base.category as "home" | "work", title: base.title, place: base.place, memo: base.memo, timingType: "scheduled", allDay, startDate, startTime: allDay ? null : startTime, endDate, endTime: allDay ? null : endTime };
+  return { category: base.category as "home" | "work", title: base.title, place: base.place, memo: base.memo, timingType: "scheduled", allDay, startDate, startTime: allDay ? null : startTime, endDate, endTime: allDay ? null : endTime, periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null };
 };
 
 export const validatePeriodEventInput = (value: Partial<PeriodEventInput>, recurrence: unknown = null): PeriodEventInput => {
