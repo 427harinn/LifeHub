@@ -47,7 +47,7 @@ export const calendarFixture = {
 
 export const dailyFixture = {
   allDay: [{ label: "家の予定", category: "home" }, { label: "週次レビュー", category: "work" }],
-  period: [{ label: "今週中：書類を整理", category: "home" }, { label: "今月中：資料をまとめる", category: "work" }],
+  period: [{ label: "今週中：書類を整理", category: "home", periodType: "week" }, { label: "今月中：資料をまとめる", category: "work", periodType: "month" }],
   timed: [
     { time: "08:30", label: "朝の散歩", category: "home" },
     { time: "10:00", label: "定例ミーティング", category: "work" },

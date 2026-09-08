@@ -152,6 +152,12 @@ scheduledではperiod系フィールドはnull。
 
 M3では`timing_type=scheduled`の行だけを作成し、period系・recurrenceRule・notificationの保存は行わない。`allDay=1`の行は`start_time`と`end_time`をnullにし、`allDay=0`の行は両時刻を必須とする。Eventの通常削除は`active=0 + deletedAt`で表す。
 
+## M4時点の実装範囲
+
+- scheduled Eventのschema / migration / repository / projectionはM4の実データ対象である。
+- DailyNoteはM4でmigration / API / UIを実装し、`userId + date`を一意とする。空保存は削除として扱う。
+- period / recurrence / Moneyの定義は将来設計として以下に残す。M4のperiod / Money UIはfixture / placeholderを含み、これらのモデルを本実装したものではない。
+
 ## 5.2 period
 
 「実施日時は決まっていないが、この期間のどこかに置いておきたい予定」。Todoではなく予定として扱い、完了状態を持たない。
@@ -391,6 +397,8 @@ DailyNote
 ```
 
 `userId + date` は一意。
+
+M4では`daily_notes`をmigration `0004_m4_daily_notes.sql`で追加し、Daily取得に含める。本文が空になった場合は行を削除してempty stateとして扱う。
 
 ---
 

@@ -184,9 +184,9 @@ LifeHubの中心体験をスマートフォンで触れる状態にする。こ�
 
 ## Calendar密度検証
 
-予定最大表示件数はここで決定する。
+Calendarは固定の最大表示件数を採用しない。実測したセル利用可能高さから`availableRows`を算出し、端末のsafe-areaやbrowser UIの差に応じて表示row数が変動するadaptive方式を正とする。
 
-390×844へ、
+390×844およびiPhone Safari相当で、
 
 - 予定が少ない月
 - 予定が多い月
@@ -195,7 +195,7 @@ LifeHubの中心体験をスマートフォンで触れる状態にする。こ�
 
 を投入しScreenshot Evidenceを作成する。
 
-そのEvidenceを見て1日最大表示件数と `+N` ルールを確定し、仕様書も更新する。
+Evidenceでは固定2 / 3 / 4件を決めるのではなく、availableRowsに収まらないEvent / Money明細がhidden countへ送られること、`すべて`のMoney summaryが最終rowを予約すること、実機でレイアウトが崩れないことを確認する。
 
 ## First Staging
 
@@ -204,8 +204,10 @@ LifeHubの中心体験をスマートフォンで触れる状態にする。こ�
 - `lifehub-staging` Worker
 - `lifehub-staging` D1
 - 必要なstaging secrets
-- staging migration
+- existing staging schema確認（新規remote migrationは未適用）
 - deploy
+
+M4のstaging smoke（health / login / Event CRUD / Calendar / Daily / DailyNote）は既存schemaで成功した。remote migration操作ではCloudflare API `7403` permission errorが発生したが、今回新規migrationはなくM4 blockerではない。次回新しいremote migrationを適用する前に権限問題を解決する。production/defaultは明示指示なしに操作しない。
 
 ユーザーがスマートフォンから、ログイン → Event登録 → Calendar / Daily確認まで行える状態にする。
 

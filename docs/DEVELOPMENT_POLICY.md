@@ -158,7 +158,7 @@ fixtureは本番データやDB仕様と混同しない構造にし、後続実�
 
 ### Calendarの特別ルール
 
-1日あたりの最大表示件数など、実際の密度を見て決める仕様は、**最大量のダミーデータを入れたEvidenceを作ってから決定する。**
+Calendarの1日表示密度は固定maxを決めず、実測したセル利用可能高さから`availableRows`を算出する。Evidenceは最終件数を決定するためではなく、端末差を含むadaptive row allocation、Money最終row予約、overflowのhidden countが実機で崩れないことを確認するために作成する。
 
 ---
 

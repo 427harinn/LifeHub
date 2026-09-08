@@ -145,7 +145,7 @@ Task / Shopping / Householdドメインは持ち込まない。
 - Calendar / DailyからQuick Add
 - DailyNote
 
-Calendarの1日最大表示件数は、390×844に最大量のダミーデータを入れてEvidenceを確認後に決定する。
+Calendarは固定maxを採用せず、実測セル高から`availableRows`を算出するadaptive row allocationをM4の結論とする。Money summaryがある日は最終rowを予約し、超過Event / Money明細を`+N`へ送る。390×844 Evidenceは固定件数決定ではなく、実機での崩れ防止とoverflow表示の確認に使う。
 
 ---
 

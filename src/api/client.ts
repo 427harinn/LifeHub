@@ -32,6 +32,8 @@ export type Event = {
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
+export type DailyNote = { id: string; userId: string; date: string; content: string; createdAt: string; updatedAt: string };
+export type CalendarRange = { startDate: string; endDate: string };
 
 class ApiError extends Error {
   constructor(readonly status: number, message: string) {
@@ -57,6 +59,10 @@ export const register = (displayName: string, email: string, password: string) =
 export const logout = () => request<{ loggedOut: boolean }>("/api/auth/logout", { method: "POST" });
 export const getSettings = () => request<{ settings: UserSettings }>("/api/settings");
 export const getEvents = (startDate: string, endDate: string) => request<{ events: Event[] }>(`/api/events?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+export const getCalendar = (month: string) => request<{ month: string; range: CalendarRange; events: Event[] }>(`/api/calendar?month=${encodeURIComponent(month.slice(0, 7))}`);
+export const getDaily = (date: string) => request<{ date: string; events: Event[]; dailyNote: DailyNote | null }>(`/api/daily?date=${encodeURIComponent(date)}`);
+export const upsertDailyNote = (date: string, content: string) => request<{ dailyNote: DailyNote | null }>(`/api/daily-notes/${encodeURIComponent(date)}`, { method: "PUT", body: JSON.stringify({ content }) });
+export const deleteDailyNote = (date: string) => request<{ dailyNote: null }>(`/api/daily-notes/${encodeURIComponent(date)}`, { method: "DELETE" });
 export const getEvent = (id: string) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`);
 export const getRecentEventDefinitions = (limit = 20) => request<{ events: Event[] }>(`/api/events/recent-definitions?limit=${limit}`);
 export const createEvent = (input: ScheduledEventInput) => request<{ event: Event }>("/api/events", { method: "POST", body: JSON.stringify(input) });

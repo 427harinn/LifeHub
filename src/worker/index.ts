@@ -5,9 +5,11 @@ import { requireAuth, type Handler, type RequestContext } from "./middleware/aut
 import { requireWritableUserState } from "./middleware/migration-guard";
 import { SettingsRepository } from "./repositories/settings-repository";
 import { EventRepository } from "./repositories/event-repository";
+import { DailyNoteRepository } from "./repositories/daily-note-repository";
 import { UserStateRepository } from "./repositories/user-state-repository";
 import { AuthService } from "./services/auth-service";
 import { EventService } from "./services/event-service";
+import { EventProjectionService, dayToRange, isDateKey, monthKeyToGridRange } from "./services/event-projection-service";
 import type { UserSettings } from "./types";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
@@ -101,6 +103,12 @@ const getUserState = requireAuth(async ({ env, user }) => {
 });
 
 const eventService = (env: Env) => new EventService(new EventRepository(env.DB));
+const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB));
+
+const requireDate = (value: string, field = "date") => {
+  if (!isDateKey(value)) throw validationError({ [field]: "日付をYYYY-MM-DD形式で指定してください。" });
+  return value;
+};
 
 const createEvent = requireAuth(async ({ request, env, user }) => {
   await requireWritableUserState({ request, env, user });
@@ -113,8 +121,49 @@ const listEvents = requireAuth(async ({ request, env, user }) => {
   const startDate = stringValue(url.searchParams.get("startDate"));
   const endDate = stringValue(url.searchParams.get("endDate"));
   if (!startDate || !endDate) throw validationError({ date: "表示期間を指定してください。" });
-  const events = await new EventRepository(env.DB).listForRange(user.id, startDate, endDate);
+  requireDate(startDate, "startDate");
+  requireDate(endDate, "endDate");
+  if (startDate > endDate) throw validationError({ date: "表示期間が不正です。" });
+  const events = await eventProjection(env).project(user.id, { startDate, endDate });
   return json({ events });
+});
+
+const getCalendar = requireAuth(async ({ request, env, user }) => {
+  const month = stringValue(new URL(request.url).searchParams.get("month"));
+  const range = monthKeyToGridRange(month);
+  if (!range) throw validationError({ month: "表示月をYYYY-MM形式で指定してください。" });
+  const events = await eventProjection(env).project(user.id, range);
+  return json({ month, range, events });
+});
+
+const getDaily = requireAuth(async ({ request, env, user }) => {
+  const date = requireDate(stringValue(new URL(request.url).searchParams.get("date")));
+  const [events, dailyNote] = await Promise.all([
+    eventProjection(env).project(user.id, dayToRange(date)),
+    new DailyNoteRepository(env.DB).getByDate(user.id, date)
+  ]);
+  return json({ date, events, dailyNote });
+});
+
+const putDailyNote = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
+  const date = requireDate(decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""));
+  const body = await parseObject(request);
+  if (typeof body.content !== "string" || body.content.length > 10000) throw validationError({ content: "メモは10000文字以内で入力してください。" });
+  const repository = new DailyNoteRepository(env.DB);
+  if (!body.content.trim()) {
+    await repository.deleteByDate(user.id, date);
+    return json({ dailyNote: null });
+  }
+  const dailyNote = await repository.upsert(user.id, date, body.content, nowIso());
+  return json({ dailyNote });
+});
+
+const deleteDailyNote = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
+  const date = requireDate(decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""));
+  await new DailyNoteRepository(env.DB).deleteByDate(user.id, date);
+  return json({ dailyNote: null });
 });
 
 const listRecentEventDefinitions = requireAuth(async ({ request, env, user }) => {
@@ -159,6 +208,11 @@ export default {
       if (url.pathname === "/api/settings" && request.method === "GET") return await getSettings(context);
       if (url.pathname === "/api/settings" && request.method === "PATCH") return await patchSettings(context);
       if (url.pathname === "/api/user-state" && request.method === "GET") return await getUserState(context);
+      if (url.pathname === "/api/calendar" && request.method === "GET") return await getCalendar(context);
+      if (url.pathname === "/api/daily" && request.method === "GET") return await getDaily(context);
+      const dailyNotePath = url.pathname.match(/^\/api\/daily-notes\/([^/]+)$/);
+      if (dailyNotePath && request.method === "PUT") return await putDailyNote(context);
+      if (dailyNotePath && request.method === "DELETE") return await deleteDailyNote(context);
       if (url.pathname === "/api/events" && request.method === "GET") return await listEvents(context);
       if (url.pathname === "/api/events" && request.method === "POST") return await createEvent(context);
       if (url.pathname === "/api/events/recent-definitions" && request.method === "GET") return await listRecentEventDefinitions(context);
