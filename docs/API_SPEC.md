@@ -122,6 +122,8 @@ occurrence対象ではstableな `occurrenceKey` を必須とする。
 - `following`: `occurrenceKey`必須。元Ruleを対象日直前で終了し、PATCHだけ新Event + Ruleを作成
 - `series`: base Event / Ruleを編集、DELETEは`active=false + deletedAt`
 
+`occurrence`は選択した1回だけ、`following`は選択した回から先だけを対象とし、過去occurrenceは変更しない。`series`は過去を含むseries全体を対象とするため、base Event / Ruleの編集後は未overrideの過去projectionも新定義に従う。series削除はsoft deleteで過去・将来を含むactive projectionから除外する。
+
 scope指定時もEvent、Rule、Overrideすべてで認証userId ownershipを確認し、他ユーザーのIDは404とする。
 
 period Eventの `this_week / this_month` 作成時は `periodAnchorDate` を保存する。

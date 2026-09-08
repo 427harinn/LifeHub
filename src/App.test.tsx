@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, recurrenceSummary, weekEnd } from "./App";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "2026-09-07T00:00:00.000Z", updatedAt: "2026-09-07T00:00:00.000Z" };
@@ -156,5 +156,20 @@ describe("Calendar date and money projections", () => {
     expect(entries.map((entry) => entry.amount)).toEqual([-1500, 2999, -800]);
     expect(calendarMoneySummaryForDate("2026-09-10", "2026-09-10")).toMatchObject({ amount: 699, category: "income" });
     expect(calendarMoneySummaryForDate("2026-09-11", "2026-09-10")).toBeNull();
+  });
+});
+
+describe("recurrence form summaries", () => {
+  it("renders human-readable interval and weekday summaries", () => {
+    expect(recurrenceSummary({ frequency: "daily", interval: 1, weekdays: null, dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("毎日");
+    expect(recurrenceSummary({ frequency: "daily", interval: 2, weekdays: null, dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("2日ごと");
+    expect(recurrenceSummary({ frequency: "weekly", interval: 1, weekdays: [2], dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("毎週火曜");
+    expect(recurrenceSummary({ frequency: "weekly", interval: 2, weekdays: [1, 3], dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("2週間ごと 月・水");
+    expect(recurrenceSummary({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 25, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("毎月25日");
+    expect(recurrenceSummary({ frequency: "monthly", interval: 2, weekdays: null, dayOfMonth: 15, startsOn: "2026-09-08", endsOn: "2026-09-22" }, "2026-09-08")).toBe("2か月ごと15日（〜9月22日(火)）");
+  });
+
+  it("uses the event start weekday when weekly weekdays are omitted", () => {
+    expect(recurrenceSummary({ frequency: "weekly", interval: 1, weekdays: null, dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08")).toBe("毎週火曜");
   });
 });

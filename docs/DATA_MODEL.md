@@ -158,6 +158,8 @@ M3では`timing_type=scheduled`の行だけを作成し、period系・recurrence
 - DailyNoteはM4でmigration / API / UIを実装し、`userId + date`を一意とする。空保存は削除として扱う。
 - scheduled recurrenceのschema / projection / overrideはM5で実装済み。period / notification / Money recurrenceは将来設計として以下に残す。period / Money UIの一部はfixture / placeholderであり、本実装ではない。
 
+M5のseries scopeはbase Event / Ruleを更新するため、過去を含む未override occurrenceのprojectionも新しい定義に従う。過去occurrenceを保護する必要がある1回はmodified overrideとして保持する。following scopeは元Ruleを対象直前で終了し、過去projectionを変更しない。
+
 ## 5.2 period
 
 「実施日時は決まっていないが、この期間のどこかに置いておきたい予定」。Todoではなく予定として扱い、完了状態を持たない。

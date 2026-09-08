@@ -54,6 +54,7 @@ describe("recurrence input normalization", () => {
 
   it("rejects invalid range and custom values", () => {
     expect(() => normalizeRecurrenceInput({ frequency: "weekly", interval: 0 }, "2026-09-01")).toThrow();
+    expect(() => normalizeRecurrenceInput({ frequency: "weekly", weekdays: [] }, "2026-09-01")).toThrow();
     expect(() => normalizeRecurrenceInput({ frequency: "monthly", dayOfMonth: 32 }, "2026-09-01")).toThrow();
     expect(() => normalizeRecurrenceInput({ frequency: "daily", endsOn: "2026-08-31" }, "2026-09-01")).toThrow();
   });

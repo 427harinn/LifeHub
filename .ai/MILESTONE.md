@@ -22,6 +22,8 @@ M5実装中。対象はscheduled Eventのrecurrenceのみ。period Event / notif
 
 - `artifacts/evidence/m5/recurrence-{none,options,daily,weekly,monthly}-390x844.png`
 - `artifacts/evidence/m5/recurrence-custom-weekdays-interval2-endsOn-390x844.png`
+- `artifacts/evidence/m5/recurrence-end-none-390x844.png`
+- `artifacts/evidence/m5/recurrence-form-summary-390x844.png`
 - `artifacts/evidence/m5/{calendar,daily}-recurring-event-390x844.png`
 - `artifacts/evidence/m5/{scope-selection,occurrence-modified,occurrence-cancelled,following-series}-390x844.png`
 - `artifacts/evidence/m5/recurrence-registration-calendar-daily.webm`
@@ -35,9 +37,17 @@ M5実装中。対象はscheduled Eventのrecurrenceのみ。period Event / notif
 - [x] 共通projectionとstable occurrenceKeyを実装
 - [x] occurrence / following / seriesのAPI操作とownershipを実装
 - [x] M4 UIを維持したrecurrence form / scope BottomSheetを実装
+- [x] recurrence UI review対応: `[数値] 単位`表示、weekly開始曜日の自動選択、人間向けsummary、終了なし / 終了日、scope補助文、曜日0件validationを追加
 - [x] unit / build / local migration / M5 Playwrightを実行
 - [ ] 7403解決確認後のstaging migration / deploy / smoke
-- [ ] self-review、docs同期、commit / push / PR作成
+- [x] self-review、docs同期、commit / push / PR #5更新（自動mergeなし）
+
+## M5 UI review update（2026-09-08）
+
+- recurrence form rowは`カスタム`や生の`間隔 2`を表示せず、`2週間ごと 月・水`などのsummaryを表示する。
+- weeklyはscheduled Eventの開始日の曜日を初期選択し、終了は`なし`または日付rowで設定する。
+- scope sheetは3択を維持し、選択した1回 / 選択した回から先 / 系列全体（過去も含む）を短い補助文で示す。
+- 390×844 Evidenceはrecurrence summary、終了なし / 終了日、開始曜日、同一seriesのCalendar複数occurrenceを含める。
 
 ## STOP条件
 

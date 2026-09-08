@@ -13,8 +13,9 @@
 - [x] T9: 390×844 Evidenceとrecurrence登録 / scope操作動画を作成
 - [x] T10: local migration、lint / typecheck / unit / build / Playwrightを実行
 - [x] T11: `npx wrangler d1 migrations list DB --env staging --remote`で7403権限を再確認。未解決のためstaging操作をSTOP
+- [x] T11a: recurrence UI review対応（human summary、interval単位表示、weekly開始曜日、終了row、scope補助文、曜日0件validation、Evidence更新）
 - [ ] T12: 7403解決時のみ`lifehub-staging` migration / deploy / recurrence smoke
-- [ ] T13: self-review、docs同期、commit / push / PR作成。自動mergeしない
+- [x] T13: self-review、docs同期、同じPR #5へcommit / push。自動mergeしない
 
 ## M5セルフレビュー観点
 

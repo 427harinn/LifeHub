@@ -35,8 +35,10 @@ const recurrenceDetails = (value: Partial<RecurrenceRuleInput>, startsOnFallback
   let weekdays = value.weekdays ?? null;
   let dayOfMonth = value.dayOfMonth ?? null;
   if (frequency === "weekly") {
-    weekdays = weekdays && weekdays.length > 0 ? [...new Set(weekdays)].sort((a, b) => a - b) : [weekdayOf(startsOn)];
-    if (weekdays.some((weekday) => !Number.isInteger(weekday) || weekday < 0 || weekday > 6)) details.weekdays = "曜日が不正です。";
+    if (value.weekdays === null || value.weekdays === undefined) weekdays = [weekdayOf(startsOn)];
+    else if (value.weekdays.length === 0) details.weekdays = "曜日を1つ以上選択してください。";
+    else weekdays = [...new Set(value.weekdays)].sort((a, b) => a - b);
+    if ((weekdays ?? []).some((weekday) => !Number.isInteger(weekday) || weekday < 0 || weekday > 6)) details.weekdays = "曜日が不正です。";
     dayOfMonth = null;
   } else if (frequency === "monthly") {
     dayOfMonth = dayOfMonth ?? Number(startsOn.slice(-2));
