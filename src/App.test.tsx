@@ -105,16 +105,22 @@ describe("Calendar adaptive row allocation", () => {
   });
 
   it("keeps money in the final row and counts mixed overflow", () => {
-    const money = [{ amount: -1500, category: "expense" as const, label: "食費" }];
-    const mixed = allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b"), projectedEvent("c")], 1, money, 4);
-    expect(mixed.hiddenCount).toBe(1);
+    const money = [{ amount: 699, category: "income" as const, isSummary: true, label: "収支" }];
+    const mixed = allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b")], 1, money, 4);
+    expect(mixed.hiddenCount).toBe(0);
     expect(mixed.visibleEvents).toHaveLength(2);
     expect(mixed.visibleMoney).toHaveLength(1);
+    const threeEventsAndMoney = allocateCalendarCellRows(["a", "b", "c"].map(projectedEvent), 1, money, 4);
+    expect(threeEventsAndMoney.hiddenCount).toBe(1);
+    expect(threeEventsAndMoney.visibleEvents).toHaveLength(3);
+    expect(threeEventsAndMoney.visibleMoney).toHaveLength(0);
     const fourEventsAndMoney = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 4);
     expect(fourEventsAndMoney.hiddenCount).toBe(1);
-    expect(fourEventsAndMoney.visibleEvents).toHaveLength(3);
-    expect(fourEventsAndMoney.visibleMoney).toHaveLength(1);
+    expect(fourEventsAndMoney.visibleEvents).toHaveLength(4);
+    expect(fourEventsAndMoney.visibleMoney).toHaveLength(0);
     expect(allocateCalendarCellRows([], 3, money, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [], visibleMoney: money });
+    const moneyTab = allocateCalendarCellRows([], 0, [{ amount: -1500, category: "expense" as const, label: "夜ごはん" }, { amount: -800, category: "expense" as const, label: "歯医者" }, { amount: -2300, category: "expense" as const, isSummary: true, label: "収支" }], 3);
+    expect(moneyTab.visibleMoney.map((entry) => entry.label)).toEqual(["夜ごはん", "歯医者", "収支"]);
   });
 });
 

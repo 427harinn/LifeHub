@@ -52,6 +52,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   for (let index = 0; index < 2; index += 1) await createEvent(page, { category: index === 0 ? "home" : "work", title: `帯1条件${index + 1}`, startDate: shiftDate(today, 4), endDate: shiftDate(today, 4), startTime: `${String(9 + index).padStart(2, "0")}:00`, endTime: `${String(9 + index).padStart(2, "0")}:30` });
   for (let index = 0; index < 6; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `多数予定${index + 1}`, startDate: today, endDate: today, startTime: `${String(12 + index).padStart(2, "0")}:00`, endTime: `${String(12 + index).padStart(2, "0")}:30` });
   for (let index = 0; index < 5; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `候補比較${index + 1}`, startDate: shiftDate(today, 10), endDate: shiftDate(today, 10), startTime: `${String(8 + index).padStart(2, "0")}:00`, endTime: `${String(8 + index).padStart(2, "0")}:30` });
+  await createEvent(page, { category: "home", title: "収支共存予定", startDate: shiftDate(today, 6), endDate: shiftDate(today, 6), startTime: "09:00", endTime: "09:30" });
 
   const calendarResponse = await page.request.get(`/api/calendar?month=${today.slice(0, 7)}`);
   expect(calendarResponse.status()).toBe(200);
@@ -66,13 +67,21 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(page.locator(".calendar-band--home").first()).toBeVisible();
   await expect(page.locator(".calendar-band--work").first()).toBeVisible();
   await expect(page.locator(".calendar-cell__count").first()).toBeVisible();
-  await expect(page.locator(".calendar-money-overlay").filter({ hasText: "+699" })).toBeVisible();
+  const moneySummaryDate = shiftDate(today, 6);
+  const allMoneySummaryCell = page.getByRole("button", { name: `${dateNumber(moneySummaryDate)}日`, exact: true });
+  await expect(allMoneySummaryCell.locator(".calendar-cell__money")).toHaveText(["+2,999"]);
+  await expect(page.locator(".calendar-money-layer")).toHaveCount(0);
+  const allCellBox = await allMoneySummaryCell.boundingBox();
+  const allMoneyBox = await allMoneySummaryCell.locator(".calendar-cell__money").boundingBox();
+  if (!allCellBox || !allMoneyBox) throw new Error("Calendar Money cell bounds unavailable");
+  expect(allMoneyBox.y).toBeGreaterThanOrEqual(allCellBox.y);
+  expect(allMoneyBox.y + allMoneyBox.height).toBeLessThanOrEqual(allCellBox.y + allCellBox.height);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-high-390x844.png") });
 
   await page.getByRole("tab", { name: "お金" }).click();
   const moneyCell = page.getByRole("button", { name: `${todayDay}日`, exact: true });
-  const moneyOverlay = page.locator(".calendar-money-overlay").filter({ hasText: "-1,500" }).first();
-  await expect(moneyOverlay.locator(".calendar-cell__money")).toHaveText(["-1,500", "+2,999", "-800"]);
+  await expect(moneyCell.locator(".calendar-cell__money")).toHaveText(["食費", "副収入", "+699"]);
+  await expect(moneyCell.locator(".calendar-cell__count")).toHaveText("1");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-390x844.png") });
   await moneyCell.click();
   const moneyDateSheet = page.getByRole("dialog");
@@ -89,6 +98,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(homeDateSheet.locator(".event-swipe-row").filter({ hasText: "朝の家予定" })).toBeVisible();
   await expect(homeDateSheet.locator(".event-swipe-row").filter({ hasText: "仕事の予定" })).toHaveCount(0);
   await expect(homeDateSheet.getByText("収支", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".calendar-cell__money")).toHaveCount(0);
   await page.waitForTimeout(220);
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-home-390x844.png") });
   await homeDateSheet.getByRole("button", { name: "閉じる" }).click();
@@ -99,6 +109,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(workDateSheet.locator(".event-swipe-row").filter({ hasText: "仕事の予定" })).toBeVisible();
   await expect(workDateSheet.locator(".event-swipe-row").filter({ hasText: "朝の家予定" })).toHaveCount(0);
   await expect(workDateSheet.getByText("収支", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".calendar-cell__money")).toHaveCount(0);
   await page.waitForTimeout(220);
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-work-390x844.png") });
   await workDateSheet.getByRole("button", { name: "1日の詳細を見る" }).click();
