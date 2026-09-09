@@ -165,7 +165,7 @@ const unregisterSubscription = requireAuth(async ({ request, env, user }) => {
   return json({ removed: true });
 });
 const testPush = requireAuth(async ({ env, user }) => {
-  if (env.APP_ENV === "staging" || env.APP_ENV === "local" || env.APP_ENV === "test") {
+  if (env.APP_ENV === "staging") {
     const result = await new WebPushService(env.DB).sendPayload(user.id, { title: "LifeHub", body: "テスト通知が届きました", data: { kind: "summary", period: "morning", localDate: todayForTest(), url: "/calendar" } }, pushBindings(env));
     return json(result);
   }
