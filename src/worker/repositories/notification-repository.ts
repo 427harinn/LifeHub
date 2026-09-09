@@ -77,6 +77,12 @@ export class NotificationDeliveryRepository {
       WHERE notification_deliveries.status = 'pending' AND notification_deliveries.claimed_at <= ?`).bind(input.id, input.userId, input.notificationType, input.eventId, input.occurrenceKey, input.eventNotificationId, input.scheduledFor, input.dedupeKey, input.now, input.now, input.now, staleBefore(input.now)).run();
     return Boolean(result.meta.changes);
   }
-  async markSent(id: string, now: string): Promise<void> { await this.db.prepare("UPDATE notification_deliveries SET status = 'sent', sent_at = ?, updated_at = ? WHERE id = ?").bind(now, now, id).run(); }
-  async release(id: string): Promise<void> { await this.db.prepare("DELETE FROM notification_deliveries WHERE id = ? AND status = 'pending'").bind(id).run(); }
+  async markSent(dedupeKey: string, now: string): Promise<void> {
+    const result = await this.db.prepare("UPDATE notification_deliveries SET status = 'sent', sent_at = ?, updated_at = ? WHERE dedupe_key = ? AND status = 'pending'").bind(now, now, dedupeKey).run();
+    if ((result.meta.changes ?? 0) > 0) return;
+    const current = await this.db.prepare("SELECT status FROM notification_deliveries WHERE dedupe_key = ?").bind(dedupeKey).first<{ status: string }>();
+    if (current?.status === "sent") return;
+    throw new Error("notification-delivery-mark-sent-failed");
+  }
+  async release(dedupeKey: string): Promise<void> { await this.db.prepare("DELETE FROM notification_deliveries WHERE dedupe_key = ? AND status = 'pending'").bind(dedupeKey).run(); }
 }

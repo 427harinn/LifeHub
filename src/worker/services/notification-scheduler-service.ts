@@ -126,8 +126,8 @@ export class NotificationSchedulerService {
 
   private async deliver(claim: DeliveryClaim, env: Env, payload: object): Promise<void> {
     if (!(await this.deliveries.claim(claim))) return;
-    try { const result = await this.push.sendPayload(claim.userId, payload, pushEnv(env)); if (result.sent > 0) await this.deliveries.markSent(claim.id, claim.now); else await this.deliveries.release(claim.id); }
-    catch (error) { await this.deliveries.release(claim.id); console.error(JSON.stringify({ event: "lifehub_notification_delivery_failed", notificationType: claim.notificationType, errorName: error instanceof Error ? error.name : "UnknownError" })); }
+    try { const result = await this.push.sendPayload(claim.userId, payload, pushEnv(env)); if (result.sent > 0) await this.deliveries.markSent(claim.dedupeKey, claim.now); else await this.deliveries.release(claim.dedupeKey); }
+    catch (error) { await this.deliveries.release(claim.dedupeKey); console.error(JSON.stringify({ event: "lifehub_notification_delivery_failed", notificationType: claim.notificationType, errorName: error instanceof Error ? error.name : "UnknownError" })); }
   }
 }
 
