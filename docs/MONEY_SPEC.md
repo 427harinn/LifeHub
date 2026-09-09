@@ -7,6 +7,8 @@ LifeHubのお金機能は、厳密な家計簿ではなく、**今月だいた�
 細かい入力を強制しない。
 予定額を先に置き、実際の金額が分かったものだけ後から置き換えられることを中心にする。
 
+M8ではplannedAmountだけを使うMoney projectionを実装する。actualAmount、estimated_actual、月末確定はM9で追加する。
+
 ---
 
 ## 2. 基本概念
@@ -54,18 +56,18 @@ MoneyItemには基準となる `plannedAmount` を持つ。
 
 ## 4. 今月の考え方
 
-今月は「確定済み実績 + 未確定予定」を混ぜて、着地見込みを表示する。
+最終像では「確定済み実績 + 未確定予定」を混ぜて、着地見込みを表示する。M8ではactualが存在しないため、当月のactive occurrenceをすべてplannedAmountで集計する。
 
 ### 支出見込み
 
 ```text
-actualがある回 → actualAmount
-actualがない回 → plannedAmount
+M8: plannedAmount
+将来: actualがある回 → actualAmount、actualがない回 → plannedAmount
 ```
 
 ### 収入見込み
 
-同じルールを使う。
+M8は支出と同じplannedAmount集計を使う。actual導入後も同じ決定ロジックを使う。
 
 ### 残りそう
 
@@ -100,8 +102,7 @@ actualがない回 → plannedAmount
 7. メモ
 8. 登録
 
-時間は基本非表示。
-必要な場合のみ `時間を追加` で表示する。
+M8のMoneyFormは時間を扱わない。MoneyItemの`time`列を残す場合も、M8で作成するMoneyは常にnullとする。
 
 最上部に `以前の項目から選ぶ >` を置く。
 
@@ -158,20 +159,20 @@ Eventと同じ共通RecurrenceRuleを利用する。
 - 毎月の電気代予定
 - 毎週の定期支出
 
+M8ではEventと共通のRecurrenceRuleを再利用し、なし / daily / weekly / monthly / interval / weekdays / dayOfMonth / startsOn / endsOnをprojectionする。毎月31日は短月の月末へclampし、occurrenceKeyは安定した値を使う。編集・削除は系列全体のみとし、overrideやoccurrence単位の変更はM9とする。
+
 ---
 
 ## 10. 繰り返しMoneyの編集
 
 Eventと同じ考え方を利用する。
 
-- 今回のみ
-- これ以降
-- すべて
+- M8: 系列全体
+- M9: 今回のみ / これ以降 / すべて
 
-今回のみの金額変更はMoneyOccurrenceOverrideへ保存する。
+今回のみの金額変更はM9でMoneyOccurrenceOverrideへ保存する。
 
-これ以降の予定額変更では、そのoccurrenceを境界に系列を分割する。
-過去のactual / estimated_actualは勝手に上書きしない。
+これ以降の予定額変更による系列分割と、過去のactual / estimated_actual保持もM9の対象とする。
 
 ---
 

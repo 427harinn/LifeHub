@@ -1,0 +1,21 @@
+import type { MoneyItem, MoneyItemInput, MoneyType } from "../types";
+
+type MoneyRow = {
+  id: string; user_id: string; type: MoneyType; title: string; category_id: string; planned_amount: number;
+  date: string; time: string | null; recurrence_rule_id: string | null; memo: string | null; active: number;
+  deleted_at: string | null; created_at: string; updated_at: string;
+};
+
+export const moneySelect = "id, user_id, type, title, category_id, planned_amount, date, time, recurrence_rule_id, memo, active, deleted_at, created_at, updated_at";
+const toMoney = (row: MoneyRow): MoneyItem => ({ id: row.id, userId: row.user_id, type: row.type, title: row.title, categoryId: row.category_id, plannedAmount: row.planned_amount, date: row.date, time: row.time, recurrenceRuleId: row.recurrence_rule_id, memo: row.memo, active: row.active === 1, deletedAt: row.deleted_at, createdAt: row.created_at, updatedAt: row.updated_at });
+
+export class MoneyRepository {
+  constructor(private readonly db: D1Database) {}
+  async create(userId: string, input: MoneyItemInput, recurrenceRuleId: string | null, now: string): Promise<MoneyItem> { const id = crypto.randomUUID(); await this.db.prepare("INSERT INTO money_items (id, user_id, type, title, category_id, planned_amount, date, time, recurrence_rule_id, memo, active, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, 1, NULL, ?, ?)").bind(id, userId, input.type, input.title, input.categoryId, input.plannedAmount, input.date, recurrenceRuleId, input.memo, now, now).run(); const created = await this.getById(userId, id); if (!created) throw new Error("MoneyItem could not be created"); return created; }
+  async getById(userId: string, id: string): Promise<MoneyItem | null> { const row = await this.db.prepare(`SELECT ${moneySelect} FROM money_items WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL`).bind(id, userId).first<MoneyRow>(); return row ? toMoney(row) : null; }
+  async listForRange(userId: string, startDate: string, endDate: string): Promise<MoneyItem[]> { const result = await this.db.prepare(`SELECT ${moneySelect} FROM money_items WHERE user_id = ? AND active = 1 AND deleted_at IS NULL AND date >= ? AND date <= ? ORDER BY date ASC, COALESCE(time, '23:59') ASC, created_at ASC`).bind(userId, startDate, endDate).all<MoneyRow>(); return result.results.map(toMoney); }
+  async listForProjection(userId: string, startDate: string, endDate: string): Promise<MoneyItem[]> { const result = await this.db.prepare(`SELECT ${moneySelect} FROM money_items WHERE user_id = ? AND active = 1 AND deleted_at IS NULL AND (recurrence_rule_id IS NOT NULL OR (date >= ? AND date <= ?)) ORDER BY date ASC, created_at ASC`).bind(userId, startDate, endDate).all<MoneyRow>(); return result.results.map(toMoney); }
+  async recentDefinitions(userId: string, limit: number): Promise<MoneyItem[]> { const result = await this.db.prepare(`SELECT ${moneySelect} FROM money_items WHERE user_id = ? AND active = 1 AND deleted_at IS NULL ORDER BY updated_at DESC, created_at DESC LIMIT ?`).bind(userId, limit).all<MoneyRow>(); return result.results.map(toMoney); }
+  async update(userId: string, id: string, input: MoneyItemInput, recurrenceRuleId: string | null, now: string): Promise<MoneyItem | null> { const result = await this.db.prepare("UPDATE money_items SET type = ?, title = ?, category_id = ?, planned_amount = ?, date = ?, time = NULL, memo = ?, recurrence_rule_id = ?, updated_at = ? WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL").bind(input.type, input.title, input.categoryId, input.plannedAmount, input.date, input.memo, recurrenceRuleId, now, id, userId).run(); if (!result.meta.changes) return null; return this.getById(userId, id); }
+  async softDelete(userId: string, id: string, deletedAt: string): Promise<boolean> { const result = await this.db.prepare("UPDATE money_items SET active = 0, deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND active = 1 AND deleted_at IS NULL").bind(deletedAt, deletedAt, id, userId).run(); return Boolean(result.meta.changes); }
+}

@@ -19,6 +19,41 @@
 
 ---
 
+# Milestone 8 Tasks
+
+## 小タスク
+
+- [x] T1: PR #8 merge済み最新mainから `codex/m8-money-mvp` を作成し、M8境界を確認
+- [x] T2: MONEY / DATA_MODEL / API / SCREEN / DESIGN / POLICYと既存fixture・adapterを監査
+- [x] T3: `0009_m8_money.sql`、MoneyCategory / MoneyItem type・repository・serviceを実装
+- [x] T3a: 既存EventのRecurrenceRule / projection engineを再利用したMoney recurrenceと`0010_m8_money_recurrence.sql`を実装
+- [x] T4: 初期カテゴリensure、カテゴリCRUD、Money CRUD / recent / month / daily summary routeを実装
+- [x] T5: API / repository / summary / migration_locked / ownership / validation testを追加
+- [x] T6: MoneyFormとrecent definitions、entry context、progressive disclosureを実装
+- [x] T7: Money画面のmonth navigation / summary / list / edit / deleteを実装
+- [x] T8: Calendar / Date Sheet / Dailyへ共有Money projectionをadapter接続。既存layout / interactionは維持
+- [x] T9: Settings > お金カテゴリの一覧 / add / edit / inactiveを実装
+- [x] T10: UI / component / E2E、M3-M7 regression、390×844 Evidenceを実行・保存
+- [x] T11: staging auth / D1 / migration / deploy / health / smoke / mobile確認（7403時はSTOP）
+- [x] T12: self-review、docs implementation note更新、commit / push / PR作成。auto-mergeなし
+
+## M8 implementation note
+
+- 既存mainのCalendar adaptive rows、Money summary予約row、hidden count、Date Sheet / Daily interactionを維持したまま、fixtureを共有projectionへ置換した。
+- M8ではplannedAmountのみを集計し、既存EventのRecurrenceRuleを要求月へprojectionする。actual / estimated_actual / occurrence override / settlement / series split / graph / budget / notificationは実装していない。
+- MoneyFormの時間入力は削除し、SettingsカテゴリとMoney月一覧は共通swipe actionで操作する。stagingでは`0010_m8_money_recurrence.sql`適用後に再deploy・390×844 smokeを行う。
+
+## M8セルフレビュー観点
+
+- MoneyItemはEventと別modelで、recurrenceは既存RecurrenceRuleへの参照と共有projectionのみ。actual / estimated_actualを実装していない
+- 金額は正数保存、符号はtype、soft delete、全queryにuserId ownershipがある
+- Calendar / Daily / Moneyは同じMoney projectionを利用している
+- Calendar adaptive rows・summary最終row・hidden count、Date Sheet、Daily swipe / inlineを置換していない
+- 家計カテゴリはuser単位で初期ensureし、参照中カテゴリをhard deleteしていない
+- progressive disclosure、390×844、既存Design tokenを維持し、カード過多・英語装飾を追加していない
+- stagingのみを操作し、production/default / HouseToDoは未操作。M9へ進まない
+
+
 # Milestone 7 Tasks
 
 ## 小タスク

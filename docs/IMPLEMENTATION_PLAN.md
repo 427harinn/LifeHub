@@ -376,11 +376,11 @@ M7はM6 merge済みmainから新規branchで実装する。HouseToDoのsubscript
 
 ---
 
-# Milestone 8: Money MVP
+# Milestone 8: Money MVP + recurrence
 
 ## 目的
 
-単発の支出・収入と今月見込みを使えるようにする。
+単発・繰り返しの支出・収入と今月見込みを使えるようにする。繰り返しは既存Eventの共通RecurrenceRule / projection engineを再利用する。
 
 ## 主な内容
 
@@ -391,6 +391,7 @@ M7はM6 merge済みmainから新規branchで実装する。HouseToDoのsubscript
 - expense / income
 - plannedAmount
 - 単発Money
+- Money recurrence（daily / weekly / monthly / interval / weekdays / dayOfMonth / startsOn / endsOn、短月clamp、stable occurrenceKey）
 - MoneyForm
 - recent definitions
 - Money月API
@@ -401,6 +402,9 @@ M7はM6 merge済みmainから新規branchで実装する。HouseToDoのsubscript
 - Calendarの日セル最上部に日次収支差額
 - Calendar Moneyタブ個別額
 - Daily予定タイムライン下にMoney
+- MoneyFormのFormRow / BottomSheet統一。時間入力はM8では扱わない
+- Money / Calendar / Dailyの共有projection
+- 繰り返しMoneyは系列全体編集・削除のみ
 
 ## Evidence
 
@@ -409,20 +413,20 @@ M7はM6 merge済みmainから新規branchで実装する。HouseToDoのsubscript
 - Calendarすべてタブの金額
 - Calendar Moneyタブ
 - Daily Money
+- Money recurrence登録、翌月projection、Calendar / Daily反映
 
 staging必須。
 
 ---
 
-# Milestone 9: Money Recurrence / Actual / Estimated Actual
+# Milestone 9: Money occurrence override / actual / estimated_actual / series split / 月末確定
 
 ## 目的
 
-ズボラ家計簿の中核となる定期支出・実績・みなし実績を完成させる。
+M8のMoney recurrenceに、occurrence単位の変更と実績確定を追加する。
 
 ## 主な内容
 
-- Money + RecurrenceRule
 - MoneyOccurrenceOverride
 - MoneyOccurrenceSettlement
 - 今回のみ / これ以降 / すべて
@@ -642,7 +646,7 @@ M7 Notification
  ↓
 M8 Money MVP
  ↓
-M9 Money Recurrence / Settlement
+M9 Money occurrence override / actual / estimated_actual / series split / 月末確定
  ↓
 M10 Money Visualization
  ↓

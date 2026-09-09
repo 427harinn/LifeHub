@@ -342,12 +342,12 @@ M5ではrecurrence周辺だけをUIレビュー対象とし、M4のフォーム�
 3. 金額
 4. カテゴリ
 5. 日付
-6. 必要なら時間追加
-7. 繰り返し
-8. メモ
-9. 登録
+6. 繰り返し
+7. メモ
+8. 登録
 
 通知は持たない。
+MoneyFormのカテゴリ・日付・繰り返しはEventFormと同じFormRow + BottomSheetを使う。M8のMoneyFormには時間入力・`時間を追加` rowを表示しない。
 
 ---
 
@@ -372,6 +372,8 @@ M5ではrecurrence周辺だけをUIレビュー対象とし、M4のフォーム�
 - カテゴリ構成グラフ
 - カテゴリ別金額
 - 今月のお金一覧
+
+M8はplannedAmountによる月projectionとし、グラフ・actual・estimated_actual・月末確定は後続Milestoneで扱う。繰り返しMoneyは要求月だけprojectionし、月一覧の行は左swipeで`編集`をrevealする。削除は編集画面内から行い、M8では系列全体を対象とする。
 
 M8前のshellでも `記録はありません` だけで終わらせず、最終UIを判断できる仮の金額・カテゴリ・明細を表示する。
 

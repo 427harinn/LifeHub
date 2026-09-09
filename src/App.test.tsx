@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
 import type { Event } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
@@ -264,5 +264,15 @@ describe("recurrence form summaries", () => {
     expect(recurrenceSummary({ frequency: "weekly", interval: 1, weekdays: [2], dayOfMonth: null, startsOn: "2026-09-08", endsOn: null }, "2026-09-08", true)).toBe("毎週");
     expect(recurrenceSummary({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 8, startsOn: "2026-09-08", endsOn: null }, "2026-09-08", true)).toBe("毎月");
     expect(recurrenceSummary({ frequency: "weekly", interval: 2, weekdays: [1, 3], dayOfMonth: null, startsOn: "2026-09-08", endsOn: "2026-09-22" }, "2026-09-08", true)).toBe("2週間ごと（〜9月22日(火)）");
+  });
+
+  it("moves default monthly and weekly anchors with a base date change", () => {
+    expect(recurrenceAfterBaseDateChange({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 9, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", dayOfMonth: 15 });
+    expect(recurrenceAfterBaseDateChange({ frequency: "weekly", interval: 1, weekdays: [3], dayOfMonth: null, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", weekdays: [2] });
+  });
+
+  it("preserves explicitly customized cadence fields when the base date changes", () => {
+    expect(recurrenceAfterBaseDateChange({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 31, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", dayOfMonth: 31 });
+    expect(recurrenceAfterBaseDateChange({ frequency: "weekly", interval: 1, weekdays: [4], dayOfMonth: null, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", weekdays: [4] });
   });
 });
