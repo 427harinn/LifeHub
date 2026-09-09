@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bytesToBase64Url } from "../lib/crypto";
-import { parsePrivateJwk } from "./web-push-service";
+import { invokeFetchWithoutReceiver, parsePrivateJwk } from "./web-push-service";
 
 describe("VAPID private key formats", () => {
   it("accepts the URL-safe base64 private scalar emitted by web-push", () => {
@@ -21,5 +21,18 @@ describe("VAPID private key formats", () => {
 
   it("rejects malformed private key formats without exposing the value", () => {
     expect(() => parsePrivateJwk("not-a-key", "not-a-public-key")).toThrow("invalid-vapid-private-key");
+  });
+});
+
+describe("Web Push fetch invocation", () => {
+  it("calls the Worker fetcher without a WebPushService receiver", async () => {
+    const fetcher: typeof fetch = vi.fn(function (this: unknown, input: RequestInfo | URL, init?: RequestInit) {
+      expect(this).toBeUndefined();
+      expect(input).toBe("https://push.example.test/endpoint");
+      expect(init?.method).toBe("POST");
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
+
+    await expect(invokeFetchWithoutReceiver(fetcher, "https://push.example.test/endpoint", { method: "POST" })).resolves.toMatchObject({ status: 204 });
   });
 });

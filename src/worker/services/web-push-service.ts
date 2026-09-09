@@ -91,6 +91,11 @@ const vapidAuthorization = async (endpoint: string, subject: string, privateText
   } catch { throw new ClassifiedError(fail("vapid", "vapid_sign_failed")); }
 };
 
+export const invokeFetchWithoutReceiver = (fetcher: typeof fetch, input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+  const detachedFetcher = fetcher;
+  return detachedFetcher(input, init);
+};
+
 export class WebPushService {
   private readonly subscriptions: PushSubscriptionRepository;
   constructor(db: D1Database, private readonly fetcher: typeof fetch = fetch) { this.subscriptions = new PushSubscriptionRepository(db); }
@@ -124,7 +129,7 @@ export class WebPushService {
     catch (error) { return { status: "failed", failure: error instanceof ClassifiedError ? error.failure : fail("vapid", "unknown") }; }
     let response: Response;
     try {
-      response = await this.fetcher(subscription.endpoint, { method: "POST", headers: { Authorization: authorization, "Content-Encoding": "aes128gcm", TTL: "60", "Content-Type": "application/octet-stream" }, body: toBuffer(body) });
+      response = await invokeFetchWithoutReceiver(this.fetcher, subscription.endpoint, { method: "POST", headers: { Authorization: authorization, "Content-Encoding": "aes128gcm", TTL: "60", "Content-Type": "application/octet-stream" }, body: toBuffer(body) });
     } catch { return { status: "failed", failure: fail("network", "network_failed") }; }
     const now = new Date().toISOString();
     if (response.status >= 200 && response.status < 300) { await this.subscriptions.markSuccess(subscription.id, now); return { status: "sent", upstreamStatus: response.status }; }
