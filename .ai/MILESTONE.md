@@ -34,7 +34,7 @@ M7 merge済み最新`main`から、時間あり予定の開始時刻変更に対
 
 ## 現在のMilestone
 
-M8実装中。ベースはPR #8 merge済み `origin/main` (`6d22c3315d9672c9dec2c91d58674604d3640e13`)、branchは `codex/m8-money-mvp`。対象はuserId所有の単発expense/income、plannedAmount、MoneyCategory、月見込み、Calendar/Daily連携までとする。
+M8実装中。ベースはPR #8 merge済み `origin/main` (`6d22c3315d9672c9dec2c91d58674604d3640e13`)、branchは `codex/m8-money-mvp`。対象はuserId所有の単発・繰り返しexpense/income、plannedAmount、MoneyCategory、月見込み、Calendar/Daily連携までとする。
 
 ## 完了条件
 
@@ -42,12 +42,13 @@ M8実装中。ベースはPR #8 merge済み `origin/main` (`6d22c3315d9672c9dec2
 - [x] 既存user・新規userの初期カテゴリensure、カテゴリCRUD、soft delete
 - [x] Money CRUD、recent definitions、月summary、daily net、ownership / validation / migration_locked
 - [x] MoneyForm、Money画面、Calendar/Daily/Date Sheetの実データ接続、Settingsカテゴリ管理
+- [x] 既存EventのRecurrenceRule / projection engineを再利用したMoney recurrence、系列全体編集・削除
 - [x] M3-M7回帰、390×844 Evidence、staging migration / deploy / smoke
 - [x] docs更新、commit / push / PR作成（auto-mergeなし）
 
 ## 明示的な非対象
 
-- Money recurrence / occurrence override / settlement
+- Money occurrence override / settlement / occurrence単位編集
 - actualAmount / estimated_actual / 月末確定
 - series scope、グラフ、予算、通知、銀行連携、OCR、archive / IndexedDB、M9以降
 - Calendar / Dailyの再設計、EventFormへのMoney統合、production/default、HouseToDo
@@ -63,13 +64,13 @@ M8実装中。ベースはPR #8 merge済み `origin/main` (`6d22c3315d9672c9dec2
 
 ## M8 implementation note（2026-09-09）
 
-- `0009_m8_money.sql`で`money_categories` / `money_items`を追加。MoneyItemは正数plannedAmount、type符号、単発、soft delete、userId ownershipとし、recurrence / settlementテーブルは追加していない。
+- `0009_m8_money.sql`で`money_categories` / `money_items`を追加し、`0010_m8_money_recurrence.sql`でrecurrence index/metaを追加。MoneyItemは正数plannedAmount、type符号、soft delete、userId ownershipとし、既存`recurrence_rules`を参照する。新しいrecurrence engineやoccurrence保存テーブルは追加していない。
 - 初期カテゴリはregister時とカテゴリ初回取得時にuser単位で`INSERT OR IGNORE` ensure。既存user・新規userの重複生成を防ぎ、カテゴリ削除は`active=false`。
 - `/api/money`、`/api/money/month`、`/api/money/recent-definitions`、`/api/money-categories`一式を実装。共有Money projectionをCalendar / Date Sheet / Daily / Money画面で利用した。
-- MoneyFormはexpense/income、numeric正数、date、時間・メモのprogressive disclosure、recent定義、編集・削除に対応。Settingsのお金カテゴリは限定paletteでadd/edit/inactiveに対応した。
-- local migration、70 unit/component tests、typecheck、lint、build、M8 Playwright E2Eを完了。Evidenceは`artifacts/evidence/m8/`に保存。
-- stagingは`lifehub-staging` D1へ`0009_m8_money.sql`を適用し、再確認で`No migrations to apply!`。Worker versionは`96a47a49-81cc-4e38-b438-fff7240b8dbe`、health/auth/category/expense/income/summary/Calendar/Daily/edit/deleteを390×844で確認。7403は未発生。
-- production/defaultとHouseToDoは操作していない。M9（recurrence、actual、settlement等）は未着手。auto-mergeは実行していない。
+- MoneyFormはexpense/income、numeric正数、category/date/recurrenceのFormRow + BottomSheet、メモのprogressive disclosure、recent定義、編集・削除に対応し、時間入力は持たない。Settingsのお金カテゴリとMoney月一覧は共通swipe actionでedit/inactiveをrevealする。
+- local migration、recurrence unit/component tests、typecheck、lint、build、M8 Playwright E2Eを完了。Evidenceは`artifacts/evidence/m8/`に保存。
+- stagingは前回`0009`まで適用済み。今回`0010_m8_money_recurrence.sql`をstagingへ適用し、再deploy・smokeを行う。production/defaultとHouseToDoは操作しない。M9（occurrence override、actual、estimated_actual、series split、月末確定）は未着手。auto-mergeは実行しない。
+- production/defaultとHouseToDoは操作していない。M9（occurrence override、actual、estimated_actual、series split、月末確定）は未着手。auto-mergeは実行していない。
 
 
 # Milestone 7: Notification

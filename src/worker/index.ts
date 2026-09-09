@@ -115,7 +115,7 @@ const getUserState = requireAuth(async ({ env, user }) => {
 
 const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
 const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env), new NotificationRepository(env.DB));
-const moneyService = (env: Env) => new MoneyService(new MoneyRepository(env.DB), new MoneyCategoryRepository(env.DB));
+const moneyService = (env: Env) => new MoneyService(new MoneyRepository(env.DB), new MoneyCategoryRepository(env.DB), new RecurrenceRepository(env.DB));
 const withEventNotifications = async (userId: string, events: Event[], db: D1Database) => {
   const repository = new NotificationRepository(db);
   const offsets = new Map<string, Promise<number[]>>();
@@ -229,7 +229,7 @@ const getCalendar = requireAuth(async ({ request, env, user }) => {
   const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
   const [events, money] = await Promise.all([
     withEventNotifications(user.id, await eventProjection(env).project(user.id, range, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB),
-    moneyService(env).projectMonth(user.id, month)
+    moneyService(env).projectMonth(user.id, month, settings.weekStartsOn)
   ]);
   return json({ month, range, events, money });
 });
@@ -242,7 +242,7 @@ const getDaily = requireAuth(async ({ request, env, user }) => {
   ]);
   const [projectedEvents, money] = await Promise.all([
     withEventNotifications(user.id, await eventProjection(env).project(user.id, dayToRange(date), { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB),
-    moneyService(env).projectDate(user.id, date)
+    moneyService(env).projectDate(user.id, date, settings.weekStartsOn)
   ]);
   const dailyEvents = [...new Map(projectedEvents.map((event) => [event.occurrenceKey ?? event.id, event])).values()];
   return json({ date, events: dailyEvents, dailyNote, money });
@@ -292,20 +292,19 @@ const deleteMoneyCategory = requireAuth(async ({ request, env, user }) => {
 const getMoneyMonth = requireAuth(async ({ request, env, user }) => {
   const month = stringValue(new URL(request.url).searchParams.get("month"));
   await moneyService(env).ensureCategories(user.id, nowIso());
-  return json(await moneyService(env).projectMonth(user.id, month));
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  return json(await moneyService(env).projectMonth(user.id, month, settings.weekStartsOn));
 });
 
 const listRecentMoneyDefinitions = requireAuth(async ({ request, env, user }) => {
   const parsedLimit = Number(new URL(request.url).searchParams.get("limit") ?? "20");
   const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 20;
   await moneyService(env).ensureCategories(user.id, nowIso());
-  const [items, categories] = await Promise.all([new MoneyRepository(env.DB).recentDefinitions(user.id, limit), new MoneyCategoryRepository(env.DB).list(user.id, undefined, true)]);
-  const categoryMap = new Map(categories.map((category) => [category.id, category]));
-  return json({ definitions: items.map((item) => ({ ...item, category: categoryMap.get(item.categoryId) ?? null })) });
+  return json({ definitions: await moneyService(env).recentDefinitions(user.id, limit) });
 });
 
 const createMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const money = await moneyService(env).create(user.id, await parseObject(request), nowIso()); return json({ money }, { status: 201 }); });
-const getMoney = requireAuth(async ({ request, env, user }) => { const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const item = await new MoneyRepository(env.DB).getById(user.id, id); if (!item) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); const category = await new MoneyCategoryRepository(env.DB).getById(user.id, item.categoryId); return json({ money: { ...item, category } }); });
+const getMoney = requireAuth(async ({ request, env, user }) => { const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const item = await moneyService(env).get(user.id, id); if (!item) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); const category = await new MoneyCategoryRepository(env.DB).getById(user.id, item.categoryId); return json({ money: { ...item, category } }); });
 const updateMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const money = await moneyService(env).update(user.id, id, await parseObject(request), nowIso()); if (!money) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); return json({ money }); });
 const deleteMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); if (!await new MoneyRepository(env.DB).softDelete(user.id, id, nowIso())) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); return json({ deleted: true }); });
 

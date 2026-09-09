@@ -470,6 +470,8 @@ MoneyItem
 
 金額は正数保存。符号はtypeで決める。
 
+M8では`recurrenceRuleId`は既存`recurrence_rules`へのuserId所有参照として利用する。occurrenceは要求範囲へprojectionし、Money occurrence専用テーブルは作成しない。`time`列を残してもM8の作成・更新値はnullとする。MoneyOccurrenceOverride / Settlement / actual系はM9以降。
+
 ---
 
 # 16. MoneyOccurrenceOverride

@@ -153,7 +153,7 @@ M3のrecent候補は現在ユーザーのactiveなEventから返し、フォー�
 
 ## 6. Money（後続Milestone）
 
-Moneyモデル / APIの本実装はM8以降の対象とする。M4のCalendar / Daily UIに表示するMoneyはfixture / placeholderを含む確認用projectionであり、productionのMoney永続化を意味しない。
+M8でMoneyモデル / APIを本実装する。M4由来のCalendar / Daily Money fixtureはM8で共有projectionへ置換する。
 
 ```text
 GET    /api/money/month?month=2026-09
@@ -163,28 +163,22 @@ PATCH  /api/money/:id
 DELETE /api/money/:id
 ```
 
-繰り返しMoneyも:
-
-```text
-scope = occurrence | following | series
-```
-
-を共通利用する。
+M8の繰り返しMoneyは既存EventのRecurrenceRuleを参照し、月projection・Calendar・Dailyへ展開する。更新・削除は系列全体のみとし、occurrence / following scopeはM9で追加する。
 
 月表示は:
 
 - 支出見込み
 - 収入見込み
 - 残りそう
-- 確定済み / 予定の補助集計
-- カテゴリ別集計
 - occurrence一覧
+
+M8の集計値は全てplannedAmountを使う。actual / estimated_actual、カテゴリ別グラフ、月末確定はM9以降とする。
 
 を返す。
 
 ---
 
-## 7. Money actual
+## 7. Money actual（M9）
 
 ```text
 PUT /api/money/:id/occurrences/:occurrenceKey/actual
@@ -207,6 +201,8 @@ DELETE /api/money/:id/occurrences/:occurrenceKey/actual
 ```text
 GET /api/money/recent-definitions?limit=20
 ```
+
+M8はtype / title / plannedAmount / category / memo / recurrenceを返し、過去の日付とtimeはコピーしない。MoneyFormの通常入力にもtimeを含めない。
 
 ---
 

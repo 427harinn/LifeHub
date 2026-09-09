@@ -158,6 +158,10 @@ export type MoneyItem = {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Present when a MoneyItem is returned with its series rule or as a projection. */
+  recurrence?: RecurrenceRule | null;
+  occurrenceKey?: string | null;
+  definitionDate?: string;
 };
 
-export type MoneyItemInput = Pick<MoneyItem, "type" | "title" | "categoryId" | "plannedAmount" | "date" | "time" | "memo">;
+export type MoneyItemInput = Pick<MoneyItem, "type" | "title" | "categoryId" | "plannedAmount" | "date" | "memo">;

@@ -26,6 +26,7 @@
 - [x] T1: PR #8 merge済み最新mainから `codex/m8-money-mvp` を作成し、M8境界を確認
 - [x] T2: MONEY / DATA_MODEL / API / SCREEN / DESIGN / POLICYと既存fixture・adapterを監査
 - [x] T3: `0009_m8_money.sql`、MoneyCategory / MoneyItem type・repository・serviceを実装
+- [x] T3a: 既存EventのRecurrenceRule / projection engineを再利用したMoney recurrenceと`0010_m8_money_recurrence.sql`を実装
 - [x] T4: 初期カテゴリensure、カテゴリCRUD、Money CRUD / recent / month / daily summary routeを実装
 - [x] T5: API / repository / summary / migration_locked / ownership / validation testを追加
 - [x] T6: MoneyFormとrecent definitions、entry context、progressive disclosureを実装
@@ -39,12 +40,12 @@
 ## M8 implementation note
 
 - 既存mainのCalendar adaptive rows、Money summary予約row、hidden count、Date Sheet / Daily interactionを維持したまま、fixtureを共有projectionへ置換した。
-- M8ではplannedAmountのみを集計し、actual / estimated_actual / recurrence / settlement / graph / budget / notificationは実装していない。
-- staging Worker `lifehub-staging` version `96a47a49-81cc-4e38-b438-fff7240b8dbe`でmigration・deploy・390×844 smokeを完了。7403なし。production/default / HouseToDoは未操作。
+- M8ではplannedAmountのみを集計し、既存EventのRecurrenceRuleを要求月へprojectionする。actual / estimated_actual / occurrence override / settlement / series split / graph / budget / notificationは実装していない。
+- MoneyFormの時間入力は削除し、SettingsカテゴリとMoney月一覧は共通swipe actionで操作する。stagingでは`0010_m8_money_recurrence.sql`適用後に再deploy・390×844 smokeを行う。
 
 ## M8セルフレビュー観点
 
-- MoneyItemはEventと別modelで、recurrence / actual / estimated_actualを実装していない
+- MoneyItemはEventと別modelで、recurrenceは既存RecurrenceRuleへの参照と共有projectionのみ。actual / estimated_actualを実装していない
 - 金額は正数保存、符号はtype、soft delete、全queryにuserId ownershipがある
 - Calendar / Daily / Moneyは同じMoney projectionを利用している
 - Calendar adaptive rows・summary最終row・hidden count、Date Sheet、Daily swipe / inlineを置換していない

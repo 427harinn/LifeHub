@@ -51,7 +51,7 @@ export type DailyNote = { id: string; userId: string; date: string; content: str
 export type CalendarRange = { startDate: string; endDate: string };
 export type MoneyType = "expense" | "income";
 export type MoneyCategory = { id: string; userId: string; type: MoneyType; name: string; colorKey: string | null; sortOrder: number; active: boolean; createdAt: string; updatedAt: string };
-export type MoneyItem = { id: string; userId: string; type: MoneyType; title: string; categoryId: string; plannedAmount: number; date: string; time: string | null; recurrenceRuleId: null; memo: string | null; active: boolean; deletedAt: string | null; createdAt: string; updatedAt: string; category?: MoneyCategory | null; signedAmount?: number };
+export type MoneyItem = { id: string; userId: string; type: MoneyType; title: string; categoryId: string; plannedAmount: number; date: string; time: null; recurrenceRuleId: string | null; memo: string | null; active: boolean; deletedAt: string | null; createdAt: string; updatedAt: string; category?: MoneyCategory | null; signedAmount?: number; occurrenceKey?: string | null; definitionDate?: string; recurrence?: RecurrenceRuleInput | null };
 export type MoneySummary = { expenseForecast: number; incomeForecast: number; remaining: number };
 export type MoneyDay = MoneySummary & { date: string };
 export type MoneyProjection = { occurrences: MoneyItem[]; summary: MoneySummary; days: MoneyDay[] };
@@ -98,6 +98,6 @@ export const updateMoneyCategory = (id: string, input: { name?: string; colorKey
 export const deleteMoneyCategory = (id: string) => request<{ deleted: boolean }>(`/api/money-categories/${encodeURIComponent(id)}`, { method: "DELETE" });
 export const getMoneyMonth = (month: string) => request<{ month: string } & MoneyProjection>(`/api/money/month?month=${encodeURIComponent(month.slice(0, 7))}`);
 export const getRecentMoneyDefinitions = (limit = 20) => request<{ definitions: MoneyItem[] }>(`/api/money/recent-definitions?limit=${limit}`);
-export const createMoney = (input: { type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; time: string | null; memo: string | null }) => request<{ money: MoneyItem }>("/api/money", { method: "POST", body: JSON.stringify(input) });
-export const updateMoney = (id: string, input: Partial<{ type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; time: string | null; memo: string | null }>) => request<{ money: MoneyItem }>(`/api/money/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
+export const createMoney = (input: { type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; memo: string | null; recurrence: RecurrenceRuleInput | null }) => request<{ money: MoneyItem }>("/api/money", { method: "POST", body: JSON.stringify(input) });
+export const updateMoney = (id: string, input: Partial<{ type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; memo: string | null; recurrence: RecurrenceRuleInput | null }>) => request<{ money: MoneyItem }>(`/api/money/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
 export const deleteMoney = (id: string) => request<{ deleted: boolean }>(`/api/money/${encodeURIComponent(id)}`, { method: "DELETE" });
