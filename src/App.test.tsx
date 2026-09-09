@@ -1,7 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, recurrenceSummary, weekEnd } from "./App";
+import type { Event } from "./api/client";
+import { defaultEndTimeForStart } from "./lib/event-time";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "2026-09-07T00:00:00.000Z", updatedAt: "2026-09-07T00:00:00.000Z" };
@@ -9,6 +11,14 @@ const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, mo
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 const requestPath = (input: RequestInfo | URL) => typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 const projectedEvent = (id: string) => ({ category: "home" as const, day: 1, date: "2026-09-01", eventId: id, kind: "single" as const, label: id });
+const timedEvent = (overrides: Partial<Event> = {}): Event => ({
+  id: "event-1", userId: "user-1", category: "home", title: "予定", place: null, memo: null, timingType: "scheduled", allDay: false,
+  startDate: "2026-09-10", startTime: "09:00", endDate: "2026-09-10", endTime: "10:00", periodWindowType: null, periodAnchorDate: null,
+  periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrenceRuleId: null, active: true, deletedAt: null,
+  createdAt: "2026-09-09T00:00:00.000Z", updatedAt: "2026-09-09T00:00:00.000Z", ...overrides
+});
+
+const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} {...props} />);
 
 describe("LifeHub M2 shell", () => {
   beforeEach(() => {
@@ -95,6 +105,57 @@ describe("LifeHub M2 shell", () => {
     fireEvent.change(screen.getByLabelText("パスワード"), { target: { value: "invalid-password" } });
     fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("ログインできません。"));
+  });
+});
+
+describe("EventForm timed start defaults", () => {
+  it("derives a one-hour end time and keeps it in the same day", () => {
+    expect(defaultEndTimeForStart("09:00")).toBe("10:00");
+    expect(defaultEndTimeForStart("14:30")).toBe("15:30");
+    expect(defaultEndTimeForStart("23:30")).toBe("23:59");
+  });
+
+  it("follows start changes until the new event end is edited", () => {
+    renderEventForm();
+    const start = screen.getByLabelText("開始時間");
+    const end = screen.getByLabelText("終了時間");
+
+    expect(end).toHaveValue("10:00");
+    fireEvent.change(start, { target: { value: "09:00" } });
+    expect(end).toHaveValue("10:00");
+    fireEvent.change(start, { target: { value: "14:30" } });
+    expect(end).toHaveValue("15:30");
+    fireEvent.change(end, { target: { value: "16:00" } });
+    expect(end).toHaveValue("16:00");
+    fireEvent.change(start, { target: { value: "15:00" } });
+    expect(end).toHaveValue("16:00");
+  });
+
+  it("respects an existing event end time", () => {
+    renderEventForm({ event: timedEvent({ startTime: "09:00", endTime: "16:00" }) });
+    fireEvent.change(screen.getByLabelText("開始時間"), { target: { value: "15:00" } });
+    expect(screen.getByLabelText("終了時間")).toHaveValue("16:00");
+  });
+
+  it("respects the end time copied from a recent event", async () => {
+    const recent = timedEvent({ id: "recent-1", title: "コピー元", startTime: "11:00", endTime: "12:45" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ events: [recent] }));
+    renderEventForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "以前の項目から選ぶ" }));
+    fireEvent.click(await screen.findByRole("button", { name: /コピー元/ }));
+    fireEvent.change(screen.getByLabelText("開始時間"), { target: { value: "15:00" } });
+    expect(screen.getByLabelText("終了時間")).toHaveValue("12:45");
+  });
+
+  it("does not change timed values while all-day is on", () => {
+    renderEventForm();
+    fireEvent.change(screen.getByLabelText("開始時間"), { target: { value: "14:30" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(screen.queryByLabelText("開始時間")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByLabelText("開始時間")).toHaveValue("14:30");
+    expect(screen.getByLabelText("終了時間")).toHaveValue("15:30");
   });
 });
 

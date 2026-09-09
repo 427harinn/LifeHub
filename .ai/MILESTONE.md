@@ -1,3 +1,32 @@
+# EventForm UX follow-up: timed start default
+
+## 現在のMilestone
+
+M7 merge済み最新`main`から、時間あり予定の開始時刻変更に対する小規模UX改善を実装する。M8 Moneyには進まない。
+
+## 対象と方針
+
+- 新規のscheduled / 終日OFFで、終了未編集の間だけ開始時刻に終了時刻を1時間追従させる。
+- 編集Eventとrecent Event適用後は、既存・コピー済みの終了時刻を明示値として尊重する。
+- allDay、日付自動変更、M7 notification、Money、EventFormのUI/DOM/CSSは変更しない。
+- 同日validationを維持し、23時台の自動計算は`23:59`に留める。
+
+## 進捗
+
+- [x] M7 merge済み最新`origin/main`を取得し、新規branchを作成
+- [x] `.ai/MILESTONE.md` / `.ai/TASKS.md`へ記録
+- [x] EventForm state / handlerを最小変更
+- [x] unit / component testを追加
+- [x] test / typecheck / lint / build、self-review
+- [ ] commit / push / PR作成（auto-mergeなし）
+
+## STOP条件
+
+- staging deployは行わない。
+- production/default、HouseToDo、M8 Moneyは操作・変更しない。
+
+---
+
 # Milestone 7: Notification
 
 ## 現在のMilestone

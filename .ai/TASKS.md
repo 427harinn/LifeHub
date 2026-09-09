@@ -1,3 +1,21 @@
+# EventForm UX follow-up tasks
+
+## 小タスク
+
+- [x] 最新`origin/main`から`codex/eventform-time-default`を作成
+- [x] 開始時刻変更時の1時間終了時刻デフォルトと23時台の同日内処理を実装
+- [x] 終了手動編集、編集Event、recent Event、allDay、複数日予定の扱いを確認
+- [x] unit / component testを追加
+- [x] typecheck / lint / build / 全体testとself-reviewを実行
+- [ ] commit / push / PR作成。auto-merge、staging deploy、M8移行はしない
+
+## 対象外
+
+- M7 notification周りの変更
+- Money、production/default、HouseToDo
+
+---
+
 # Milestone 7 Tasks
 
 ## 小タスク
