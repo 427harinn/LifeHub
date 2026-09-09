@@ -18,7 +18,7 @@ M7 merge済み最新`main`から、時間あり予定の開始時刻変更に対
 - [x] EventForm state / handlerを最小変更
 - [x] unit / component testを追加
 - [x] test / typecheck / lint / build、self-review
-- [ ] commit / push / PR作成（auto-mergeなし）
+- [x] commit / push / PR作成（auto-mergeなし）
 
 ## STOP条件
 

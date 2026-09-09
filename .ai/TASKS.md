@@ -7,7 +7,7 @@
 - [x] 終了手動編集、編集Event、recent Event、allDay、複数日予定の扱いを確認
 - [x] unit / component testを追加
 - [x] typecheck / lint / build / 全体testとself-reviewを実行
-- [ ] commit / push / PR作成。auto-merge、staging deploy、M8移行はしない
+- [x] commit / push / PR作成。auto-merge、staging deploy、M8移行はしない
 
 ## 対象外
 
