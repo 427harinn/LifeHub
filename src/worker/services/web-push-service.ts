@@ -99,8 +99,11 @@ export class WebPushService {
     const publicKey = env.WEB_PUSH_VAPID_PUBLIC_KEY?.trim();
     const privateKey = env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim();
     const subject = env.WEB_PUSH_SUBJECT?.trim();
-    if (!publicKey || !privateKey || !subject || !/^(mailto:|https:)/.test(subject)) {
+    if (!publicKey || !privateKey || !subject) {
       const value = fail("config", "missing_config"); logFailure(env, value); throw new Error("push-config-missing");
+    }
+    if (!/^(mailto:|https:)/.test(subject)) {
+      const value = fail("config", "invalid_subject"); logFailure(env, value); throw new Error("push-config-invalid-subject");
     }
     const subscriptions = await this.subscriptions.listActive(userId);
     let sent = 0; let failed = 0; let firstFailure: WebPushFailure | undefined;
