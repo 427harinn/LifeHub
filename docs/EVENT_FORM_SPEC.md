@@ -269,6 +269,10 @@ BottomSheet:
 
 カスタムでは複数offsetを追加できる。
 
+選択済みoffsetはcheckで示し、summaryは`なし`、`30分前`、`1日前、30分前`、`3件`などとする。raw minute値は表示しない。Templateを選択すると、その時点の複数offsetをEventNotificationへコピーする。
+
+period Eventで通知が1件以上の場合だけ通知詳細内に期限時刻rowを表示し、未指定時はUserSettingsの`periodDefaultDeadlineTime`（21:00）を使う。
+
 ## 9.1 scheduled / 時間あり
 
 occurrence開始日時を基準に通知する。

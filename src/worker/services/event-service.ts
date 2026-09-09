@@ -5,6 +5,7 @@ import { notFoundError, validationError } from "../lib/errors";
 import type { Event, EventInput, PeriodEventInput, RecurrenceRuleInput, ScheduledEventInput } from "../types";
 import { dateDifference, isDateKey, normalizeRecurrenceInput, shiftDate } from "./recurrence-service";
 import { EventProjectionService } from "./event-projection-service";
+import { NotificationRepository } from "../repositories/notification-repository";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_PLACE_LENGTH = 200;
@@ -82,13 +83,20 @@ export const validatePeriodEventInput = (value: Partial<PeriodEventInput>, recur
 export const validateEventInput = (value: Partial<EventInput>, recurrence: unknown = null): EventInput => value.timingType === "period" ? validatePeriodEventInput(value, recurrence) : validateScheduledEventInput(value);
 
 export type EventScope = "occurrence" | "following" | "series";
-export type EventCommand = Partial<EventInput> & { scope?: EventScope; occurrenceKey?: string; recurrence?: Partial<RecurrenceRuleInput> | null };
+export type EventCommand = Partial<EventInput> & { scope?: EventScope; occurrenceKey?: string; recurrence?: Partial<RecurrenceRuleInput> | null; notifications?: number[] };
 const scopeOf = (value: EventCommand) => value.scope ?? "series";
+
+const normalizeNotifications = (value: unknown): number[] => {
+  if (!Array.isArray(value)) throw validationError({ notifications: "通知設定が不正です。" });
+  const values = [...new Set(value as unknown[])];
+  if (values.some((offset) => typeof offset !== "number" || !Number.isInteger(offset) || offset < 0 || offset > 525600)) throw validationError({ notifications: "通知時刻が不正です。" });
+  return (values as number[]).sort((left, right) => right - left);
+};
 
 const periodEndForMonth = (monthStart: string) => shiftDate(`${monthStart.slice(0, 7)}-01`, new Date(Date.UTC(Number(monthStart.slice(0, 4)), Number(monthStart.slice(5, 7)), 0)).getUTCDate() - 1);
 
 export class EventService {
-  constructor(private readonly repository: EventRepository, private readonly recurrenceRepository: RecurrenceRepository, private readonly overrideRepository: EventOccurrenceOverrideRepository, private readonly projection: EventProjectionService) {}
+  constructor(private readonly repository: EventRepository, private readonly recurrenceRepository: RecurrenceRepository, private readonly overrideRepository: EventOccurrenceOverrideRepository, private readonly projection: EventProjectionService, private readonly notificationRepository?: NotificationRepository) {}
 
   private async prepareRule(userId: string, recurrence: unknown, startsOn: string, now: string) {
     const input = normalizeRecurrenceInput(recurrence, startsOn);
@@ -97,9 +105,17 @@ export class EventService {
 
   async create(userId: string, body: EventCommand, now: string): Promise<Event> {
     const input = validateEventInput(body, body.recurrence);
+    const requestedNotifications = body.notifications === undefined ? undefined : normalizeNotifications(body.notifications);
     const startsOn = input.timingType === "period" ? input.periodAnchorDate : input.startDate;
     const rule = await this.prepareRule(userId, body.recurrence, startsOn ?? now.slice(0, 10), now);
-    return this.repository.create(userId, input, rule?.id ?? null, now);
+    const created = await this.repository.create(userId, input, rule?.id ?? null, now);
+    if (requestedNotifications !== undefined && this.notificationRepository) await this.notificationRepository.replaceEventNotifications(userId, created.id, requestedNotifications, now);
+    return { ...created, notifications: await this.notificationOffsets(userId, created.id) };
+  }
+
+  private async notificationOffsets(userId: string, eventId: string): Promise<number[]> {
+    if (!this.notificationRepository) return [];
+    return (await this.notificationRepository.listEventNotificationsForEvent(userId, eventId)).sort((left, right) => right.offsetMinutes - left.offsetMinutes).map((row) => row.offsetMinutes);
   }
 
   private async getBase(userId: string, id: string) {
@@ -155,11 +171,12 @@ export class EventService {
       const { occurrence } = await this.targetOccurrence(userId, event, body.occurrenceKey);
       const input = validateEventInput({ ...occurrence, ...body }, undefined);
       await this.overrideRepository.upsert(userId, id, body.occurrenceKey as string, "modified", input, now);
-      return { ...occurrence, ...input, occurrenceKey: body.occurrenceKey, recurrence: rule };
+      return { ...occurrence, ...input, occurrenceKey: body.occurrenceKey, recurrence: rule, notifications: await this.notificationOffsets(userId, id) };
     }
 
     const recurrence = body.recurrence === undefined ? rule : body.recurrence;
     const input = validateEventInput({ ...event, ...body }, recurrence);
+    const requestedNotifications = body.notifications === undefined ? undefined : normalizeNotifications(body.notifications);
     const startsOn = this.inputStartsOn(input) ?? now.slice(0, 10);
     const normalized = normalizeRecurrenceInput(recurrence, startsOn);
     if (scope === "following") {
@@ -171,7 +188,10 @@ export class EventService {
       const splitInput = input.timingType === "period"
         ? { ...input, periodAnchorDate: input.periodWindowType === "custom_range" ? null : date }
         : { ...input, startDate: date, endDate: shiftDate(date, dateDifference(input.startDate ?? date, input.endDate ?? date)) };
-      return this.repository.create(userId, splitInput, newRule?.id ?? null, now);
+      const created = await this.repository.create(userId, splitInput, newRule?.id ?? null, now);
+      const offsets = requestedNotifications === undefined ? await this.notificationOffsets(userId, id) : requestedNotifications;
+      if (this.notificationRepository) await this.notificationRepository.replaceEventNotifications(userId, created.id, offsets, now);
+      return { ...created, notifications: offsets };
     }
 
     let ruleId = rule?.id ?? null;
@@ -181,7 +201,8 @@ export class EventService {
     } else ruleId = null;
     const updated = await this.repository.update(userId, id, input, ruleId, now);
     if (!updated) throw notFoundError();
-    return updated;
+    if (requestedNotifications !== undefined && this.notificationRepository) await this.notificationRepository.replaceEventNotifications(userId, id, requestedNotifications, now);
+    return { ...updated, notifications: await this.notificationOffsets(userId, id) };
   }
 
   async delete(userId: string, id: string, body: Pick<EventCommand, "scope" | "occurrenceKey"> = {}, now: string): Promise<void> {

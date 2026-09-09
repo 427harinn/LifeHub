@@ -65,4 +65,9 @@ export class SettingsRepository {
     ).bind(next.timezone, next.weekStartsOn, next.morningSummaryEnabled ? 1 : 0, next.morningSummaryTime, next.eveningSummaryEnabled ? 1 : 0, next.eveningSummaryTime, next.periodDefaultDeadlineTime, now, userId).run();
     return this.getOrCreate(userId, now);
   }
+
+  async listAll(): Promise<UserSettings[]> {
+    const result = await this.db.prepare(`SELECT ${userSettingsSelect} FROM user_settings ORDER BY user_id`).all<SettingsRow>();
+    return result.results.map(toSettings);
+  }
 }

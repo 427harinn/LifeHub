@@ -221,3 +221,17 @@ HouseToDoの単一 `notificationOffsetMinutes` はコピーしない。
 - 朝・夜時刻は個別変更可能
 - period既定deadlineTimeは21:00
 - 終日Event単体通知基準は09:00固定
+
+---
+
+## 14. M7実装記録
+
+実装は`0008_m7_notifications.sql`でLifeHub専用の`push_subscriptions`、`event_notifications`、`notification_templates` / `notification_template_offsets`、`notification_deliveries`を追加した。Event単体のdedupe keyは`eventNotificationId + occurrenceKey + scheduledFor`、summaryは`userId + notificationType + scheduledFor`とする。
+
+Workerは5分Cronで対象時刻近辺を判定し、claim leaseは10分、stale pendingは再claim可能とする。送信はsubscriptionごとに独立して実行し、404/410だけ該当subscriptionをdisableする。成功済み端末へのpartial failure再送はdelivery claimで抑止する。
+
+HouseToDoから実際に確認した具体的ファイルは、Backendの`worker/routes/notifications.ts`、`worker/routes/notification-settings.ts`、`worker/services/push-subscription-service.ts`、`worker/repositories/push-subscription-repository.ts`、`worker/services/web-push-service.ts`、`worker/services/notification-scheduler-service.ts`、`worker/repositories/notification-delivery-repository.ts`、`worker/index.ts`、Frontendの`public/sw.js`、`src/main.tsx`、`src/api/notifications.ts`、`src/lib/capabilities.ts`、`src/lib/vapid.ts`、`src/lib/notification-url.ts`、および指定テスト8件。採用したのはlifecycle / Web Push / lease / timezone / safe URLの考え方だけで、Household / Task完了判定は採用していない。
+
+staging secretは`WEB_PUSH_VAPID_PUBLIC_KEY`、`WEB_PUSH_VAPID_PRIVATE_KEY`、`WEB_PUSH_SUBJECT`を使用し、値はGit・docs・log・PRへ保存しない。
+
+実機Pushの最終確認はstagingで別途必要。自動ChromiumおよびCodex In-app Browserではpermission deniedとなり、実Push受信・通知tap成功とは扱わない。

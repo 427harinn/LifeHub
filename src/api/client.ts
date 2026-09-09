@@ -37,6 +37,7 @@ export type Event = {
   updatedAt: string;
   occurrenceKey?: string | null;
   recurrence?: RecurrenceRule | null;
+  notifications?: number[];
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
@@ -45,7 +46,7 @@ export type RecurrenceFrequency = "daily" | "weekly" | "monthly";
 export type RecurrenceRule = { id: string; userId: string; frequency: RecurrenceFrequency; interval: number; weekdays: number[] | null; dayOfMonth: number | null; startsOn: string; endsOn: string | null; createdAt: string; updatedAt: string };
 export type RecurrenceRuleInput = Pick<RecurrenceRule, "frequency" | "interval" | "weekdays" | "dayOfMonth" | "startsOn" | "endsOn">;
 export type EventScope = "occurrence" | "following" | "series";
-export type EventCommandInput = Partial<ScheduledEventInput & PeriodEventInput> & { recurrence?: RecurrenceRuleInput | null; scope?: EventScope; occurrenceKey?: string };
+export type EventCommandInput = Partial<ScheduledEventInput & PeriodEventInput> & { recurrence?: RecurrenceRuleInput | null; notifications?: number[]; scope?: EventScope; occurrenceKey?: string };
 export type DailyNote = { id: string; userId: string; date: string; content: string; createdAt: string; updatedAt: string };
 export type CalendarRange = { startDate: string; endDate: string };
 
@@ -65,6 +66,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+export const apiRequest = request;
+
 export const apiErrorStatus = (error: unknown) => error instanceof ApiError ? error.status : null;
 
 export const authMe = () => request<{ user: AuthUser }>("/api/auth/me");
@@ -72,6 +75,7 @@ export const login = (email: string, password: string) => request<{ user: AuthUs
 export const register = (displayName: string, email: string, password: string) => request<{ user: AuthUser }>("/api/auth/register", { method: "POST", body: JSON.stringify({ displayName, email, password }) });
 export const logout = () => request<{ loggedOut: boolean }>("/api/auth/logout", { method: "POST" });
 export const getSettings = () => request<{ settings: UserSettings }>("/api/settings");
+export const updateSettings = (input: Partial<UserSettings>) => request<{ settings: UserSettings }>("/api/settings", { method: "PATCH", body: JSON.stringify(input) });
 export const getEvents = (startDate: string, endDate: string) => request<{ events: Event[] }>(`/api/events?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
 export const getCalendar = (month: string) => request<{ month: string; range: CalendarRange; events: Event[] }>(`/api/calendar?month=${encodeURIComponent(month.slice(0, 7))}`);
 export const getDaily = (date: string) => request<{ date: string; events: Event[]; dailyNote: DailyNote | null }>(`/api/daily?date=${encodeURIComponent(date)}`);

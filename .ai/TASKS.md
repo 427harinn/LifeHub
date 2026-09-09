@@ -1,3 +1,38 @@
+# Milestone 7 Tasks
+
+## 小タスク
+
+- [x] T1: M6 merge済み最新`main`を確認し、M6 branchを再利用しない`codex/m7-notification`を作成
+- [x] T2: LifeHub指定docsとHouseToDo指定実コード・テストを実読し、再利用境界を整理
+- [x] T3: `0008_m7_notifications.sql`とuserId所有のPushSubscription / EventNotification / Template / Deliveryを追加
+- [x] T4: LifeHub専用VAPID設定、Web Push、404/410単体disable、複数端末、unsubscribeを実装
+- [x] T5: PWA Service Worker、capability、user action permission、subscription登録を実装
+- [x] T6: Event create/updateへの複数offset統合、Template CRUDとEventForm適用を実装
+- [x] T7: all-day 09:00、scheduled、period deadline、timezone/DST、M5/M6 projection準拠のschedulerを実装
+- [x] T8: 朝夜summary、migration_locked除外、5分Cron、delivery claim / retry / dedupeを実装
+- [x] T9: Settings通知section、時刻設定、Template管理、same-origin deep linkを実装
+- [x] T10: unit / integration / typecheck / lint / build / local migrationを実行
+- [x] T11: 390×844 EvidenceとM7 UI / scheduler Evidenceを作成（実Pushはpermission denied）
+- [x] T12: OAuth / account / D1 / secrets確認後、staging migration / deploy / smokeを実行
+- [ ] T13: staging実機でpermission → subscription → Push受信 → tap → Daily/Event遷移を記録（自動ブラウザはpermission denied）
+- [x] T14: regression、docs同期、self-review、commit / push、PR作成。auto-mergeしない
+
+## M7セルフレビュー
+
+- Todo完了・未完了・skip判定を通知条件に使っていない
+- occurrenceを事前生成せず、M5/M6 `EventProjectionService`だけを使っている
+- summaryは0件なら送らず、3件程度 + `ほかN件`で詰め込みすぎない
+- all-day 09:00と朝summary時刻を連動させていない
+- partial subscription failureで成功端末へ再送せず、404/410は該当端末だけdisableする
+- deep linkはsame-origin pathだけで、recurring occurrenceKey/date contextを保持する
+- production/default / HouseToDo / M8 Moneyには触れていない
+
+## HouseToDo確認ファイル
+
+Backend: `worker/routes/notifications.ts`, `worker/routes/notification-settings.ts`, `worker/services/push-subscription-service.ts`, `worker/repositories/push-subscription-repository.ts`, `worker/services/web-push-service.ts`, `worker/services/notification-scheduler-service.ts`, `worker/repositories/notification-delivery-repository.ts`, `worker/index.ts`。Frontend: `public/sw.js`, `src/main.tsx`, `src/api/notifications.ts`, `src/lib/capabilities.ts`, `src/lib/vapid.ts`, `src/lib/notification-url.ts`。Tests: `worker/notifications.test.ts`, `worker/services/web-push-service.test.ts`, `worker/services/notification-scheduler-service.test.ts`, `worker/repositories/notification-delivery-repository.test.ts`, `worker/scheduled.test.ts`, `src/lib/capabilities.test.ts`, `src/lib/vapid.test.ts`, `src/lib/notification-url.test.ts`。
+
+---
+
 # Milestone 5 Tasks
 
 ## 小タスク

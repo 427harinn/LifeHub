@@ -9,6 +9,7 @@
     "cf:dev:m2": "npm run db:migrate:local && npm run cf:dev",
     "cf:dev:m3": "npm run db:migrate:local && npm run cf:dev",
     "cf:dev:m4": "npm run db:migrate:local && npm run cf:dev",
+    "cf:dev:m7": "npm run db:migrate:local && npm run cf:dev",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

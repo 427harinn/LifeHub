@@ -1,3 +1,43 @@
+# Milestone 7: Notification
+
+## 現在のMilestone
+
+M7 Notification実装中。M6 merge済み`main`から作成した`codex/m7-notification`で、LifeHub個人用のWeb Push、Event単体通知、朝夜まとめ、テンプレート、delivery、deep linkを対象とする。M8 Moneyには進まない。
+
+## 実装方針
+
+- Household / Task / TaskRecord / complete / skip semanticsは持ち込まない
+- M5/M6の`EventProjectionService`を通知の唯一のoccurrence sourceとし、occurrenceを事前保存しない
+- `userId`所有の複数端末subscriptionを許可し、endpoint単位でupsertする
+- EventNotificationは複数minute offset。Template変更は既存Eventへ遡及しない
+- all-dayは09:00固定、periodはprojection後のdeadline、朝夜summaryはUserSettings時刻で判定する
+- `migration_locked` userはsummary / Event単体通知を除外する
+
+## M7進捗
+
+- [x] 最新`origin/main`確認、M6 branchを再利用しない新規branch作成
+- [x] 指定LifeHub docsとHouseToDo実コード・テストを監査
+- [x] `0008_m7_notifications.sql`、PushSubscription、EventNotification、Template、Deliveryを実装
+- [x] VAPID / Web Push、Service Worker、PWA capability、Settings、EventForm、deep linkを実装
+- [x] scheduler / 5分Cron、lease / stale claim / retry / partial subscription failureを実装
+- [x] unit / typecheck / lint / build / local migrationを実行
+- [x] 390×844 Evidence、staging migration / deploy / smoke
+- [ ] 実機Push確認（自動ブラウザとCodex In-app Browserはpermission denied。iPhone PWA等で要追加確認）
+- [x] docs同期、self-review、commit / push / PR作成（auto-mergeなし）
+
+## HouseToDo implementation note
+
+実際に確認したファイル: `worker/routes/notifications.ts`, `worker/routes/notification-settings.ts`, `worker/services/push-subscription-service.ts`, `worker/repositories/push-subscription-repository.ts`, `worker/services/web-push-service.ts`, `worker/services/notification-scheduler-service.ts`, `worker/repositories/notification-delivery-repository.ts`, `worker/index.ts`, `public/sw.js`, `src/main.tsx`, `src/api/notifications.ts`, `src/lib/capabilities.ts`, `src/lib/vapid.ts`, `src/lib/notification-url.ts`および指定された8件のテスト。subscription lifecycle、Web Push暗号化、claim lease、timezone、safe same-origin URL、permission user actionのみを考え方として採用し、Household / Task完了判定は採用していない。
+
+## STOP条件
+
+- staging対象は`lifehub-staging` / `https://lifehub-staging.427harinn.workers.dev`だけ
+- `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`不足時は値を表示・保存せず、secret設定を依頼して停止
+- OAuth期限切れまたはCloudflare API 7403再発時は停止して再認証・権限確認を依頼
+- production/defaultおよびHouseToDoのWorker / D1 / secrets / Cronは操作しない
+
+---
+
 # Milestone 5: Scheduled Recurrence Engine
 
 ## 現在のMilestone

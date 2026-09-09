@@ -275,6 +275,21 @@ DELETE /api/notification-templates/:id
 
 デフォルトテンプレート設定もこのAPIで扱う。
 
+## 12a. Push subscription / VAPID
+
+```text
+GET    /api/notifications/vapid-public-key
+POST   /api/notifications/subscriptions
+DELETE /api/notifications/subscriptions
+POST   /api/notifications/test   # local / staging / test only
+```
+
+VAPID APIはpublic keyだけを返す。subscription createは`endpoint`と`keys.p256dh` / `keys.auth`を受け、`userId + endpoint`でupsertする。unsubscribeはログイン中userの指定endpointだけを削除する。
+
+## 12b. Event notifications
+
+Event create/updateの`notifications`はminute offset配列（例: `[1440, 30]`）で、EventNotificationへコピーする。Template更新は既存Eventのoffsetを変更しない。
+
 ---
 
 ## 13. MoneyCategory

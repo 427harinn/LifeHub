@@ -4,6 +4,11 @@
   "main": "./src/worker/index.ts",
   "compatibility_date": "2026-09-07",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  },
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
@@ -25,6 +30,9 @@
       "name": "lifehub-staging",
       "vars": {
         "APP_ENV": "staging"
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"]
       },
       "d1_databases": [
         {

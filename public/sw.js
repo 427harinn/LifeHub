@@ -1,16 +1,8 @@
-const CACHE_NAME = "lifehub-shell-v1";
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(event.request));
-});
-
-void CACHE_NAME;
+const fallbackUrl = "/calendar";
+function safeUrl(value) { if (typeof value !== "string" || !value || value.startsWith("//")) return fallbackUrl; try { decodeURI(value); const url = new URL(value, self.location.origin); if (url.origin !== self.location.origin || !["http:", "https:"].includes(url.protocol)) return fallbackUrl; return `${url.pathname}${url.search}${url.hash}`; } catch { return fallbackUrl; } }
+function safeAssetUrl(value) { if (typeof value !== "string" || !value || value.startsWith("//")) return undefined; try { const url = new URL(value, self.location.origin); return url.origin === self.location.origin && ["http:", "https:"].includes(url.protocol) ? url.href : undefined; } catch { return undefined; } }
+function safeNotificationData(data) { const result = { url: safeUrl(data && data.url) }; if (!data || typeof data !== "object" || Array.isArray(data)) return result; if (data.kind === "summary" && (data.period === "morning" || data.period === "evening") && typeof data.localDate === "string") return { ...result, kind: "summary", period: data.period, localDate: data.localDate }; if (data.kind === "event" && typeof data.eventId === "string" && data.eventId.length > 0 && data.eventId.length <= 128 && typeof data.date === "string") return { ...result, kind: "event", eventId: data.eventId, date: data.date, ...(typeof data.occurrenceKey === "string" ? { occurrenceKey: data.occurrenceKey } : {}) }; return result; }
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener("push", (event) => { if (!event.data) return; let payload; try { payload = event.data.json(); } catch { return; } if (!payload || typeof payload !== "object" || Array.isArray(payload)) return; const options = {}; if (typeof payload.body === "string") options.body = payload.body; const icon = safeAssetUrl(payload.icon); const badge = safeAssetUrl(payload.badge); if (icon) options.icon = icon; if (badge) options.badge = badge; options.data = safeNotificationData(payload.data); event.waitUntil(self.registration.showNotification(typeof payload.title === "string" ? payload.title : "LifeHub", options)); });
+self.addEventListener("notificationclick", (event) => { event.notification.close(); const targetUrl = safeUrl(event.notification.data && event.notification.data.url); event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => { const client = clients.find((candidate) => new URL(candidate.url).origin === self.location.origin); if (client) { const current = new URL(client.url); const currentTarget = `${current.pathname}${current.search}${current.hash}`; return "navigate" in client && currentTarget !== targetUrl ? client.navigate(targetUrl).then(() => client.focus()) : client.focus(); } return self.clients.openWindow(targetUrl); })); });

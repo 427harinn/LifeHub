@@ -73,6 +73,35 @@ export type Event = {
   /** Present when this Event is a projected recurrence occurrence. */
   occurrenceKey?: string | null;
   recurrence?: RecurrenceRule | null;
+  notifications?: number[];
+};
+
+export type EventNotification = {
+  id: string;
+  userId: string;
+  eventId: string;
+  offsetMinutes: number;
+  sortOrder: number;
+  createdAt: string;
+};
+
+export type NotificationTemplateOffset = {
+  id: string;
+  templateId: string;
+  offsetMinutes: number;
+  sortOrder: number;
+};
+
+export type NotificationTemplate = {
+  id: string;
+  userId: string;
+  name: string;
+  targetCategory: EventCategory | null;
+  isDefault: boolean;
+  active: boolean;
+  offsets: NotificationTemplateOffset[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime" | "periodWindowType" | "periodAnchorDate" | "periodStartDate" | "periodEndDate" | "deadlineTime">;
