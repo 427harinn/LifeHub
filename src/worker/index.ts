@@ -16,7 +16,6 @@ import { AuthService } from "./services/auth-service";
 import { EventService } from "./services/event-service";
 import { EventProjectionService, dayToRange, isDateKey, monthKeyToGridRange } from "./services/event-projection-service";
 import type { Event, UserSettings } from "./types";
-import { WebPushService } from "./services/web-push-service";
 import { runNotificationScheduler } from "./services/notification-scheduler-service";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
@@ -164,15 +163,6 @@ const unregisterSubscription = requireAuth(async ({ request, env, user }) => {
   await new PushSubscriptionRepository(env.DB).delete(user.id, endpoint);
   return json({ removed: true });
 });
-const testPush = requireAuth(async ({ env, user }) => {
-  if (env.APP_ENV === "staging") {
-    const result = await new WebPushService(env.DB).sendPayload(user.id, { title: "LifeHub", body: "テスト通知が届きました", data: { kind: "summary", period: "morning", localDate: todayForTest(), url: "/calendar" } }, pushBindings(env));
-    return json(result);
-  }
-  throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
-});
-const todayForTest = () => new Date().toISOString().slice(0, 10);
-
 const getNotificationTemplates = requireAuth(({ env, user }) => new NotificationRepository(env.DB).listTemplates(user.id).then((templates) => json({ templates })));
 const createNotificationTemplate = requireAuth(async ({ request, env, user }) => {
   const body = await parseObject(request);
@@ -319,7 +309,6 @@ export default {
       if (url.pathname === "/api/notifications/vapid-public-key" && request.method === "GET") return await getVapidPublicKey(context);
       if (url.pathname === "/api/notifications/subscriptions" && request.method === "POST") return await registerSubscription(context);
       if (url.pathname === "/api/notifications/subscriptions" && request.method === "DELETE") return await unregisterSubscription(context);
-      if (url.pathname === "/api/notifications/test" && request.method === "POST") return await testPush(context);
       if (url.pathname === "/api/notification-templates" && request.method === "GET") return await getNotificationTemplates(context);
       if (url.pathname === "/api/notification-templates" && request.method === "POST") return await createNotificationTemplate(context);
       const notificationTemplatePath = url.pathname.match(/^\/api\/notification-templates\/([^/]+)$/);

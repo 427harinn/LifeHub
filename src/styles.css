@@ -252,8 +252,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .event-option-sheet__option span:last-child { color: var(--color-primary-strong); font-size: 1rem; }
 .event-option-sheet__close { min-height: 44px; padding: 8px 0; border: 0; color: var(--color-primary-strong); background: transparent; text-align: right; cursor: pointer; }
 .notification-settings { display: grid; }
-.notification-test { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
-.notification-test__result { margin: 0; color: var(--color-text-muted); font-size: .75rem; }
 .notification-offset-picker { display: grid; gap: 0; margin: var(--space-2) 0; }
 .notification-offset-option { display: flex; min-height: 48px; align-items: center; gap: var(--space-3); border-bottom: 1px solid var(--color-border); font-size: .875rem; }
 .notification-offset-option input { width: 18px; height: 18px; accent-color: var(--color-primary-strong); }

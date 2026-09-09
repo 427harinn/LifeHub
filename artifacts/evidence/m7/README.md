@@ -18,8 +18,14 @@
 - `event-form-notification-multiple-390x844.png`
 - `event-form-notification-template-applied-390x844.png`
 
-実Push確認記録:
+実Push確認記録（2026-09-09）:
 
-- Playwright headless / headful Chromium: `pushManager.subscribe()` が `permission denied`
-- Codex In-app Browser: 通知ON操作後に「通知の許可が必要です」
-- したがって、このEvidenceは実機Push受信・通知tapの成功証跡ではない。iPhone PWAまたは通知許可可能な実機で、permission → subscription → test Push → tap → Daily/Event遷移を追加確認する。
+- 対象: LifeHub stagingのiPhone PWA。permission許可後、既存subscriptionが登録されている状態で確認した。
+- direct Push: 受信とtapを確認し、LifeHub Settingsへ遷移した。
+- Event単体通知: scheduler経由で受信し、本文が対象Eventと一致。tapで対象日Calendar / Eventを開いた。
+- 夜summary: `evening_summary`、朝summary: `morning_summary`をstaging deliveryで確認。各slotは1件のみで、`status=sent`、duplicateなし。
+- summary本文: 今日のscheduled予定と有効期間内のperiod予定を含み、Todo完了を前提にする文言なし。朝summaryのtapで9/9 Calendarを開いた。
+- 0件時に送信しないことはscheduler unit testで確認した。
+- 自動Chromium / Codex In-app Browserの`permission denied`は、実機確認とは別の環境差として保持する。
+
+temporary direct Push UI/APIは、実機確認完了後に削除した。機密値、subscription endpoint全文、認証値はEvidenceに保存していない。

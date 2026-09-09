@@ -1,17 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { isStagingNotificationOrigin, NotificationOffsetPicker, NotificationSettingsSection, notificationSummary } from "./NotificationSettings";
+import { NotificationOffsetPicker, NotificationSettingsSection, notificationSummary } from "./NotificationSettings";
 
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "", updatedAt: "" };
 
 describe("notification settings UI", () => {
-  it("only enables the temporary test push origin for LifeHub staging", () => {
-    expect(isStagingNotificationOrigin("https://lifehub-staging.427harinn.workers.dev")).toBe(true);
-    expect(isStagingNotificationOrigin("https://lifehub.427harinn.workers.dev")).toBe(false);
-    expect(isStagingNotificationOrigin("http://localhost:5173")).toBe(false);
-  });
-
   it("summarizes multiple offsets without exposing raw minutes", () => {
     expect(notificationSummary([])).toBe("なし");
     expect(notificationSummary([30])).toBe("30分前");

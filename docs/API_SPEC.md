@@ -281,7 +281,6 @@ DELETE /api/notification-templates/:id
 GET    /api/notifications/vapid-public-key
 POST   /api/notifications/subscriptions
 DELETE /api/notifications/subscriptions
-POST   /api/notifications/test   # staging only; temporary direct Push verification
 ```
 
 VAPID APIはpublic keyだけを返す。subscription createは`endpoint`と`keys.p256dh` / `keys.auth`を受け、`userId + endpoint`でupsertする。unsubscribeはログイン中userの指定endpointだけを削除する。

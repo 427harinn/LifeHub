@@ -12,9 +12,9 @@
 - [x] T8: 朝夜summary、migration_locked除外、5分Cron、delivery claim / retry / dedupeを実装
 - [x] T9: Settings通知section、時刻設定、Template管理、same-origin deep linkを実装
 - [x] T10: unit / integration / typecheck / lint / build / local migrationを実行
-- [x] T11: 390×844 EvidenceとM7 UI / scheduler Evidenceを作成（実Pushはpermission denied）
+- [x] T11: 390×844 EvidenceとM7 UI / scheduler Evidenceを作成。自動ブラウザのpermission deniedとは別にstaging実機記録を追加
 - [x] T12: OAuth / account / D1 / secrets確認後、staging migration / deploy / smokeを実行
-- [ ] T13: staging実機でpermission → subscription → Push受信 → tap → Daily/Event遷移を記録（自動ブラウザはpermission denied）
+- [x] T13: staging iPhone PWAでpermission → subscription → direct Push → Event単体 / 朝summary / 夜summary受信 → tap → Calendar/Event遷移を記録
 - [x] T14: regression、docs同期、self-review、commit / push、PR作成。auto-mergeしない
 
 ## M7セルフレビュー
@@ -25,6 +25,8 @@
 - all-day 09:00と朝summary時刻を連動させていない
 - partial subscription failureで成功端末へ再送せず、404/410は該当端末だけdisableする
 - deep linkはsame-origin pathだけで、recurring occurrenceKey/date contextを保持する
+- 実機確認はstagingのみで行い、朝夜summaryのslot重複なし、scheduled / period本文、Todo完了前提でない文言、9/9 Calendar遷移を確認した
+- 実機確認完了後、staging限定temporary test Push UI/APIを削除した
 - production/default / HouseToDo / M8 Moneyには触れていない
 
 ## HouseToDo確認ファイル
