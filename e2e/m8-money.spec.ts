@@ -123,7 +123,16 @@ test("Money MVP recurrence, projections, UI grammar, and swipe actions", async (
   await expect(moneyRow.getByRole("button", { name: "編集" })).toBeVisible();
   await page.getByRole("button", { name: "編集" }).last().click();
   await expect(page.getByRole("heading", { name: "お金を編集" })).toBeVisible();
-  await page.getByRole("button", { name: "お金一覧へ戻る" }).click();
+  const movedDate = `${date.slice(0, 8)}15`;
+  await chooseDate(page, movedDate);
+  await expect(page.getByRole("button", { name: "お金の繰り返し" })).toContainText("毎月15日");
+  await page.getByRole("button", { name: "変更を保存" }).click();
+  await expect(page.locator(".money-list-row time").filter({ hasText: `${Number(movedDate.slice(5, 7))}/15` })).toBeVisible();
+  const nextMonthDate = new Date(`${movedDate}T00:00:00`);
+  nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+  await page.getByRole("button", { name: "次の月" }).click();
+  await expect(page.locator(".money-list-row time").filter({ hasText: `${nextMonthDate.getMonth() + 1}/15` })).toBeVisible();
+  await page.getByRole("button", { name: "前の月" }).click();
   await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "追加", exact: true }).click();
