@@ -7,7 +7,10 @@
 - [x] 終了手動編集、編集Event、recent Event、allDay、複数日予定の扱いを確認
 - [x] unit / component testを追加
 - [x] typecheck / lint / build / 全体testとself-reviewを実行
-- [x] commit / push / PR作成。auto-merge、staging deploy、M8移行はしない
+- [x] commit / push / PR作成。auto-merge、production/default、HouseToDo、M8移行はしない
+- [x] PR #8の`mergeable: false`を再確認し、最新`origin/main`とのconflictなしを記録
+- [x] `lifehub-staging`へdeploy（DB migrationなし）し、390×844相当のEventForm確認を実行
+- [x] `artifacts/evidence/eventform-time/`へ指定Evidenceと23時台Evidenceを保存
 
 ## 対象外
 

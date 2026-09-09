@@ -18,11 +18,14 @@ M7 merge済み最新`main`から、時間あり予定の開始時刻変更に対
 - [x] EventForm state / handlerを最小変更
 - [x] unit / component testを追加
 - [x] test / typecheck / lint / build、self-review
+- [x] PR #8のGitHub API mergeabilityと最新`origin/main`との差分を確認（conflictなし）
+- [x] staging deploy（Worker version `da117618-539d-41f8-95ca-64c1ed105c74`）と390×844確認
+- [x] Evidence `start-follow-end-390x844.png` / `manual-end-kept-390x844.png` / `late-start-390x844.png`を保存
 - [x] commit / push / PR作成（auto-mergeなし）
 
 ## STOP条件
 
-- staging deployは行わない。
+- staging deployは`lifehub-staging`だけで行い、DB migrationは実行しない。
 - production/default、HouseToDo、M8 Moneyは操作・変更しない。
 
 ---
