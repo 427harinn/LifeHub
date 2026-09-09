@@ -321,7 +321,29 @@ M5ではmodified overrideのnull（場所・メモを消す等）と未変更を
 
 ---
 
-# 10. EventNotification
+# 10. PushSubscription
+
+```text
+PushSubscription
+- id
+- userId
+- endpoint
+- endpointHash
+- p256dh
+- auth
+- enabled
+- disabledAt nullable
+- lastSuccessAt nullable
+- lastFailureAt nullable
+- createdAt
+- updatedAt
+```
+
+`userId + endpoint`を一意とし、1 userの複数端末を許可する。404 / 410は該当subscriptionだけを無効化する。
+
+---
+
+# 11. EventNotification
 
 ```text
 EventNotification
@@ -343,7 +365,7 @@ EventNotification
 
 ---
 
-# 11. NotificationTemplate
+# 12. NotificationTemplate
 
 ```text
 NotificationTemplate
@@ -367,7 +389,7 @@ NotificationTemplateOffset
 
 ---
 
-# 12. NotificationDelivery
+# 13. NotificationDelivery
 
 ```text
 NotificationDelivery

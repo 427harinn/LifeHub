@@ -370,6 +370,10 @@ PushはブラウザEvidenceだけでは不十分なので、stagingで実機確�
 - override後の通知日時
 - 重複防止
 
+## M7 implementation note
+
+M7はM6 merge済みmainから新規branchで実装する。HouseToDoのsubscription lifecycle、Web Push暗号化、claim lease / sent、timezone-safe scheduling、Service Worker safe same-origin deep linkを監査して採用したが、Household / Task / completion semanticsは採用しない。通知判定はM5/M6のEventProjectionServiceを唯一の正とし、occurrenceを事前保存しない。
+
 ---
 
 # Milestone 8: Money MVP

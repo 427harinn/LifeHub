@@ -1,6 +1,7 @@
 import { createExpiredSessionCookie, createSessionCookie } from "./lib/cookies";
 import { DEFAULT_TIMEZONE, DISPLAY_NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./lib/constants";
 import { AppError, validationError } from "./lib/errors";
+import { sha256Hex } from "./lib/crypto";
 import { requireAuth, type Handler, type RequestContext } from "./middleware/auth";
 import { requireWritableUserState } from "./middleware/migration-guard";
 import { SettingsRepository } from "./repositories/settings-repository";
@@ -9,10 +10,13 @@ import { EventOccurrenceOverrideRepository } from "./repositories/event-occurren
 import { RecurrenceRepository } from "./repositories/recurrence-repository";
 import { DailyNoteRepository } from "./repositories/daily-note-repository";
 import { UserStateRepository } from "./repositories/user-state-repository";
+import { NotificationRepository } from "./repositories/notification-repository";
+import { PushSubscriptionRepository } from "./repositories/push-subscription-repository";
 import { AuthService } from "./services/auth-service";
 import { EventService } from "./services/event-service";
 import { EventProjectionService, dayToRange, isDateKey, monthKeyToGridRange } from "./services/event-projection-service";
-import type { UserSettings } from "./types";
+import type { Event, UserSettings } from "./types";
+import { runNotificationScheduler } from "./services/notification-scheduler-service";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
 const nowIso = () => new Date().toISOString();
@@ -105,7 +109,88 @@ const getUserState = requireAuth(async ({ env, user }) => {
 });
 
 const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
-const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env));
+const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env), new NotificationRepository(env.DB));
+const withEventNotifications = async (userId: string, events: Event[], db: D1Database) => {
+  const repository = new NotificationRepository(db);
+  const offsets = new Map<string, Promise<number[]>>();
+  return Promise.all(events.map(async (event) => {
+    let values = offsets.get(event.id);
+    if (!values) {
+      values = repository.listEventNotificationsForEvent(userId, event.id).then((rows) => rows.map((row) => row.offsetMinutes));
+      offsets.set(event.id, values);
+    }
+    return { ...event, notifications: await values };
+  }));
+};
+
+type PushBindings = { WEB_PUSH_VAPID_PUBLIC_KEY?: string; WEB_PUSH_VAPID_PRIVATE_KEY?: string; WEB_PUSH_SUBJECT?: string };
+const pushBindings = (env: Env) => env as Env & PushBindings;
+const notificationOffsets = (value: unknown): number[] => {
+  if (!Array.isArray(value)) throw validationError({ notifications: "通知設定が不正です。" });
+  const offsets = [...new Set(value as unknown[])];
+  if (offsets.some((offset) => typeof offset !== "number" || !Number.isInteger(offset) || offset < 0 || offset > 525600)) throw validationError({ notifications: "通知時刻が不正です。" });
+  return (offsets as number[]).sort((left, right) => right - left);
+};
+const subscriptionBody = async (request: Request) => {
+  const body = await parseObject(request);
+  const endpoint = stringValue(body.endpoint);
+  const keys = body.keys && typeof body.keys === "object" && !Array.isArray(body.keys) ? body.keys as Record<string, unknown> : {};
+  const p256dh = stringValue(keys.p256dh);
+  const auth = stringValue(keys.auth);
+  let parsed: URL;
+  try { parsed = new URL(endpoint); } catch { throw validationError({ endpoint: "Push endpointが不正です。" }); }
+  if (parsed.protocol !== "https:" || endpoint.length > 2048) throw validationError({ endpoint: "Push endpointはHTTPSで指定してください。" });
+  if (!/^[A-Za-z0-9_-]+$/.test(p256dh) || !/^[A-Za-z0-9_-]+$/.test(auth) || p256dh.length > 512 || auth.length > 512) throw validationError({ subscription: "Push subscriptionの鍵が不正です。" });
+  return { endpoint, p256dh, auth };
+};
+
+const getVapidPublicKey = requireAuth(({ env }) => {
+  const publicKey = pushBindings(env).WEB_PUSH_VAPID_PUBLIC_KEY?.trim();
+  if (!publicKey) throw new AppError("PUSH_CONFIG_UNAVAILABLE", 503, "通知の設定が利用できません。");
+  return Promise.resolve(json({ publicKey }));
+});
+const registerSubscription = requireAuth(async ({ request, env, user }) => {
+  const input = await subscriptionBody(request);
+  await new PushSubscriptionRepository(env.DB).upsert({ id: crypto.randomUUID(), user_id: user.id, endpoint: input.endpoint, endpoint_hash: await sha256Hex(input.endpoint), p256dh: input.p256dh, auth: input.auth, now: nowIso() });
+  return json({ registered: true }, { status: 201 });
+});
+const unregisterSubscription = requireAuth(async ({ request, env, user }) => {
+  const body = await parseObject(request);
+  const endpoint = stringValue(body.endpoint);
+  let parsed: URL;
+  try { parsed = new URL(endpoint); } catch { throw validationError({ endpoint: "Push endpointが不正です。" }); }
+  if (parsed.protocol !== "https:") throw validationError({ endpoint: "Push endpointはHTTPSで指定してください。" });
+  await new PushSubscriptionRepository(env.DB).delete(user.id, endpoint);
+  return json({ removed: true });
+});
+const getNotificationTemplates = requireAuth(({ env, user }) => new NotificationRepository(env.DB).listTemplates(user.id).then((templates) => json({ templates })));
+const createNotificationTemplate = requireAuth(async ({ request, env, user }) => {
+  const body = await parseObject(request);
+  const name = stringValue(body.name);
+  if (!name || name.length > 80) throw validationError({ name: "テンプレート名を入力してください。" });
+  const offsets = notificationOffsets(body.offsets ?? []);
+  const targetCategory = body.targetCategory === null || body.targetCategory === undefined ? null : body.targetCategory === "home" || body.targetCategory === "work" ? body.targetCategory : (() => { throw validationError({ targetCategory: "カテゴリが不正です。" }); })();
+  if (body.isDefault !== undefined && typeof body.isDefault !== "boolean") throw validationError({ isDefault: "デフォルト設定が不正です。" });
+  const template = await new NotificationRepository(env.DB).createTemplate(user.id, name, targetCategory, body.isDefault === true, offsets, nowIso());
+  return json({ template }, { status: 201 });
+});
+const updateNotificationTemplate = requireAuth(async ({ request, env, user }) => {
+  const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
+  const body = await parseObject(request);
+  const input: { name?: string; targetCategory?: "home" | "work" | null; isDefault?: boolean; offsets?: number[] } = {};
+  if (body.name !== undefined) { const name = stringValue(body.name); if (!name || name.length > 80) throw validationError({ name: "テンプレート名を入力してください。" }); input.name = name; }
+  if (body.offsets !== undefined) input.offsets = notificationOffsets(body.offsets);
+  if (body.isDefault !== undefined) { if (typeof body.isDefault !== "boolean") throw validationError({ isDefault: "デフォルト設定が不正です。" }); input.isDefault = body.isDefault; }
+  if (body.targetCategory !== undefined) { if (body.targetCategory !== null && body.targetCategory !== "home" && body.targetCategory !== "work") throw validationError({ targetCategory: "カテゴリが不正です。" }); input.targetCategory = body.targetCategory; }
+  const template = await new NotificationRepository(env.DB).updateTemplate(user.id, id, input, nowIso());
+  if (!template) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
+  return json({ template });
+});
+const deleteNotificationTemplate = requireAuth(async ({ request, env, user }) => {
+  const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
+  if (!await new NotificationRepository(env.DB).deleteTemplate(user.id, id)) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
+  return json({ deleted: true });
+});
 
 const requireDate = (value: string, field = "date") => {
   if (!isDateKey(value)) throw validationError({ [field]: "日付をYYYY-MM-DD形式で指定してください。" });
@@ -127,7 +212,7 @@ const listEvents = requireAuth(async ({ request, env, user }) => {
   requireDate(endDate, "endDate");
   if (startDate > endDate) throw validationError({ date: "表示期間が不正です。" });
   const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
-  const events = await eventProjection(env).project(user.id, { startDate, endDate }, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
+  const events = await withEventNotifications(user.id, await eventProjection(env).project(user.id, { startDate, endDate }, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB);
   return json({ events });
 });
 
@@ -136,7 +221,7 @@ const getCalendar = requireAuth(async ({ request, env, user }) => {
   const range = monthKeyToGridRange(month);
   if (!range) throw validationError({ month: "表示月をYYYY-MM形式で指定してください。" });
   const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
-  const events = await eventProjection(env).project(user.id, range, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
+  const events = await withEventNotifications(user.id, await eventProjection(env).project(user.id, range, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB);
   return json({ month, range, events });
 });
 
@@ -146,7 +231,7 @@ const getDaily = requireAuth(async ({ request, env, user }) => {
     new DailyNoteRepository(env.DB).getByDate(user.id, date),
     new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE)
   ]);
-  const projectedEvents = await eventProjection(env).project(user.id, dayToRange(date), { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn });
+  const projectedEvents = await withEventNotifications(user.id, await eventProjection(env).project(user.id, dayToRange(date), { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB);
   const dailyEvents = [...new Map(projectedEvents.map((event) => [event.occurrenceKey ?? event.id, event])).values()];
   return json({ date, events: dailyEvents, dailyNote });
 });
@@ -178,7 +263,8 @@ const listRecentEventDefinitions = requireAuth(async ({ request, env, user }) =>
   const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 20;
   const events = await new EventRepository(env.DB).recentDefinitions(user.id, limit);
   const recurrenceRepository = new RecurrenceRepository(env.DB);
-  const enrichedEvents = await Promise.all(events.map(async (event) => ({ ...event, recurrence: event.recurrenceRuleId ? await recurrenceRepository.getById(user.id, event.recurrenceRuleId) : null })));
+  const notificationRepository = new NotificationRepository(env.DB);
+  const enrichedEvents = await Promise.all(events.map(async (event) => ({ ...event, recurrence: event.recurrenceRuleId ? await recurrenceRepository.getById(user.id, event.recurrenceRuleId) : null, notifications: (await notificationRepository.listEventNotificationsForEvent(user.id, event.id)).map((notification) => notification.offsetMinutes) })));
   return json({ events: enrichedEvents });
 });
 
@@ -187,7 +273,8 @@ const getEvent = requireAuth(async ({ env, user, request }) => {
   const event = await new EventRepository(env.DB).getById(user.id, id);
   if (!event) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
   const recurrence = event.recurrenceRuleId ? await new RecurrenceRepository(env.DB).getById(user.id, event.recurrenceRuleId) : null;
-  return json({ event: { ...event, recurrence } });
+  const notifications = await new NotificationRepository(env.DB).listEventNotificationsForEvent(user.id, event.id);
+  return json({ event: { ...event, recurrence, notifications: notifications.map((notification) => notification.offsetMinutes) } });
 });
 
 const updateEvent = requireAuth(async ({ request, env, user }) => {
@@ -219,6 +306,14 @@ export default {
       if (url.pathname === "/api/auth/me" && request.method === "GET") return await authMe(context);
       if (url.pathname === "/api/settings" && request.method === "GET") return await getSettings(context);
       if (url.pathname === "/api/settings" && request.method === "PATCH") return await patchSettings(context);
+      if (url.pathname === "/api/notifications/vapid-public-key" && request.method === "GET") return await getVapidPublicKey(context);
+      if (url.pathname === "/api/notifications/subscriptions" && request.method === "POST") return await registerSubscription(context);
+      if (url.pathname === "/api/notifications/subscriptions" && request.method === "DELETE") return await unregisterSubscription(context);
+      if (url.pathname === "/api/notification-templates" && request.method === "GET") return await getNotificationTemplates(context);
+      if (url.pathname === "/api/notification-templates" && request.method === "POST") return await createNotificationTemplate(context);
+      const notificationTemplatePath = url.pathname.match(/^\/api\/notification-templates\/([^/]+)$/);
+      if (notificationTemplatePath && request.method === "PATCH") return await updateNotificationTemplate(context);
+      if (notificationTemplatePath && request.method === "DELETE") return await deleteNotificationTemplate(context);
       if (url.pathname === "/api/user-state" && request.method === "GET") return await getUserState(context);
       if (url.pathname === "/api/calendar" && request.method === "GET") return await getCalendar(context);
       if (url.pathname === "/api/daily" && request.method === "GET") return await getDaily(context);
@@ -239,5 +334,8 @@ export default {
       console.error("lifehub_worker_error", error);
       return json({ error: { code: "INTERNAL_ERROR", message: "予期しないエラーが発生しました。" } }, { status: 500 });
     }
+  },
+  scheduled(controller: ScheduledController, env: Env, context: ExecutionContext) {
+    context.waitUntil(runNotificationScheduler(env, new Date(controller.scheduledTime)));
   }
 };

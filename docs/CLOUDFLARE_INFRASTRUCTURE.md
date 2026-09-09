@@ -154,6 +154,18 @@ Cron 自体は UTC で動作するため、実際に通知対象かどうかは�
 - default evening: 21:00
 - ユーザー設定で変更可能
 
+### M7 staging運用
+
+LifeHub staging Worker `lifehub-staging`だけに5分Cron（`*/5 * * * *`）を設定する。VAPIDはLifeHub staging専用Secretとして次の名前だけを使用する。
+
+- `WEB_PUSH_VAPID_PUBLIC_KEY`
+- `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `WEB_PUSH_SUBJECT`
+
+`WEB_PUSH_VAPID_PRIVATE_KEY`は公式`web-push generate-vapid-keys`互換のURL-safe base64 private scalarをcanonical形式とする。Workerは移行期間のJSON JWKも受理する。secret値は表示・取得・ログ出力せず、LifeHub用generatorはrepo外へ出力する。
+
+secret値はGit / docs / log / PRへ保存しない。OAuth期限切れまたはCloudflare API 7403再発時はstaging操作を停止し、`wrangler whoami`、account、D1 binding / database ID、secret名を確認してから再開する。
+
 ---
 
 ## 9. Application Settings

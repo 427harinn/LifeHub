@@ -221,3 +221,21 @@ HouseToDoの単一 `notificationOffsetMinutes` はコピーしない。
 - 朝・夜時刻は個別変更可能
 - period既定deadlineTimeは21:00
 - 終日Event単体通知基準は09:00固定
+
+---
+
+## 14. M7実装記録
+
+実装は`0008_m7_notifications.sql`でLifeHub専用の`push_subscriptions`、`event_notifications`、`notification_templates` / `notification_template_offsets`、`notification_deliveries`を追加した。Event単体のdedupe keyは`eventNotificationId + occurrenceKey + scheduledFor`、summaryは`userId + notificationType + scheduledFor`とする。
+
+実機Push確認用の一時導線は、LifeHub staging originでのみ表示・実行し、ログイン中userの既存有効subscriptionだけを対象とした。結果表示は`sent` / `failed`のみとし、subscription値やVAPID secretは扱わなかった。Event単体通知、朝summary、夜summaryの実機確認完了に伴い、temporary UI/APIは削除済みである。
+
+Workerは5分Cronで対象時刻近辺を判定し、claim leaseは10分、stale pendingは再claim可能とする。送信はsubscriptionごとに独立して実行し、404/410だけ該当subscriptionをdisableする。成功済み端末へのpartial failure再送はdelivery claimで抑止する。
+
+HouseToDoから実際に確認した具体的ファイルは、Backendの`worker/routes/notifications.ts`、`worker/routes/notification-settings.ts`、`worker/services/push-subscription-service.ts`、`worker/repositories/push-subscription-repository.ts`、`worker/services/web-push-service.ts`、`worker/services/notification-scheduler-service.ts`、`worker/repositories/notification-delivery-repository.ts`、`worker/index.ts`、Frontendの`public/sw.js`、`src/main.tsx`、`src/api/notifications.ts`、`src/lib/capabilities.ts`、`src/lib/vapid.ts`、`src/lib/notification-url.ts`、および指定テスト8件。採用したのはlifecycle / Web Push / lease / timezone / safe URLの考え方だけで、Household / Task完了判定は採用していない。
+
+staging secretは`WEB_PUSH_VAPID_PUBLIC_KEY`、`WEB_PUSH_VAPID_PRIVATE_KEY`、`WEB_PUSH_SUBJECT`を使用し、値はGit・docs・log・PRへ保存しない。
+
+`WEB_PUSH_VAPID_PRIVATE_KEY`のcanonical形式は、公式`web-push generate-vapid-keys`が出力するURL-safe base64のP-256 private scalarとする。Workerは既存環境との互換性のためJSON JWKも受理し、base64 private scalarはstagingのpublic keyからJWKの`x` / `y`を組み立ててimportする。LifeHub用`node scripts/generate-vapid-secrets.mjs <repo外出力先> <mailto-or-https-subject>`は値を表示せず、3 secretファイルをrepo外へ生成する。
+
+2026-09-09、stagingのiPhone PWAでpermission → subscription → direct Push → Event単体通知 → 夜summary → 朝summaryの受信を確認した。各通知のtapで設定または対象日のCalendarへ遷移し、朝summaryは9/9 Calendarを開いた。自動ChromiumおよびCodex In-app Browserのpermission deniedは実機確認とは分けて記録する。
