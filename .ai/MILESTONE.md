@@ -30,6 +30,48 @@ M7 merge済み最新`main`から、時間あり予定の開始時刻変更に対
 
 ---
 
+# Milestone 8: Money MVP
+
+## 現在のMilestone
+
+M8実装中。ベースはPR #8 merge済み `origin/main` (`6d22c3315d9672c9dec2c91d58674604d3640e13`)、branchは `codex/m8-money-mvp`。対象はuserId所有の単発expense/income、plannedAmount、MoneyCategory、月見込み、Calendar/Daily連携までとする。
+
+## 完了条件
+
+- [x] `0009_m8_money.sql`、MoneyCategory / MoneyItemのrepository / service / route
+- [x] 既存user・新規userの初期カテゴリensure、カテゴリCRUD、soft delete
+- [x] Money CRUD、recent definitions、月summary、daily net、ownership / validation / migration_locked
+- [x] MoneyForm、Money画面、Calendar/Daily/Date Sheetの実データ接続、Settingsカテゴリ管理
+- [x] M3-M7回帰、390×844 Evidence、staging migration / deploy / smoke
+- [x] docs更新、commit / push / PR作成（auto-mergeなし）
+
+## 明示的な非対象
+
+- Money recurrence / occurrence override / settlement
+- actualAmount / estimated_actual / 月末確定
+- series scope、グラフ、予算、通知、銀行連携、OCR、archive / IndexedDB、M9以降
+- Calendar / Dailyの再設計、EventFormへのMoney統合、production/default、HouseToDo
+
+## 進捗
+
+- [x] 最新origin/main取得、PR #8 merge済みSHA確認、新規branch作成
+- [x] 指定docsと既存Money fixture / Calendar / Daily実装を監査
+- [x] DB / repository / service / API
+- [x] Money UI / entry point / Calendar / Daily / Settings adapter
+- [x] tests / Evidence / staging smoke
+- [x] self-review、docs同期、commit / push / PR作成
+
+## M8 implementation note（2026-09-09）
+
+- `0009_m8_money.sql`で`money_categories` / `money_items`を追加。MoneyItemは正数plannedAmount、type符号、単発、soft delete、userId ownershipとし、recurrence / settlementテーブルは追加していない。
+- 初期カテゴリはregister時とカテゴリ初回取得時にuser単位で`INSERT OR IGNORE` ensure。既存user・新規userの重複生成を防ぎ、カテゴリ削除は`active=false`。
+- `/api/money`、`/api/money/month`、`/api/money/recent-definitions`、`/api/money-categories`一式を実装。共有Money projectionをCalendar / Date Sheet / Daily / Money画面で利用した。
+- MoneyFormはexpense/income、numeric正数、date、時間・メモのprogressive disclosure、recent定義、編集・削除に対応。Settingsのお金カテゴリは限定paletteでadd/edit/inactiveに対応した。
+- local migration、70 unit/component tests、typecheck、lint、build、M8 Playwright E2Eを完了。Evidenceは`artifacts/evidence/m8/`に保存。
+- stagingは`lifehub-staging` D1へ`0009_m8_money.sql`を適用し、再確認で`No migrations to apply!`。Worker versionは`96a47a49-81cc-4e38-b438-fff7240b8dbe`、health/auth/category/expense/income/summary/Calendar/Daily/edit/deleteを390×844で確認。7403は未発生。
+- production/defaultとHouseToDoは操作していない。M9（recurrence、actual、settlement等）は未着手。auto-mergeは実行していない。
+
+
 # Milestone 7: Notification
 
 ## 現在のMilestone

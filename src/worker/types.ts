@@ -128,3 +128,36 @@ export type DailyNote = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type MoneyType = "expense" | "income";
+
+export type MoneyCategory = {
+  id: string;
+  userId: string;
+  type: MoneyType;
+  name: string;
+  colorKey: string | null;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MoneyItem = {
+  id: string;
+  userId: string;
+  type: MoneyType;
+  title: string;
+  categoryId: string;
+  plannedAmount: number;
+  date: string;
+  time: string | null;
+  recurrenceRuleId: string | null;
+  memo: string | null;
+  active: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MoneyItemInput = Pick<MoneyItem, "type" | "title" | "categoryId" | "plannedAmount" | "date" | "time" | "memo">;
