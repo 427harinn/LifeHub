@@ -60,14 +60,28 @@ const encryptPayload = async (subscription: PushSubscriptionRecord, payload: str
   return concat(header, ciphertext);
 };
 
-const parsePrivateJwk = (value: string): JsonWebKey => {
-  const parsed: unknown = JSON.parse(value);
-  if (!parsed || typeof parsed !== "object" || (parsed as JsonWebKey).kty !== "EC" || (parsed as JsonWebKey).crv !== "P-256" || !(parsed as JsonWebKey).d || !(parsed as JsonWebKey).x || !(parsed as JsonWebKey).y) throw new Error("invalid-vapid-private-key");
-  return parsed;
+export const parsePrivateJwk = (value: string, publicKey: string): JsonWebKey => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (parsed && typeof parsed === "object" && (parsed as JsonWebKey).kty === "EC" && (parsed as JsonWebKey).crv === "P-256" && (parsed as JsonWebKey).d && (parsed as JsonWebKey).x && (parsed as JsonWebKey).y) return parsed;
+  } catch {
+    // The web-push CLI stores the private scalar as URL-safe base64, not JSON.
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(value) || !/^[A-Za-z0-9_-]+$/.test(publicKey)) throw new Error("invalid-vapid-private-key");
+  let privateBytes: Uint8Array;
+  let publicBytes: Uint8Array;
+  try {
+    privateBytes = base64UrlToBytes(value);
+    publicBytes = base64UrlToBytes(publicKey);
+  } catch {
+    throw new Error("invalid-vapid-private-key");
+  }
+  if (privateBytes.length !== 32 || publicBytes.length !== 65 || publicBytes[0] !== 4) throw new Error("invalid-vapid-private-key");
+  return { kty: "EC", crv: "P-256", d: bytesToBase64Url(privateBytes), x: bytesToBase64Url(publicBytes.slice(1, 33)), y: bytesToBase64Url(publicBytes.slice(33)), ext: true };
 };
 const vapidAuthorization = async (endpoint: string, subject: string, privateText: string, publicKey: string) => {
   let privateKey: CryptoKey;
-  try { privateKey = await crypto.subtle.importKey("jwk", parsePrivateJwk(privateText), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]); }
+  try { privateKey = await crypto.subtle.importKey("jwk", parsePrivateJwk(privateText, publicKey), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]); }
   catch { throw new ClassifiedError(fail("vapid", "vapid_key_import_failed")); }
   const header = bytesToBase64Url(encoder.encode(JSON.stringify({ typ: "JWT", alg: "ES256" })));
   const body = bytesToBase64Url(encoder.encode(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 43_200, sub: subject })));

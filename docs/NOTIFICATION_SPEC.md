@@ -234,4 +234,6 @@ HouseToDoから実際に確認した具体的ファイルは、Backendの`worker
 
 staging secretは`WEB_PUSH_VAPID_PUBLIC_KEY`、`WEB_PUSH_VAPID_PRIVATE_KEY`、`WEB_PUSH_SUBJECT`を使用し、値はGit・docs・log・PRへ保存しない。
 
+`WEB_PUSH_VAPID_PRIVATE_KEY`のcanonical形式は、公式`web-push generate-vapid-keys`が出力するURL-safe base64のP-256 private scalarとする。Workerは既存環境との互換性のためJSON JWKも受理し、base64 private scalarはstagingのpublic keyからJWKの`x` / `y`を組み立ててimportする。LifeHub用`node scripts/generate-vapid-secrets.mjs <repo外出力先> <mailto-or-https-subject>`は値を表示せず、3 secretファイルをrepo外へ生成する。
+
 実機Pushの最終確認はstagingで別途必要。自動ChromiumおよびCodex In-app Browserではpermission deniedとなり、実Push受信・通知tap成功とは扱わない。
