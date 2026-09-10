@@ -72,7 +72,7 @@ test("M9 Money occurrence override, actual, shared calendar/daily projection, an
   await page.getByRole("button", { name: "お金を追加" }).click();
   await expect(page.getByRole("heading", { name: "お金を登録" })).toBeVisible();
   await page.getByLabel("項目名").fill("電気代");
-  await page.getByLabel("金額").fill("10000");
+  await page.getByRole("textbox", { name: "金額" }).fill("10000");
   await chooseDate(page, today);
   await page.getByRole("button", { name: "お金の繰り返し" }).click();
   await page.getByRole("dialog", { name: "繰り返し" }).getByRole("button", { name: "毎月" }).click();
@@ -95,7 +95,7 @@ test("M9 Money occurrence override, actual, shared calendar/daily projection, an
   await expect(scopeSheet).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-scope-390x844.png") });
   await scopeSheet.getByRole("button", { name: "この項目のみ" }).click();
-  await page.getByLabel("金額").fill("5000");
+  await page.getByRole("textbox", { name: "金額" }).fill("5000");
   await page.getByRole("button", { name: "変更を保存" }).click();
   await expect(page.locator(".money-list .event-swipe-row").filter({ hasText: "電気代" }).first()).toContainText("5,000円");
   await page.screenshot({ path: path.join(evidenceDir, "money-occurrence-only-390x844.png") });
