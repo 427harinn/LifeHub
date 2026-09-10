@@ -211,11 +211,13 @@ describe("Calendar adaptive row allocation", () => {
     expect(threeRowsFourEvents.hiddenCount).toBe(2);
     const threeRowsOneEvent = allocateCalendarCellRows([projectedEvent("a")], 0, money, 3);
     expect(threeRowsOneEvent.visibleEvents).toHaveLength(1);
-    expect(threeRowsOneEvent.emptyRows).toBe(1);
+    expect(threeRowsOneEvent.contentRows).toBe(2);
+    expect(threeRowsOneEvent.emptyRows).toBe(0);
     expect(threeRowsOneEvent.visibleMoney).toEqual(money);
     expect(threeRowsOneEvent.hiddenCount).toBe(0);
     const threeRowsNoEvents = allocateCalendarCellRows([], 0, money, 3);
-    expect(threeRowsNoEvents.emptyRows).toBe(2);
+    expect(threeRowsNoEvents.contentRows).toBe(1);
+    expect(threeRowsNoEvents.emptyRows).toBe(0);
     expect(threeRowsNoEvents.visibleMoney).toEqual(money);
     expect(threeRowsNoEvents.hiddenCount).toBe(0);
     const fourRowsFourEvents = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 4);
@@ -234,8 +236,28 @@ describe("Calendar adaptive row allocation", () => {
     expect(moneyTab.emptyRows).toBe(0);
     expect(moneyTab.visibleMoney.map((entry) => entry.label)).toEqual(["夜ごはん", "歯医者", "収支"]);
     const moneyTabOneDetail = allocateCalendarCellRows([], 0, [{ amount: -1500, category: "expense" as const, label: "夜ごはん" }, { amount: -1500, category: "expense" as const, isSummary: true, label: "収支" }], 3);
-    expect(moneyTabOneDetail.emptyRows).toBe(1);
+    expect(moneyTabOneDetail.contentRows).toBe(2);
+    expect(moneyTabOneDetail.emptyRows).toBe(0);
     expect(moneyTabOneDetail.visibleMoney.at(-1)?.isSummary).toBe(true);
+  });
+
+  it("reserves the final rendered row for All-tab Money summary before events", () => {
+    const money = [{ amount: -5200, category: "expense" as const, isSummary: true, label: "収支" }];
+    const allocation = allocateCalendarCellRows([projectedEvent("event-a"), projectedEvent("event-b")], 2, money, 4);
+    expect(allocation.visibleBandCount).toBe(2);
+    expect(allocation.visibleEvents).toHaveLength(1);
+    expect(allocation.visibleMoney).toEqual(money);
+    expect(allocation.contentRows).toBe(2);
+    expect(allocation.summaryRowIndex).toBe(2);
+    expect(allocation.hiddenCount).toBe(1);
+
+    const overflow = allocateCalendarCellRows([projectedEvent("event-a")], 3, money, 3);
+    expect(overflow.visibleBandCount).toBe(2);
+    expect(overflow.visibleEvents).toHaveLength(0);
+    expect(overflow.visibleMoney).toEqual(money);
+    expect(overflow.contentRows).toBe(1);
+    expect(overflow.summaryRowIndex).toBe(1);
+    expect(overflow.hiddenCount).toBe(2);
   });
 
   it("allocates only rendered rows across compact calendar capacities", () => {

@@ -85,7 +85,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .calendar-cell__money--detail { text-align: left; }
 .calendar-cell__money--expense { color: #b65445; }
 .calendar-cell__money--income { color: #527c9c; }
-.calendar-cell__single-events { position: relative; z-index: 5; display: grid; min-height: 0; grid-auto-rows: 13px; align-content: start; gap: 1px; margin-top: 2px; overflow: hidden; padding-top: calc(var(--calendar-band-lanes, 0) * 15px); }
+.calendar-cell__single-events { position: relative; z-index: 5; display: grid; min-height: 0; grid-template-rows: repeat(var(--calendar-content-rows, 0), 13px); grid-auto-rows: 13px; align-content: start; gap: 1px; margin-top: 2px; overflow: hidden; padding-top: calc(var(--calendar-band-lanes, 0) * 15px); }
 .calendar-event { display: block; min-width: 0; overflow: hidden; padding: 0 3px; color: var(--color-text); font-size: .625rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event--single, .calendar-event--recurring { background: transparent; }
 .calendar-event--home { color: var(--color-primary-strong); }
@@ -224,6 +224,17 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .sheet-money-entry { display: flex; min-height: 40px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .8125rem; }
 .sheet-money-entry--button { width: 100%; border-top: 0; border-right: 0; border-left: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .sheet-money-entry strong { font-size: .9375rem; font-weight: 600; }
+.calendar-date-sheet .sheet-list:has(.money-sheet-row) { gap: var(--space-2); border-top: 0; }
+.calendar-date-sheet .sheet-list:has(.money-sheet-row) .event-swipe-row { border-bottom: 0; }
+.calendar-date-sheet .money-sheet-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--space-2); min-height: 52px; align-items: center; padding: 8px 0; border: 0; color: var(--color-text); }
+.calendar-date-sheet .money-sheet-row > span { min-width: 0; }
+.calendar-date-sheet .money-sheet-row > span strong { display: block; overflow: hidden; font-size: .9375rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-date-sheet .money-sheet-row > span small { display: none; }
+.calendar-date-sheet .money-sheet-row > strong { font-size: .9375rem; font-weight: 600; white-space: nowrap; }
+.calendar-date-sheet .sheet-list:has(.money-sheet-row) + .sheet-money-summary { margin-top: 2px; padding: 8px 0 0; border-top: 0; }
+.calendar-date-sheet .sheet-list:has(.money-sheet-row) ~ .sheet-footer { margin-top: 2px; }
+.calendar-date-sheet .money-inline-detail__list { border-top: 0; gap: 2px; }
+.calendar-date-sheet .money-inline-detail__list > div { min-height: 0; padding: 4px 0; border-bottom: 0; }
 .calendar-date-sheet__quick-add { position: relative; display: flex; flex: 0 0 44px; flex-direction: column; align-items: flex-end; gap: 8px; }
 .calendar-date-sheet__quick-add-toggle { box-shadow: 0 4px 14px rgb(38 51 49 / 22%); }
 .calendar-date-sheet__quick-add-menu { position: absolute; right: 0; bottom: 52px; display: grid; min-width: 128px; gap: 2px; padding: 5px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); box-shadow: var(--shadow-card); }

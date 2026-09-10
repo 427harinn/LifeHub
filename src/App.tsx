@@ -177,17 +177,17 @@ export function allocateCalendarCellRows(events: CalendarProjectedEvent[], bandC
   const moneyItems = money ?? [];
   const summary = moneyItems.find((item) => item.isSummary);
   const details = moneyItems.filter((item) => !item.isSummary);
-  const eventCapacity = Math.max(0, rowCapacity - (summary ? 1 : 0));
+  const reservedSummaryRows = summary ? 1 : 0;
+  const eventCapacity = Math.max(0, rowCapacity - reservedSummaryRows);
   const visibleBandCount = Math.min(eventCapacity, bandCount);
   const singleEventCapacity = Math.max(0, eventCapacity - visibleBandCount);
   const visibleEvents = events.slice(0, Math.min(maxVisibleEvents, singleEventCapacity));
-  const moneyCapacity = Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length);
-  const visibleMoney = moneyCapacity > 0
-    ? [...details.slice(0, Math.max(0, moneyCapacity - (summary ? 1 : 0))), ...(summary && moneyCapacity > 0 ? [summary] : [])]
-    : [];
+  const detailCapacity = Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length - reservedSummaryRows);
+  const visibleMoney = [...details.slice(0, detailCapacity), ...(summary ? [summary] : [])];
   const hiddenDetailCount = Math.max(0, details.length - visibleMoney.filter((item) => !item.isSummary).length);
   const hiddenCount = Math.max(0, bandCount - visibleBandCount) + Math.max(0, events.length - visibleEvents.length) + hiddenDetailCount;
-  return { emptyRows: Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length - visibleMoney.length), hiddenCount, visibleEvents, visibleMoney };
+  const contentRows = visibleEvents.length + visibleMoney.length;
+  return { contentRows, emptyRows: 0, hiddenCount, summaryRowIndex: summary ? contentRows : null, visibleBandCount, visibleEvents, visibleMoney };
 }
 
 function toCalendarFixtureEvents(events: Event[], month: string): CalendarProjectedEvent[] {
@@ -259,7 +259,6 @@ function CalendarShell({ events, money, filter, month, onDateSelect, onFilterCha
   const filteredEvents = useMemo(() => projectedEvents.filter((event) => fixtureEventMatchesFilter(event, filter)), [filter, projectedEvents]);
   const today = todayDateKey();
   const bands = useMemo(() => filter === "money" ? [] : buildCalendarBandSegments(filteredEvents, firstWeekday), [filteredEvents, filter, firstWeekday]);
-  const bandLaneCountByCell = useMemo(() => bands.reduce<Record<string, number>>((counts, segment) => { for (let column = segment.startColumn; column <= segment.endColumn; column += 1) { const key = `${segment.row}:${column}`; counts[key] = Math.max(counts[key] ?? 0, segment.lane + 1); } return counts; }, {}), [bands]);
   const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const [calendarCellHeight, setCalendarCellHeight] = useState(0);
   useEffect(() => {
@@ -277,17 +276,18 @@ function CalendarShell({ events, money, filter, month, onDateSelect, onFilterCha
   const rowCapacity = candidateValue === 2 || candidateValue === 3 || candidateValue === 4 ? Math.min(autoRowCapacity, candidateValue) : autoRowCapacity;
   const bandFitsRowAllocation = (segment: CalendarBandSegment) => {
     if (filter !== "all") return segment.lane < rowCapacity;
-    const moneyReservedLane = rowCapacity - 1;
-    if (moneyReservedLane < 0 || segment.lane >= moneyReservedLane) {
-      for (let column = segment.startColumn; column <= segment.endColumn; column += 1) {
-        const cellIndex = segment.row * 7 + column - 1;
-        const day = cells[cellIndex];
-        const cellDate = day ? `${year}-${pad(monthIndex + 1)}-${pad(day)}` : null;
-        if (calendarMoneyForCell(cellDate, filter, today, money ?? undefined).some((item) => item.isSummary)) return false;
-      }
+    for (let column = segment.startColumn; column <= segment.endColumn; column += 1) {
+      const cellIndex = segment.row * 7 + column - 1;
+      const day = cells[cellIndex];
+      const cellDate = day ? `${year}-${pad(monthIndex + 1)}-${pad(day)}` : null;
+      const cellMoney = calendarMoneyForCell(cellDate, filter, today, money ?? undefined);
+      const reservedRows = cellMoney.some((item) => item.isSummary) ? 1 : 0;
+      if (segment.lane >= rowCapacity - reservedRows) return false;
     }
-    return segment.lane < rowCapacity;
+    return true;
   };
+  const renderedBands = useMemo(() => bands.filter(bandFitsRowAllocation), [bands, filter, rowCapacity, cells, monthIndex, year, today, money]);
+  const bandLaneCountByCell = useMemo(() => renderedBands.reduce<Record<string, number>>((counts, segment) => { for (let column = segment.startColumn; column <= segment.endColumn; column += 1) { const key = `${segment.row}:${column}`; counts[key] = Math.max(counts[key] ?? 0, segment.lane + 1); } return counts; }, {}), [renderedBands]);
   return <main className="screen-page calendar-page">
     <header className="screen-header"><h1>カレンダー</h1><button aria-label="検索" className="icon-button" onClick={onSearch} type="button"><NavIcon name="search" /></button></header>
     <FixtureTabs active={filter} onChange={onFilterChange} />
@@ -303,15 +303,15 @@ function CalendarShell({ events, money, filter, month, onDateSelect, onFilterCha
           const bandLaneCount = bandLaneCountByCell[`${Math.floor(index / 7)}:${(index % 7) + 1}`] ?? 0;
           const moneyItems = calendarMoneyForCell(cellDate, filter, today, money ?? undefined);
           const allocation = allocateCalendarCellRows(cellEvents, bandLaneCount, moneyItems, rowCapacity, rowCapacity);
-          const hasBand = bandLaneCount > 0;
+          const hasBand = allocation.visibleBandCount > 0;
           return <button aria-label={day ? `${day}日` : "空の日付"} className={`calendar-cell${cellDate === today ? " calendar-cell--today" : ""}${hasBand ? " calendar-cell--has-band" : ""}`} disabled={!day} key={`${day ?? "empty"}-${index}`} onClick={() => { if (cellDate) onDateSelect(cellDate, filter); }} style={{ "--calendar-band-lanes": Math.min(rowCapacity, bandLaneCount) } as CSSProperties} type="button">
-            {day ? <><span className="calendar-cell__date">{day}</span>{allocation.hiddenCount > 0 ? <span aria-label={`${allocation.hiddenCount}件の予定を省略`} className="calendar-cell__count">{allocation.hiddenCount}</span> : null}<span className="calendar-cell__single-events">
+            {day ? <><span className="calendar-cell__date">{day}</span>{allocation.hiddenCount > 0 ? <span aria-label={`${allocation.hiddenCount}件の予定を省略`} className="calendar-cell__count">{allocation.hiddenCount}</span> : null}<span className="calendar-cell__single-events" style={{ "--calendar-band-lanes": allocation.visibleBandCount, "--calendar-content-rows": allocation.contentRows } as CSSProperties}>
               {allocation.visibleEvents.map((event) => <span className={`calendar-event calendar-event--${event.category} calendar-event--${event.kind}`} key={`${event.eventId}-${event.date}`}>{event.label}</span>)}
-              {allocation.visibleMoney.map((entry, moneyIndex) => <span className={`calendar-cell__money calendar-cell__money--${entry.category}${entry.isSummary ? " calendar-cell__money--summary" : " calendar-cell__money--detail"}`} key={`${entry.label}-${entry.amount}-${moneyIndex}`}>{entry.isSummary ? moneyAmountLabel(entry.amount) : entry.label}</span>)}
+              {allocation.visibleMoney.map((entry, moneyIndex) => <span className={`calendar-cell__money calendar-cell__money--${entry.category}${entry.isSummary ? " calendar-cell__money--summary" : " calendar-cell__money--detail"}`} key={`${entry.label}-${entry.amount}-${moneyIndex}`} style={entry.isSummary && allocation.summaryRowIndex ? { gridRow: allocation.summaryRowIndex } : undefined}>{entry.isSummary ? moneyAmountLabel(entry.amount) : entry.label}</span>)}
             </span></> : null}
           </button>;
         })}
-        <div aria-hidden="true" className="calendar-band-layer">{bands.filter(bandFitsRowAllocation).map((segment, index) => <span className={`calendar-band calendar-band--multi calendar-band--${segment.category}${segment.isStart ? " calendar-band--start" : ""}${segment.isEnd ? " calendar-band--end" : ""}`} key={`${segment.category}-${segment.row}-${segment.startColumn}-${index}`} style={{ "--band-lane": segment.lane, gridColumn: `${segment.startColumn} / ${segment.endColumn + 1}`, gridRow: segment.row + 1 } as CSSProperties}>{segment.label}</span>)}</div>
+        <div aria-hidden="true" className="calendar-band-layer">{renderedBands.map((segment, index) => <span className={`calendar-band calendar-band--multi calendar-band--${segment.category}${segment.isStart ? " calendar-band--start" : ""}${segment.isEnd ? " calendar-band--end" : ""}`} key={`${segment.category}-${segment.row}-${segment.startColumn}-${index}`} style={{ "--band-lane": segment.lane, gridColumn: `${segment.startColumn} / ${segment.endColumn + 1}`, gridRow: segment.row + 1 } as CSSProperties}>{segment.label}</span>)}</div>
       </div>
     </section>
   </main>;
@@ -500,6 +500,11 @@ export function MoneyStatusIcon({ status }: { status?: MoneyItem["settlementStat
   return <span aria-label={settled ? "確定" : "予定"} className={`money-status-icon${settled ? " money-status-icon--settled" : ""}`} role="img">{settled ? <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg> : null}</span>;
 }
 
+function MoneyRowContent({ item, showCategory = true }: { item: MoneyItem; showCategory?: boolean }) {
+  const amount = item.signedAmount ?? (item.type === "income" ? item.plannedAmount : -item.plannedAmount);
+  return <><MoneyStatusIcon status={item.settlementStatus} /><span className="money-row__label"><strong>{item.title}</strong>{showCategory ? <small>{item.category?.name ?? "その他"}</small> : null}</span><b className={`money-amount--${item.type}`}>{moneyAmountLabel(amount)}円</b></>;
+}
+
 export function MoneyInlineDetail({ item, onActual, id }: { item: MoneyItem; onActual: () => void; id?: string }) {
   const plannedAmount = item.effectivePlannedAmount ?? item.plannedAmount;
   const actualAmount = item.settlementStatus ? (item.effectiveAmount ?? item.plannedAmount) : null;
@@ -508,6 +513,7 @@ export function MoneyInlineDetail({ item, onActual, id }: { item: MoneyItem; onA
     <dl className="money-inline-detail__list">
       <div><dt>予定額</dt><dd>{plannedAmount.toLocaleString("ja-JP")}円</dd></div>
       {actualAmount !== null ? <div><dt>確定額</dt><dd>{actualAmount.toLocaleString("ja-JP")}円</dd></div> : null}
+      {item.category?.name ? <div><dt>カテゴリ</dt><dd>{item.category.name}</dd></div> : null}
       {item.recurrence ? <div><dt>繰り返し</dt><dd>{recurrenceSummary(item.recurrence, item.definitionDate ?? item.date)}</dd></div> : null}
       {item.memo ? <div><dt>メモ</dt><dd className="money-inline-detail__memo">{item.memo}</dd></div> : null}
     </dl>
@@ -574,7 +580,7 @@ function MoneyPage({ month, money, onMonthChange, onEdit, onMoneyChanged }: { mo
     <div className={`money-month-body${dragging ? " is-swipe-dragging" : ""}`} style={{ "--money-swipe-offset": `${offset}px` } as CSSProperties}>
       <div className="money-month-nav"><button aria-label="前の月" onClick={() => onMonthChange(shiftMonth(month, -1))} type="button">‹</button><h2>{formatMonth(month)}</h2><button aria-label="次の月" onClick={() => onMonthChange(shiftMonth(month, 1))} type="button">›</button></div>
       <section className="money-summary" aria-label="今月の見込み"><div><span>支出見込み</span><strong className="money-summary__expense">{(money?.summary.expenseForecast ?? 0).toLocaleString("ja-JP")}円</strong></div><div><span>収入見込み</span><strong className="money-summary__income">{(money?.summary.incomeForecast ?? 0).toLocaleString("ja-JP")}円</strong></div><div><span>残りそう</span><strong className={(money?.summary.remaining ?? 0) >= 0 ? "money-summary__income" : "money-summary__expense"}>{(money?.summary.remaining ?? 0).toLocaleString("ja-JP")}円</strong></div></section>
-      <section className="money-list"><h2>今月のお金</h2>{occurrences.map((item) => { const key = item.occurrenceKey ?? item.id; return <SwipeActionRow actions={[{ label: "編集", onClick: () => onEdit(item) }]} ariaLabel={item.title} expandedContent={openRow === key ? <MoneyInlineDetail item={item} onActual={() => setActualItem(item)} /> : null} key={key} onHorizontalSwipeStart={() => setOpenRow(null)} onOpenChange={(open) => setOpenActionRow(open ? key : null)} onOtherRowTouch={() => setOpenActionRow(null)} open={openActionRow === key}><button aria-controls={openRow === key ? `money-detail-${key}` : undefined} aria-expanded={openRow === key} className="money-list-row" onClick={(event) => { event.stopPropagation(); handleMainTap(key); }} type="button"><MoneyStatusIcon status={item.settlementStatus} /><span><strong>{item.title}</strong><small>{item.category?.name ?? "その他"}</small></span><b className={`money-amount--${item.type}`}>{moneyAmountLabel(item.signedAmount ?? (item.type === "income" ? item.plannedAmount : -item.plannedAmount))}円</b></button></SwipeActionRow>; })}{occurrences.length === 0 ? <p className="empty-state">今月の記録はありません</p> : null}</section>
+      <section className="money-list"><h2>今月のお金</h2>{occurrences.map((item) => { const key = item.occurrenceKey ?? item.id; return <SwipeActionRow actions={[{ label: "編集", onClick: () => onEdit(item) }]} ariaLabel={item.title} expandedContent={openRow === key ? <MoneyInlineDetail item={item} onActual={() => setActualItem(item)} /> : null} key={key} onHorizontalSwipeStart={() => setOpenRow(null)} onOpenChange={(open) => setOpenActionRow(open ? key : null)} onOtherRowTouch={() => setOpenActionRow(null)} open={openActionRow === key}><button aria-controls={openRow === key ? `money-detail-${key}` : undefined} aria-expanded={openRow === key} className="money-list-row" onClick={(event) => { event.stopPropagation(); handleMainTap(key); }} type="button"><MoneyRowContent item={item} /></button></SwipeActionRow>; })}{occurrences.length === 0 ? <p className="empty-state">今月の記録はありません</p> : null}</section>
       <MoneyCategoryDonut occurrences={occurrences} />
     </div>
     <MoneyActualSheet key={actualItem?.occurrenceKey ?? "empty"} item={actualItem} onClose={() => setActualItem(null)} onSaved={onMoneyChanged} open={Boolean(actualItem)} />
