@@ -133,7 +133,6 @@ test("M9 Money occurrence override, actual, shared calendar/daily projection, an
   await actualSheet.getByRole("button", { name: "保存" }).click();
   await expect(page.locator(".money-list .event-swipe-row").filter({ hasText: "電気代" }).first()).toContainText("5,200円");
   await expect(page.locator(".money-list .event-swipe-row").filter({ hasText: "電気代" }).first().locator(".money-status-icon")).toHaveAttribute("aria-label", "確定");
-  await page.locator(".money-list .event-swipe-row").filter({ hasText: "電気代" }).first().locator(".money-list-row").click();
   await expect(page.getByRole("button", { name: "確定額を変更" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-actual-expanded-390x844.png") });
   await page.screenshot({ path: path.join(evidenceDir, "money-actual-saved-390x844.png") });

@@ -46,7 +46,6 @@ test("Money UI regression evidence at 390x844", async ({ page }) => {
   const actualSheet = page.getByRole("dialog", { name: "確定額" });
   await actualSheet.getByLabel("確定額").fill("5200");
   await actualSheet.getByRole("button", { name: "保存" }).click();
-  await row.locator(".money-list-row").click();
   await expect(page.getByRole("button", { name: "確定額を変更" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-confirmed-detail-full-width-390x844.png") });
 
