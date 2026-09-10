@@ -122,6 +122,7 @@ test("Money MVP recurrence, projections, UI grammar, and swipe actions", async (
   await swipeLeft(page, moneyRow);
   await expect(moneyRow.getByRole("button", { name: "編集" })).toBeVisible();
   await page.getByRole("button", { name: "編集" }).last().click();
+  await page.getByRole("dialog", { name: "編集する範囲" }).getByRole("button", { name: "すべての項目" }).click();
   await expect(page.getByRole("heading", { name: "お金を編集" })).toBeVisible();
   const movedDate = `${date.slice(0, 8)}15`;
   await chooseDate(page, movedDate);

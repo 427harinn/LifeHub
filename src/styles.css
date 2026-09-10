@@ -221,6 +221,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .sheet-money-summary--expense { color: #b65445; }
 .sheet-money-summary--income { color: #527c9c; }
 .sheet-money-entry { display: flex; min-height: 40px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .8125rem; }
+.sheet-money-entry--button { width: 100%; border-top: 0; border-right: 0; border-left: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .sheet-money-entry strong { font-size: .9375rem; font-weight: 600; }
 .calendar-date-sheet__quick-add { position: relative; display: flex; flex: 0 0 44px; flex-direction: column; align-items: flex-end; gap: 8px; }
 .calendar-date-sheet__quick-add-toggle { box-shadow: 0 4px 14px rgb(38 51 49 / 22%); }
@@ -308,6 +309,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-summary > div { display: flex; min-height: 54px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); }
 .money-summary span { color: var(--color-text-secondary); font-size: .8125rem; }
 .money-summary strong { font-size: 1.2rem; font-weight: 600; }
+.money-summary__support { display: grid !important; grid-template-columns: 1fr auto 1fr auto; min-height: 40px !important; gap: 8px; color: var(--color-text-secondary); font-size: .75rem; }
+.money-summary__support strong { color: var(--color-text); font-size: .8125rem; }
 .money-summary__expense, .money-amount--expense, .daily-money--expense { color: #b65445; }
 .money-summary__income, .money-amount--income, .daily-money--income { color: #527c9c; }
 .money-list { display: grid; gap: 0; }
@@ -319,6 +322,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-list-row strong { font-size: .9375rem; font-weight: 500; }
 .money-list-row small { margin-top: 3px; color: var(--color-text-secondary); font-size: .75rem; }
 .money-list-row b { font-size: .9375rem; font-weight: 600; white-space: nowrap; }
+.daily-money-row { width: 100%; border: 0; color: var(--color-text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.actual-sheet { display: grid; gap: var(--space-3); }
 .money-form-page .screen-header { gap: var(--space-2); }
 .money-type-label { color: var(--color-text-secondary); font-size: .75rem; }
 .money-type-label--expense { color: #b65445; }

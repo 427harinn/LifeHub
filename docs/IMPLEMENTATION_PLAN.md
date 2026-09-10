@@ -421,6 +421,8 @@ staging必須。
 
 # Milestone 9: Money occurrence override / actual / estimated_actual / series split / 月末確定
 
+実装時は既存EventのRecurrenceRule / occurrence projection / scope interactionを再利用する。M9では`0011_m9_money_occurrence.sql`のOverrideとSettlementを共通MoneyProjectionへ合成し、Calendar / Daily / Moneyが同じeffective amountを参照する。M10 Visualization（グラフ等）は未着手とする。
+
 ## 目的
 
 M8のMoney recurrenceに、occurrence単位の変更と実績確定を追加する。

@@ -373,7 +373,7 @@ MoneyFormのカテゴリ・日付・繰り返しはEventFormと同じFormRow + B
 - カテゴリ別金額
 - 今月のお金一覧
 
-M8はplannedAmountによる月projectionとし、グラフ・actual・estimated_actual・月末確定は後続Milestoneで扱う。繰り返しMoneyは要求月だけprojectionし、月一覧の行は左swipeで`編集`をrevealする。削除は編集画面内から行い、M8では系列全体を対象とする。
+M9では共通MoneyProjectionのeffective amountを表示する。actualは`実績`、未来plannedは`予定`、過去のestimated_actualは`予定額のまま`として控えめに表示し、内部語は通常画面に出さない。繰り返しMoneyの編集・削除ではEventと同じBottomSheetで`この項目のみ / この項目以降 / すべての項目`を選ぶ。実績入力は既存Money rowの編集相当UIから行い、登録フォームへは追加しない。
 
 M8前のshellでも `記録はありません` だけで終わらせず、最終UIを判断できる仮の金額・カテゴリ・明細を表示する。
 

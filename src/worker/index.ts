@@ -1,6 +1,6 @@
 import { createExpiredSessionCookie, createSessionCookie } from "./lib/cookies";
 import { DEFAULT_TIMEZONE, DISPLAY_NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./lib/constants";
-import { AppError, validationError } from "./lib/errors";
+import { AppError, notFoundError, validationError } from "./lib/errors";
 import { sha256Hex } from "./lib/crypto";
 import { requireAuth, type Handler, type RequestContext } from "./middleware/auth";
 import { requireWritableUserState } from "./middleware/migration-guard";
@@ -20,6 +20,9 @@ import { EventProjectionService, dayToRange, isDateKey, monthKeyToGridRange } fr
 import type { Event, UserSettings } from "./types";
 import { runNotificationScheduler } from "./services/notification-scheduler-service";
 import { MoneyService } from "./services/money-service";
+import { MoneyOccurrenceOverrideRepository } from "./repositories/money-occurrence-override-repository";
+import { MoneyOccurrenceSettlementRepository } from "./repositories/money-occurrence-settlement-repository";
+import { runMoneySettlement } from "./services/money-settlement-service";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
 const nowIso = () => new Date().toISOString();
@@ -115,7 +118,7 @@ const getUserState = requireAuth(async ({ env, user }) => {
 
 const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
 const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env), new NotificationRepository(env.DB));
-const moneyService = (env: Env) => new MoneyService(new MoneyRepository(env.DB), new MoneyCategoryRepository(env.DB), new RecurrenceRepository(env.DB));
+const moneyService = (env: Env) => new MoneyService(new MoneyRepository(env.DB), new MoneyCategoryRepository(env.DB), new RecurrenceRepository(env.DB), new MoneyOccurrenceOverrideRepository(env.DB), new MoneyOccurrenceSettlementRepository(env.DB));
 const withEventNotifications = async (userId: string, events: Event[], db: D1Database) => {
   const repository = new NotificationRepository(db);
   const offsets = new Map<string, Promise<number[]>>();
@@ -229,7 +232,7 @@ const getCalendar = requireAuth(async ({ request, env, user }) => {
   const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
   const [events, money] = await Promise.all([
     withEventNotifications(user.id, await eventProjection(env).project(user.id, range, { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB),
-    moneyService(env).projectMonth(user.id, month, settings.weekStartsOn)
+    moneyService(env).projectMonth(user.id, month, settings.weekStartsOn, new Date(), settings.timezone)
   ]);
   return json({ month, range, events, money });
 });
@@ -242,7 +245,7 @@ const getDaily = requireAuth(async ({ request, env, user }) => {
   ]);
   const [projectedEvents, money] = await Promise.all([
     withEventNotifications(user.id, await eventProjection(env).project(user.id, dayToRange(date), { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }), env.DB),
-    moneyService(env).projectDate(user.id, date, settings.weekStartsOn)
+    moneyService(env).projectDate(user.id, date, settings.weekStartsOn, new Date(), settings.timezone)
   ]);
   const dailyEvents = [...new Map(projectedEvents.map((event) => [event.occurrenceKey ?? event.id, event])).values()];
   return json({ date, events: dailyEvents, dailyNote, money });
@@ -293,7 +296,7 @@ const getMoneyMonth = requireAuth(async ({ request, env, user }) => {
   const month = stringValue(new URL(request.url).searchParams.get("month"));
   await moneyService(env).ensureCategories(user.id, nowIso());
   const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
-  return json(await moneyService(env).projectMonth(user.id, month, settings.weekStartsOn));
+  return json(await moneyService(env).projectMonth(user.id, month, settings.weekStartsOn, new Date(), settings.timezone));
 });
 
 const listRecentMoneyDefinitions = requireAuth(async ({ request, env, user }) => {
@@ -306,7 +309,9 @@ const listRecentMoneyDefinitions = requireAuth(async ({ request, env, user }) =>
 const createMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const money = await moneyService(env).create(user.id, await parseObject(request), nowIso()); return json({ money }, { status: 201 }); });
 const getMoney = requireAuth(async ({ request, env, user }) => { const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const item = await moneyService(env).get(user.id, id); if (!item) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); const category = await new MoneyCategoryRepository(env.DB).getById(user.id, item.categoryId); return json({ money: { ...item, category } }); });
 const updateMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const money = await moneyService(env).update(user.id, id, await parseObject(request), nowIso()); if (!money) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); return json({ money }); });
-const deleteMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); if (!await new MoneyRepository(env.DB).softDelete(user.id, id, nowIso())) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); return json({ deleted: true }); });
+const deleteMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const url = new URL(request.url); const id = decodeURIComponent(url.pathname.split("/").pop() ?? ""); await moneyService(env).delete(user.id, id, { scope: stringValue(url.searchParams.get("scope")) as "occurrence" | "following" | "series" | undefined, occurrenceKey: url.searchParams.get("occurrenceKey") ?? undefined }, nowIso()); return json({ deleted: true }); });
+const putMoneyActual = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const match = new URL(request.url).pathname.match(/^\/api\/money\/([^/]+)\/occurrences\/([^/]+)\/actual$/); if (!match) throw notFoundError(); const body = await parseObject(request); const amount = body.amount; if (!Number.isInteger(amount) || Number(amount) <= 0) throw validationError({ amount: "実際の金額は1円以上の整数で入力してください。" }); const settlement = await moneyService(env).setActual(user.id, decodeURIComponent(match[1]), decodeURIComponent(match[2]), Number(amount), nowIso()); return json({ settlement }); });
+const deleteMoneyActual = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const match = new URL(request.url).pathname.match(/^\/api\/money\/([^/]+)\/occurrences\/([^/]+)\/actual$/); if (!match) throw notFoundError(); await moneyService(env).deleteActual(user.id, decodeURIComponent(match[1]), decodeURIComponent(match[2]), nowIso()); return json({ deleted: true }); });
 
 const putDailyNote = requireAuth(async ({ request, env, user }) => {
   await requireWritableUserState({ request, env, user });
@@ -397,6 +402,9 @@ export default {
       if (url.pathname === "/api/money/month" && request.method === "GET") return await getMoneyMonth(context);
       if (url.pathname === "/api/money" && request.method === "POST") return await createMoney(context);
       if (url.pathname === "/api/money/recent-definitions" && request.method === "GET") return await listRecentMoneyDefinitions(context);
+      const moneyActualPath = url.pathname.match(/^\/api\/money\/([^/]+)\/occurrences\/([^/]+)\/actual$/);
+      if (moneyActualPath && request.method === "PUT") return await putMoneyActual(context);
+      if (moneyActualPath && request.method === "DELETE") return await deleteMoneyActual(context);
       const moneyPath = url.pathname.match(/^\/api\/money\/([^/]+)$/);
       if (moneyPath && request.method === "GET") return await getMoney(context);
       if (moneyPath && request.method === "PATCH") return await updateMoney(context);
@@ -421,5 +429,6 @@ export default {
   },
   scheduled(controller: ScheduledController, env: Env, context: ExecutionContext) {
     context.waitUntil(runNotificationScheduler(env, new Date(controller.scheduledTime)));
+    context.waitUntil(runMoneySettlement(env, new Date(controller.scheduledTime)));
   }
 };

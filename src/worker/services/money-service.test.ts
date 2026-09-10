@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { isMoneyDate, moneySummaryFor, projectMoneyItems } from "./money-service";
-import type { MoneyCategory, MoneyItem, RecurrenceRule } from "../types";
+import { isMoneyDate, moneyOccurrenceKey, moneySummaryFor, projectMoneyItems } from "./money-service";
+import { completedMoneyRange } from "./money-settlement-service";
+import type { MoneyCategory, MoneyItem, MoneyOccurrenceOverride, MoneyOccurrenceSettlement, RecurrenceRule } from "../types";
 
 const item = (overrides: Partial<MoneyItem> = {}): MoneyItem => ({
   id: "money-1", userId: "user-1", type: "expense", title: "家賃", categoryId: "category-1", plannedAmount: 70000,
@@ -53,5 +54,37 @@ describe("Money validation and projection primitives", () => {
     expect(entries.filter((entry) => entry.title === "週次").map((entry) => entry.date)).toEqual(["2026-09-01", "2026-09-08", "2026-09-15"]);
     expect(entries.filter((entry) => entry.title === "隔週").map((entry) => entry.date)).toEqual(["2026-09-01", "2026-09-15"]);
     expect(entries.filter((entry) => entry.title === "終了").map((entry) => entry.date)).toEqual(["2026-09-01", "2026-09-02", "2026-09-03"]);
+  });
+
+  it("applies occurrence overrides without changing the next occurrence", () => {
+    const recurring = item({ recurrenceRuleId: "rule-1", date: "2026-09-01" });
+    const key = moneyOccurrenceKey(recurring.id, "2026-09-08");
+    const override: MoneyOccurrenceOverride = { id: "override-1", userId: "user-1", moneyItemId: recurring.id, occurrenceKey: key, overrideType: "modified", patch: { title: "臨時電気", plannedAmount: 5000, date: "2026-09-08" }, createdAt: "", updatedAt: "" };
+    const entries = projectMoneyItems([{ item: recurring, rule: rule({ frequency: "daily", dayOfMonth: null, startsOn: "2026-09-01" }) }], [category], "2026-09-01", "2026-09-15", 1, [override]);
+    expect(entries.find((entry) => entry.occurrenceKey === key)).toMatchObject({ title: "臨時電気", plannedAmount: 5000, effectiveAmount: 5000 });
+    expect(entries.find((entry) => entry.date === "2026-09-15")).toMatchObject({ title: "家賃", plannedAmount: 70000 });
+  });
+
+  it("keeps cancelled occurrences out and gives actual priority over planned", () => {
+    const recurring = item({ recurrenceRuleId: "rule-1", date: "2026-09-01" });
+    const cancelled: MoneyOccurrenceOverride = { id: "cancelled", userId: "user-1", moneyItemId: recurring.id, occurrenceKey: moneyOccurrenceKey(recurring.id, "2026-09-08"), overrideType: "cancelled", patch: null, createdAt: "", updatedAt: "" };
+    const reducedPlan: MoneyOccurrenceOverride = { id: "reduced-plan", userId: "user-1", moneyItemId: recurring.id, occurrenceKey: moneyOccurrenceKey(recurring.id, "2026-09-15"), overrideType: "modified", patch: { plannedAmount: 4000 }, createdAt: "", updatedAt: "" };
+    const actual: MoneyOccurrenceSettlement = { id: "actual", userId: "user-1", moneyItemId: recurring.id, occurrenceKey: moneyOccurrenceKey(recurring.id, "2026-09-15"), status: "actual", amount: 5200, finalizedAt: "", updatedAt: "", estimatedAmount: null };
+    const entries = projectMoneyItems([{ item: recurring, rule: rule({ frequency: "weekly", weekdays: [2], dayOfMonth: null, startsOn: "2026-09-01" }) }], [category], "2026-09-01", "2026-09-15", 1, [cancelled, reducedPlan], [actual], "2026-09");
+    expect(entries.map((entry) => entry.date)).toEqual(["2026-09-01", "2026-09-15"]);
+    expect(entries.find((entry) => entry.date === "2026-09-15")).toMatchObject({ effectiveAmount: 5200, signedAmount: -5200, settlementStatus: "actual", displayState: "実績" });
+  });
+
+  it("uses estimated actual for past months and remains fixed after a base change", () => {
+    const recurring = item({ recurrenceRuleId: "rule-1", date: "2026-09-01", plannedAmount: 12000 });
+    const key = moneyOccurrenceKey(recurring.id, "2026-09-01");
+    const settlement: MoneyOccurrenceSettlement = { id: "estimated", userId: "user-1", moneyItemId: recurring.id, occurrenceKey: key, status: "estimated_actual", amount: 10000, finalizedAt: "", updatedAt: "", estimatedAmount: null };
+    const entries = projectMoneyItems([{ item: recurring, rule: rule({ frequency: "daily", dayOfMonth: null, startsOn: "2026-09-01" }) }], [category], "2026-09-01", "2026-10-01", 1, [], [settlement], "2026-10");
+    expect(entries.find((entry) => entry.date === "2026-09-01")).toMatchObject({ plannedAmount: 12000, effectiveAmount: 10000, settlementStatus: "estimated_actual" });
+  });
+
+  it("uses the user's local month boundary for settlement", () => {
+    expect(completedMoneyRange(new Date("2026-10-01T00:30:00.000Z"), "Asia/Tokyo")).toEqual({ startDate: "0001-01-01", endDate: "2026-09-30", currentMonth: "2026-10" });
+    expect(completedMoneyRange(new Date("2026-09-30T14:59:00.000Z"), "Asia/Tokyo").endDate).toBe("2026-08-31");
   });
 });

@@ -165,3 +165,26 @@ export type MoneyItem = {
 };
 
 export type MoneyItemInput = Pick<MoneyItem, "type" | "title" | "categoryId" | "plannedAmount" | "date" | "memo">;
+export type MoneyOccurrenceOverrideType = "modified" | "cancelled";
+export type MoneyOccurrenceOverride = {
+  id: string;
+  userId: string;
+  moneyItemId: string;
+  occurrenceKey: string;
+  overrideType: MoneyOccurrenceOverrideType;
+  patch: Partial<MoneyItemInput> | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type MoneySettlementStatus = "actual" | "estimated_actual";
+export type MoneyOccurrenceSettlement = {
+  id: string;
+  userId: string;
+  moneyItemId: string;
+  occurrenceKey: string;
+  status: MoneySettlementStatus;
+  amount: number;
+  finalizedAt: string;
+  updatedAt: string;
+  estimatedAmount: number | null;
+};
