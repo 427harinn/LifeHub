@@ -79,7 +79,7 @@ export function BottomSheet({ className, headerActions, open, title, onClose, ch
     dragStart.current = null;
     dragOffsetRef.current = 0;
     setDragging(false);
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
     setDragOffset(0);
     if (shouldClose) onClose();
   };
