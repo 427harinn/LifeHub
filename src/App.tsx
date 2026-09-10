@@ -567,10 +567,10 @@ function MoneyPage({ month, money, onMonthChange, onEdit, onMoneyChanged }: { mo
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [openActionRow, setOpenActionRow] = useState<string | null>(null);
   const [actualItem, setActualItem] = useState<MoneyItem | null>(null);
-  const { clickCapture, dragging, offset, pointerCancel, pointerDown, pointerMove, pointerUp } = useHorizontalSwipe((direction) => onMonthChange(shiftMonth(month, direction === "next" ? 1 : -1)), (target) => target instanceof Element && Boolean(target.closest(".event-swipe-row")));
+  const { clickCapture, dragging, offset, pointerCancel, pointerDown, pointerMove, pointerUp } = useHorizontalSwipe((direction) => onMonthChange(shiftMonth(month, direction === "next" ? 1 : -1)), (target) => target instanceof Element && Boolean(target.closest(".event-swipe-row, .bottom-sheet-layer, .mobile-nav")));
   const toggleRow = (key: string) => setOpenRow((current) => current === key ? null : key);
   const handleMainTap = (key: string) => { if (openActionRow === key) { setOpenActionRow(null); return; } toggleRow(key); };
-  return <main className="screen-page money-page" onClickCapture={clickCapture} onPointerCancel={pointerCancel} onPointerDownCapture={(event) => { pointerDown(event); if (openRow && !(event.target instanceof Element && event.target.closest(".event-swipe-row"))) setOpenRow(null); }} onPointerMoveCapture={pointerMove} onPointerUpCapture={pointerUp}>
+  return <main className="screen-page money-page" onClickCapture={clickCapture} onPointerCancel={pointerCancel} onPointerDownCapture={(event) => { pointerDown(event); if (openRow && !(event.target instanceof Element && event.target.closest(".event-swipe-row, .bottom-sheet-layer"))) setOpenRow(null); }} onPointerMoveCapture={pointerMove} onPointerUpCapture={pointerUp}>
     <header className="screen-header"><h1>お金</h1><span className="daily-date-label">{formatDate(todayDateKey())}</span></header>
     <div className={`money-month-body${dragging ? " is-swipe-dragging" : ""}`} style={{ "--money-swipe-offset": `${offset}px` } as CSSProperties}>
       <div className="money-month-nav"><button aria-label="前の月" onClick={() => onMonthChange(shiftMonth(month, -1))} type="button">‹</button><h2>{formatMonth(month)}</h2><button aria-label="次の月" onClick={() => onMonthChange(shiftMonth(month, 1))} type="button">›</button></div>
