@@ -57,13 +57,11 @@ test("period form states and Calendar/Daily/Date Sheet evidence", async ({ page 
   await page.screenshot({ path: path.join(evidenceDir, "period-this-month-monthly-form-390x844.png") });
   await page.getByRole("button", { name: "実施時期" }).click();
   await page.getByRole("dialog", { name: "実施時期" }).getByRole("button", { name: "日付範囲を指定" }).click();
-  await expect(page.getByRole("button", { name: /^期間/ })).toBeVisible();
+  await expect(page.getByLabel("開始日")).toBeVisible();
+  await expect(page.getByLabel("終了日")).toBeVisible();
   await expect(page.getByRole("button", { name: /^繰り返し$/ })).toHaveCount(0);
-  await page.getByRole("button", { name: /^期間/ }).click();
-  await page.getByRole("button", { name: "終了日を追加" }).click();
   await page.getByLabel("終了日").fill(shiftDate(today(), 2));
-  await page.getByRole("button", { name: "この日付にする" }).click();
-  await expect(page.getByRole("button", { name: /^期間/ })).toContainText("〜");
+  await expect(page.getByLabel("終了日")).toHaveValue(shiftDate(today(), 2));
   await page.screenshot({ path: path.join(evidenceDir, "period-custom-range-390x844.png") });
   await page.getByLabel("タイトル").fill("今週中UI");
   await page.getByRole("button", { name: "予定の種類" }).click();

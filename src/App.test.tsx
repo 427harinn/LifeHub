@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
 import type { Event } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
@@ -109,6 +109,15 @@ describe("LifeHub M2 shell", () => {
 });
 
 describe("EventForm timed start defaults", () => {
+  it("uses direct date inputs and always-visible memo without duplicate headings", () => {
+    renderEventForm();
+    expect(screen.getByLabelText("日付")).toHaveValue("2026-09-10");
+    expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-10");
+    expect(screen.getByLabelText("メモ")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "予定の種類" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "日時" })).not.toBeInTheDocument();
+  });
+
   it("derives a one-hour end time and keeps it in the same day", () => {
     expect(defaultEndTimeForStart("09:00")).toBe("10:00");
     expect(defaultEndTimeForStart("14:30")).toBe("15:30");
@@ -183,8 +192,9 @@ describe("Calendar adaptive row allocation", () => {
     expect(screen.queryByRole("button", { name: /^日付$/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "実施時期" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "実施時期" })).getByRole("button", { name: "日付範囲を指定" }));
-    expect(screen.getByRole("button", { name: /^期間/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^開始日/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^期間/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("開始日")).toHaveValue("2026-09-10");
+    expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-10");
     expect(screen.queryByRole("button", { name: /^繰り返し$/ })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "同日範囲" } });
     fireEvent.click(screen.getByRole("button", { name: "登録" }));
@@ -286,21 +296,36 @@ describe("MoneyForm settlement mode", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
     renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    expect(screen.getByRole("button", { name: "登録内容" })).toHaveTextContent("実績");
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("確定");
     fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
-    expect(screen.getByRole("button", { name: "登録内容" })).toHaveTextContent("予定");
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("予定");
+  });
+
+  it("uses the shared direct date/memo grammar and terminal choices have no chevron", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    expect(screen.getByLabelText("日付")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("メモ")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "お金の種類" }));
+    const typeSheet = screen.getByRole("dialog", { name: "種類" });
+    expect(within(typeSheet).getByRole("button", { name: "支出" }).querySelector(".form-row__chevron")).toBeNull();
+    fireEvent.click(within(typeSheet).getByRole("button", { name: "支出" }));
+    fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
+    const settlementSheet = screen.getByRole("dialog", { name: "金額の状態" });
+    expect(within(settlementSheet).getByRole("button", { name: "確定" }).querySelector(".form-row__chevron")).toBeNull();
   });
 
   it("keeps a manually selected mode when recurrence changes", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
     renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    fireEvent.click(screen.getByRole("button", { name: "登録内容" }));
-    fireEvent.click(within(screen.getByRole("dialog", { name: "登録内容" })).getByRole("button", { name: "予定" }));
+    fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "金額の状態" })).getByRole("button", { name: "予定" }));
     fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
-    expect(screen.getByRole("button", { name: "登録内容" })).toHaveTextContent("予定");
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("予定");
   });
 
   it("creates an actual settlement for actual registration and none for planned registration", async () => {
@@ -313,7 +338,7 @@ describe("MoneyForm settlement mode", () => {
     });
     const firstForm = renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "ランチ" } });
+    fireEvent.change(screen.getByLabelText("項目名"), { target: { value: "ランチ" } });
     fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
     fireEvent.click(screen.getByRole("button", { name: "登録" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => requestPath(input).includes("/actual") && init?.method === "PUT")).toBe(true));
@@ -321,11 +346,22 @@ describe("MoneyForm settlement mode", () => {
     firstForm.unmount();
     renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    fireEvent.click(screen.getByRole("button", { name: "登録内容" }));
-    fireEvent.click(within(screen.getByRole("dialog", { name: "登録内容" })).getByRole("button", { name: "予定" }));
-    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "ランチ予定" } });
+    fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "金額の状態" })).getByRole("button", { name: "予定" }));
+    fireEvent.change(screen.getByLabelText("項目名"), { target: { value: "ランチ予定" } });
     fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
     fireEvent.click(screen.getByRole("button", { name: "登録" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/actual"))).toBe(false));
+  });
+});
+
+describe("Money status check grammar", () => {
+  it("matches the HouseToDo empty and final checked states", () => {
+    const { rerender } = render(<MoneyStatusIcon />);
+    expect(screen.getByRole("img", { name: "予定" })).toHaveClass("money-status-icon");
+    expect(screen.getByRole("img", { name: "予定" }).querySelector("svg")).toBeNull();
+    rerender(<MoneyStatusIcon status="actual" />);
+    expect(screen.getByRole("img", { name: "確定" })).toHaveClass("money-status-icon--settled");
+    expect(screen.getByRole("img", { name: "確定" }).querySelector("svg")).toBeInTheDocument();
   });
 });

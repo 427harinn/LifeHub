@@ -267,7 +267,7 @@ test("Calendar and Daily add preserve returnTo date", async ({ page }) => {
   await expect(lowDensitySheet).toBeVisible();
   await lowDensitySheet.getByRole("button", { name: "当日に追加" }).click();
   await lowDensitySheet.getByRole("menu", { name: "この日に追加" }).getByRole("menuitem", { name: "家" }).click();
-  await expect(page.locator(".event-form").getByRole("button", { name: /^日付/ })).toContainText(`${dayNumber}`);
+  await expect(page.locator(".event-form").getByLabel("日付")).toHaveValue(today);
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
 
@@ -275,7 +275,7 @@ test("Calendar and Daily add preserve returnTo date", async ({ page }) => {
   await page.getByRole("dialog").getByRole("button", { name: "1日の詳細を見る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await openAdd(page, "仕事");
-  await expect(page.locator(".event-form").getByRole("button", { name: /^日付/ })).toContainText(`${dayNumber}`);
+  await expect(page.locator(".event-form").getByLabel("日付")).toHaveValue(today);
   const form = page.locator(".event-form");
   for (const option of ["予定の種類", "繰り返し", "通知"]) {
     await form.getByRole("button", { name: option, exact: true }).click();

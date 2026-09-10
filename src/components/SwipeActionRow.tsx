@@ -51,7 +51,7 @@ export function SwipeActionRow({ ariaLabel, actions, children, expandedContent, 
     } else setOffset(isOpen ? -actionWidth : 0);
   };
   return <article aria-label={ariaLabel} className={`event-swipe-row${isOpen ? " is-actions-open" : ""}${dragging ? " is-dragging" : ""}`} onClickCapture={(event) => { if (!suppressClick.current) return; event.preventDefault(); event.stopPropagation(); suppressClick.current = false; }} onPointerCancel={() => { start.current = null; setDragging(false); setOffset(isOpen ? -actionWidth : 0); }} onPointerDown={(event) => { if (event.target instanceof Element && event.target.closest(".event-swipe-row__actions")) return; onOtherRowTouch?.(); start.current = { x: event.clientX, y: event.clientY, axis: "pending" }; }} onPointerMove={move} onPointerUp={end}>
-    <div className="event-swipe-row__content" style={{ "--event-swipe-offset": `${dragging ? offset : 0}px`, width: dragging ? "100%" : isOpen ? `calc(100% - ${actionWidth}px)` : "100%" } as CSSProperties} onClick={() => { if (!isOpen) onMainClick?.(); }}>
+    <div className="event-swipe-row__content" style={{ "--event-swipe-offset": `${dragging ? offset : isOpen ? -actionWidth : 0}px` } as CSSProperties} onClick={() => { if (!isOpen) onMainClick?.(); }}>
       {children}
     </div>
     {isOpen ? <div aria-label={`${ariaLabel}の操作メニュー`} className="event-swipe-row__actions" style={{ width: `${actionWidth}px` }}>{actions.map((action) => <button className={action.variant === "danger" ? "swipe-action--danger" : ""} key={action.label} onClick={() => { setOpenState(false); setOffset(0); action.onClick(); }} onPointerDown={(event) => event.stopPropagation()} type="button">{action.label}</button>)}</div> : null}

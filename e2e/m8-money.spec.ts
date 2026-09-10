@@ -19,14 +19,12 @@ async function register(page: import("@playwright/test").Page) {
 }
 
 async function chooseDate(page: import("@playwright/test").Page, date: string) {
-  await page.getByRole("button", { name: "お金の日付" }).click();
-  await page.getByRole("dialog", { name: "日付" }).locator("#money-sheet-date").fill(date);
-  await page.getByRole("dialog", { name: "日付" }).getByRole("button", { name: "この日付にする" }).click();
+  await page.getByLabel("日付").fill(date);
 }
 
 async function fillMoney(page: import("@playwright/test").Page, type: "expense" | "income", title: string, amount: string, date: string) {
   if (type === "income") { await page.getByRole("button", { name: "お金の種類" }).click(); await page.getByRole("dialog", { name: "種類" }).getByRole("button", { name: "収入" }).click(); }
-  await page.getByLabel("タイトル").fill(title);
+  await page.getByLabel("項目名").fill(title);
   await page.getByLabel("金額").fill(amount);
   await chooseDate(page, date);
 }
