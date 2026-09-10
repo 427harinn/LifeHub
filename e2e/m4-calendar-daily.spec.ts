@@ -7,7 +7,7 @@ test.use({ viewport: { width: 390, height: 844 }, video: "on" });
 const evidenceDir = path.resolve("artifacts/evidence/m4");
 const password = "correct-horse-battery";
 const uniqueEmail = () => `m4-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
-const isoToday = () => new Date().toISOString().slice(0, 10);
+const isoToday = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const shiftDate = (date: string, days: number) => { const value = new Date(`${date}T00:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); };
 const dateNumber = (date: string) => Number(date.slice(-2));
 const weekdayLabel = (date: string) => ["日", "月", "火", "水", "木", "金", "土"][new Date(`${date}T00:00:00Z`).getUTCDay()];
@@ -197,7 +197,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(page.locator(".daily-date-label")).toHaveText(displayDate(today));
   await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-swipe-row__main")).toBeVisible();
   await page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-swipe-row__main").click();
-  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-inline-detail")).toContainText(`${displayDate(today)}〜${displayDate(shiftDate(today, 5))}`);
+  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-inline-detail")).toContainText(`${displayDate(today)}〜${displayDate(shiftDate(today, 3))}`);
   await page.screenshot({ path: path.join(evidenceDir, "daily-period-week-390x844.png") });
   await page.locator(".daily-page .event-swipe-row").filter({ hasText: "今月中：資料をまとめる" }).first().locator(".event-swipe-row__main").click();
   await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今月中：資料をまとめる" }).first().locator(".event-inline-detail")).toContainText(`${displayDate(today)}〜${displayDate(`${today.slice(0, 7)}-30`)}`);
