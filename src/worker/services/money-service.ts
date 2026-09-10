@@ -28,6 +28,7 @@ export const parseMoneyOccurrenceKey = (value: string, moneyItemId: string) => {
   const date = value.slice(prefix.length);
   return isMoneyDate(date) ? date : null;
 };
+export const moneyFollowingBoundary = (occurrenceKey: string, moneyItemId: string) => parseMoneyOccurrenceKey(occurrenceKey, moneyItemId);
 
 const recurrenceInput = (rule: RecurrenceRule | null): RecurrenceRuleInput | null => rule ? { frequency: rule.frequency, interval: rule.interval, weekdays: rule.weekdays, dayOfMonth: rule.dayOfMonth, startsOn: rule.startsOn, endsOn: rule.endsOn } : null;
 const amountFor = (item: Pick<MoneyItem, "type" | "plannedAmount"> & Partial<Pick<MoneyOccurrence, "effectiveAmount" | "signedAmount">>) => item.effectiveAmount ?? Math.abs(item.signedAmount ?? item.plannedAmount);
@@ -77,7 +78,14 @@ export const projectMoneyItems = (definitions: MoneyProjectionDefinition[], cate
       if (override.overrideType !== "modified" || !originalDate || !movedDate || movedDate === originalDate || generatedKeys.has(override.occurrenceKey) || !isScheduledDate(item, rule, originalDate, weekStartsOn)) return [];
       const projected = projectOne(item, rule, originalDate, override); return projected ? [projected] : [];
     });
-    return [...generated, ...moved];
+    const historicalSettlements = settlements.filter((settlement) => settlement.moneyItemId === item.id && settlement.status && !generatedKeys.has(settlement.occurrenceKey)).flatMap((settlement) => {
+      const originalDate = moneyFollowingBoundary(settlement.occurrenceKey, item.id);
+      if (!originalDate || originalDate.slice(0, 7) >= currentMonth || originalDate < startDate || originalDate > endDate) return [];
+      const override = overrideByKey.get(settlement.occurrenceKey);
+      const projected = projectOne(item, rule, originalDate, override);
+      return projected ? [projected] : [];
+    });
+    return [...generated, ...moved, ...historicalSettlements];
   }).sort((left, right) => `${left.date}:${left.id}:${left.occurrenceKey}`.localeCompare(`${right.date}:${right.id}:${right.occurrenceKey}`));
 };
 
@@ -109,24 +117,24 @@ export class MoneyService {
   private async base(userId: string, id: string) { const item = await this.money.getById(userId, id); if (!item) throw notFoundError(); const rule = item.recurrenceRuleId ? await this.recurrences.getById(userId, item.recurrenceRuleId) : null; return { item, rule }; }
   private async targetOccurrence(userId: string, item: MoneyItem, rule: RecurrenceRule | null, occurrenceKey: string | undefined, allowSingle = true) {
     if (!occurrenceKey) throw validationError({ occurrenceKey: "occurrenceKeyが必要です。" });
-    const originalDate = parseMoneyOccurrenceKey(occurrenceKey, item.id);
+    const originalDate = moneyFollowingBoundary(occurrenceKey, item.id);
     if (!originalDate || (!rule && !allowSingle) || !isMoneyOccurrenceDate(item, rule, originalDate)) throw notFoundError();
     const override = await this.overrides.get(userId, item.id, occurrenceKey); if (override?.overrideType === "cancelled") throw notFoundError();
     const finalDate = override?.patch?.date ?? originalDate; const range = { startDate: finalDate < originalDate ? finalDate : originalDate, endDate: finalDate > originalDate ? finalDate : originalDate };
-    const projected = (await Promise.all([1, 0].map((weekStartsOn) => this.project(userId, range.startDate, range.endDate, weekStartsOn)))).flatMap((result) => result.occurrences); const occurrence = projected.find((entry) => entry.occurrenceKey === occurrenceKey); if (!occurrence) throw notFoundError(); return occurrence;
+    const projected = (await Promise.all([1, 0].map((weekStartsOn) => this.project(userId, range.startDate, range.endDate, weekStartsOn)))).flatMap((result) => result.occurrences); const occurrence = projected.find((entry) => entry.occurrenceKey === occurrenceKey); if (!occurrence) throw notFoundError(); return { occurrence, originalDate };
   }
   async update(userId: string, id: string, body: MoneyCommand, now: string) {
     const { item, rule } = await this.base(userId, id); const scope = body.scope ?? "series";
     if (scope === "occurrence") {
       if (!rule) throw validationError({ scope: "繰り返し項目ではありません。" });
-      const occurrence = await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); const prepared = await this.prepareInput(userId, { ...occurrence, ...body }, undefined, false);
+      const { occurrence } = await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); const prepared = await this.prepareInput(userId, { ...occurrence, ...body }, undefined, false);
       await this.overrides.upsert(userId, id, body.occurrenceKey as string, "modified", prepared.input, now); return { ...occurrence, ...prepared.input, occurrenceKey: body.occurrenceKey, recurrence: rule };
     }
     const recurrence = body.recurrence === undefined ? recurrenceInput(rule) : body.recurrence; const prepared = await this.prepareInput(userId, body, { ...item, recurrence: rule }); const normalized = normalizeRecurrenceInput(recurrence, prepared.input.date);
     if (scope === "following") {
       if (!rule || !body.occurrenceKey) throw validationError({ scope: "繰り返し項目の対象範囲が不正です。" });
-      const occurrence = await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); await this.recurrences.update(userId, rule.id, { ...rule, endsOn: shiftDate(occurrence.date, -1), weekdays: rule.weekdays }, now);
-      const newRule = normalized ? await this.recurrences.create(userId, { ...normalized, startsOn: occurrence.date }, now) : null; const created = await this.money.create(userId, { ...prepared.input, date: occurrence.date }, newRule?.id ?? null, now); await this.copyForwardData(userId, id, created.id, occurrence.date, now); return this.withRecurrence(userId, created);
+      const { originalDate } = await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); await this.recurrences.update(userId, rule.id, { ...rule, endsOn: shiftDate(originalDate, -1), weekdays: rule.weekdays }, now);
+      const newRule = normalized ? await this.recurrences.create(userId, { ...normalized, startsOn: originalDate }, now) : null; const created = await this.money.create(userId, { ...prepared.input, date: originalDate }, newRule?.id ?? null, now); await this.copyForwardData(userId, id, created.id, originalDate, now); return this.withRecurrence(userId, created);
     }
     let ruleId = rule?.id ?? null; if (normalized) { if (rule) await this.recurrences.update(userId, rule.id, normalized, now); else ruleId = (await this.recurrences.create(userId, normalized, now)).id; } else ruleId = null;
     const updated = await this.money.update(userId, id, prepared.input, ruleId, now); if (!updated) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); return this.withRecurrence(userId, updated);
@@ -139,11 +147,11 @@ export class MoneyService {
   async delete(userId: string, id: string, body: Pick<MoneyCommand, "scope" | "occurrenceKey"> = {}, now: string): Promise<void> {
     const { item, rule } = await this.base(userId, id); const scope = body.scope ?? "series";
     if (scope === "occurrence") { if (!rule) throw validationError({ scope: "繰り返し項目ではありません。" }); await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); await this.overrides.upsert(userId, id, body.occurrenceKey as string, "cancelled", null, now); return; }
-    if (scope === "following") { if (!rule || !body.occurrenceKey) throw validationError({ scope: "繰り返し項目の対象範囲が不正です。" }); const occurrence = await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); await this.recurrences.update(userId, rule.id, { ...rule, endsOn: shiftDate(occurrence.date, -1), weekdays: rule.weekdays }, now); return; }
+    if (scope === "following") { if (!rule || !body.occurrenceKey) throw validationError({ scope: "繰り返し項目の対象範囲が不正です。" }); const { originalDate } = await this.targetOccurrence(userId, item, rule, body.occurrenceKey, false); await this.recurrences.update(userId, rule.id, { ...rule, endsOn: shiftDate(originalDate, -1), weekdays: rule.weekdays }, now); return; }
     if (!await this.money.softDelete(userId, id, now)) throw notFoundError();
   }
-  async setActual(userId: string, id: string, occurrenceKey: string, amount: number, now: string) { if (!Number.isInteger(amount) || amount <= 0) throw validationError({ amount: "実際の金額は1円以上の整数で入力してください。" }); const { item, rule } = await this.base(userId, id); const occurrence = await this.targetOccurrence(userId, item, rule, occurrenceKey); return this.settlements.upsert(userId, id, occurrence.occurrenceKey, "actual", amount, now); }
-  async deleteActual(userId: string, id: string, occurrenceKey: string, now: string) { const { item, rule } = await this.base(userId, id); const occurrence = await this.targetOccurrence(userId, item, rule, occurrenceKey); await this.settlements.deleteActual(userId, id, occurrence.occurrenceKey, now); }
+  async setActual(userId: string, id: string, occurrenceKey: string, amount: number, now: string) { if (!Number.isInteger(amount) || amount <= 0) throw validationError({ amount: "実際の金額は1円以上の整数で入力してください。" }); const { item, rule } = await this.base(userId, id); const { occurrence } = await this.targetOccurrence(userId, item, rule, occurrenceKey); return this.settlements.upsert(userId, id, occurrence.occurrenceKey, "actual", amount, now); }
+  async deleteActual(userId: string, id: string, occurrenceKey: string, now: string) { const { item, rule } = await this.base(userId, id); const { occurrence } = await this.targetOccurrence(userId, item, rule, occurrenceKey); await this.settlements.deleteActual(userId, id, occurrence.occurrenceKey, now); }
   async project(userId: string, startDate: string, endDate: string, weekStartsOn = 1, now = new Date(), timezone = "UTC"): Promise<MoneyProjection> {
     const [items, categories, settlementRows] = await Promise.all([this.money.listForProjection(userId, startDate, endDate), this.categories.list(userId, undefined, true), this.settlements.listForUser(userId)]);
     const definitions = await Promise.all(items.map(async (item) => ({ item, rule: item.recurrenceRuleId ? await this.recurrences.getById(userId, item.recurrenceRuleId) : null, overrides: await this.overrides.listForItem(userId, item.id) })));

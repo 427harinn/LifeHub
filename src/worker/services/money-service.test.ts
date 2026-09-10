@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isMoneyDate, moneyOccurrenceKey, moneySummaryFor, projectMoneyItems } from "./money-service";
+import { isMoneyDate, moneyFollowingBoundary, moneyOccurrenceKey, moneySummaryFor, projectMoneyItems } from "./money-service";
 import { completedMoneyRange } from "./money-settlement-service";
+import { MoneyCategoryRepository } from "../repositories/money-category-repository";
+import { MoneyOccurrenceOverrideRepository } from "../repositories/money-occurrence-override-repository";
+import { MoneyOccurrenceSettlementRepository } from "../repositories/money-occurrence-settlement-repository";
+import { MoneyRepository } from "../repositories/money-repository";
+import { RecurrenceRepository } from "../repositories/recurrence-repository";
+import { MoneyService } from "./money-service";
 import type { MoneyCategory, MoneyItem, MoneyOccurrenceOverride, MoneyOccurrenceSettlement, RecurrenceRule } from "../types";
 
 const item = (overrides: Partial<MoneyItem> = {}): MoneyItem => ({
@@ -81,6 +87,59 @@ describe("Money validation and projection primitives", () => {
     const settlement: MoneyOccurrenceSettlement = { id: "estimated", userId: "user-1", moneyItemId: recurring.id, occurrenceKey: key, status: "estimated_actual", amount: 10000, finalizedAt: "", updatedAt: "", estimatedAmount: null };
     const entries = projectMoneyItems([{ item: recurring, rule: rule({ frequency: "daily", dayOfMonth: null, startsOn: "2026-09-01" }) }], [category], "2026-09-01", "2026-10-01", 1, [], [settlement], "2026-10");
     expect(entries.find((entry) => entry.date === "2026-09-01")).toMatchObject({ plannedAmount: 12000, effectiveAmount: 10000, settlementStatus: "estimated_actual" });
+  });
+
+  it("restores a settled past occurrence after the series recurrence date changes", () => {
+    const rent = item({ id: "rent", date: "2026-09-09", plannedAmount: 75000, recurrenceRuleId: "rule-rent" });
+    const settledKey = moneyOccurrenceKey(rent.id, "2026-09-09");
+    const settlement: MoneyOccurrenceSettlement = { id: "rent-settlement", userId: "user-1", moneyItemId: rent.id, occurrenceKey: settledKey, status: "actual", amount: 70000, finalizedAt: "2026-09-10T00:00:00.000Z", updatedAt: "", estimatedAmount: null };
+    const entries = projectMoneyItems([{ item: rent, rule: rule({ id: "rule-rent", dayOfMonth: 15, startsOn: "2026-09-09" }) }], [category], "2026-09-01", "2026-10-31", 1, [], [settlement], "2026-10");
+    expect(entries.find((entry) => entry.occurrenceKey === settledKey)).toMatchObject({ date: "2026-09-09", effectiveAmount: 70000, settlementStatus: "actual" });
+    expect(entries.find((entry) => entry.date === "2026-10-15")).toMatchObject({ plannedAmount: 75000, effectiveAmount: 75000, settlementStatus: null });
+  });
+
+  it("uses the original occurrence key date as a following split boundary", () => {
+    const key = moneyOccurrenceKey("rent", "2026-09-10");
+    expect(moneyFollowingBoundary(key, "rent")).toBe("2026-09-10");
+    expect(moneyFollowingBoundary(key, "other-rent")).toBeNull();
+  });
+
+  it("splits a moved occurrence at its original key date and carries its override forward", async () => {
+    const movedItem = item({ id: "moved-rent", date: "2026-09-10", plannedAmount: 70000, recurrenceRuleId: "moved-rule" });
+    const movedRule = rule({ id: "moved-rule", frequency: "daily", dayOfMonth: null, startsOn: "2026-09-10" });
+    const movedKey = moneyOccurrenceKey(movedItem.id, "2026-09-10");
+    const movedOverride: MoneyOccurrenceOverride = { id: "moved-override", userId: "user-1", moneyItemId: movedItem.id, occurrenceKey: movedKey, overrideType: "modified", patch: { date: "2026-09-12", plannedAmount: 70000 }, createdAt: "", updatedAt: "" };
+    const movedSettlement: MoneyOccurrenceSettlement = { id: "moved-settlement", userId: "user-1", moneyItemId: movedItem.id, occurrenceKey: movedKey, status: "actual", amount: 68000, finalizedAt: "", updatedAt: "", estimatedAmount: null };
+    const money = Object.create(MoneyRepository.prototype) as MoneyRepository;
+    const categories = Object.create(MoneyCategoryRepository.prototype) as MoneyCategoryRepository;
+    const recurrences = Object.create(RecurrenceRepository.prototype) as RecurrenceRepository;
+    const overrides = Object.create(MoneyOccurrenceOverrideRepository.prototype) as MoneyOccurrenceOverrideRepository;
+    const settlements = Object.create(MoneyOccurrenceSettlementRepository.prototype) as MoneyOccurrenceSettlementRepository;
+    let updatedRule: RecurrenceRule | null = null;
+    let createdRule: RecurrenceRule | null = null;
+    let createdItem: MoneyItem | null = null;
+    const copiedOverrides: Array<{ moneyItemId: string; occurrenceKey: string; patch: Partial<MoneyItem> | null }> = [];
+    const copiedSettlements: Array<{ moneyItemId: string; occurrenceKey: string; status: string; amount: number }> = [];
+    money.getById = () => Promise.resolve(movedItem);
+    money.listForProjection = () => Promise.resolve([movedItem]);
+    money.create = (_userId, input, recurrenceRuleId, now) => { createdItem = { ...movedItem, ...input, id: "split-rent", recurrenceRuleId, createdAt: now, updatedAt: now }; return Promise.resolve(createdItem); };
+    categories.getById = () => Promise.resolve(category);
+    categories.list = () => Promise.resolve([category]);
+    recurrences.getById = () => Promise.resolve(movedRule);
+    recurrences.update = (_userId, _id, input, now) => { updatedRule = { ...movedRule, ...input, updatedAt: now }; return Promise.resolve(updatedRule); };
+    recurrences.create = (_userId, input, now) => { createdRule = { ...movedRule, ...input, id: "split-rule", createdAt: now, updatedAt: now }; return Promise.resolve(createdRule); };
+    overrides.get = () => Promise.resolve(movedOverride);
+    overrides.listForItem = () => Promise.resolve([movedOverride]);
+    overrides.upsert = (_userId, moneyItemId, occurrenceKey, _type, patch) => { copiedOverrides.push({ moneyItemId, occurrenceKey, patch }); return Promise.resolve(movedOverride); };
+    settlements.listForUser = () => Promise.resolve([movedSettlement]);
+    settlements.upsert = (_userId, moneyItemId, occurrenceKey, status, amount) => { copiedSettlements.push({ moneyItemId, occurrenceKey, status, amount }); return Promise.resolve({ ...movedSettlement, moneyItemId, occurrenceKey, status, amount }); };
+    const service = new MoneyService(money, categories, recurrences, overrides, settlements);
+    await service.update("user-1", movedItem.id, { scope: "following", occurrenceKey: movedKey, title: "家賃変更", plannedAmount: 75000, categoryId: category.id, date: "2026-09-12", memo: null, recurrence: { frequency: "daily", interval: 1, weekdays: null, dayOfMonth: null, startsOn: "2026-09-12", endsOn: null } }, "2026-09-01T00:00:00.000Z");
+    expect(updatedRule).toMatchObject({ endsOn: "2026-09-09" });
+    expect(createdRule).toMatchObject({ startsOn: "2026-09-10" });
+    expect(createdItem).toMatchObject({ id: "split-rent", date: "2026-09-10", plannedAmount: 75000 });
+    expect(copiedOverrides).toEqual([{ moneyItemId: "split-rent", occurrenceKey: moneyOccurrenceKey("split-rent", "2026-09-10"), patch: movedOverride.patch }]);
+    expect(copiedSettlements).toEqual([{ moneyItemId: "split-rent", occurrenceKey: moneyOccurrenceKey("split-rent", "2026-09-10"), status: "actual", amount: 68000 }]);
   });
 
   it("uses the user's local month boundary for settlement", () => {
