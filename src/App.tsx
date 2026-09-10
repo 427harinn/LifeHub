@@ -83,6 +83,7 @@ function useHorizontalSwipe(onSwipe: (direction: "previous" | "next") => void, s
     if (shouldIgnore?.(pointerEvent.target)) return;
     gesture.current = { axis: "pending", x: pointerEvent.clientX, y: pointerEvent.clientY };
     suppressClick.current = false;
+    pointerEvent.currentTarget.setPointerCapture?.(pointerEvent.pointerId);
   };
   const pointerMove = (pointerEvent: ReactPointerEvent<HTMLElement>) => {
     const current = gesture.current;
@@ -91,9 +92,8 @@ function useHorizontalSwipe(onSwipe: (direction: "previous" | "next") => void, s
     const dy = pointerEvent.clientY - current.y;
     if (current.axis === "pending") {
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
-      if (Math.abs(dx) <= Math.abs(dy) + 4) { current.axis = "vertical"; setDragging(false); return; }
+      if (Math.abs(dx) <= Math.abs(dy) + 4) { current.axis = "vertical"; setDragging(false); pointerEvent.currentTarget.releasePointerCapture?.(pointerEvent.pointerId); return; }
       current.axis = "horizontal";
-      pointerEvent.currentTarget.setPointerCapture?.(pointerEvent.pointerId);
       setDragging(true);
     }
     if (current.axis === "horizontal") { pointerEvent.preventDefault(); setOffset(Math.max(-96, Math.min(96, dx))); }
