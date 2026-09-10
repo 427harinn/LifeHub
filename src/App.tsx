@@ -468,7 +468,7 @@ export function MoneyStatusIcon({ status }: { status?: MoneyItem["settlementStat
   return <span aria-label={settled ? "確定" : "予定"} className={`money-status-icon${settled ? " money-status-icon--settled" : ""}`} role="img">{settled ? <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg> : null}</span>;
 }
 
-function MoneyInlineDetail({ item, onActual, id }: { item: MoneyItem; onActual: () => void; id?: string }) {
+export function MoneyInlineDetail({ item, onActual, id }: { item: MoneyItem; onActual: () => void; id?: string }) {
   const plannedAmount = item.effectivePlannedAmount ?? item.plannedAmount;
   const actualAmount = item.settlementStatus ? (item.effectiveAmount ?? item.plannedAmount) : null;
   return <div className="event-inline-detail money-inline-detail" id={id}>

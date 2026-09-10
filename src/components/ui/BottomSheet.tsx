@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 
 type BottomSheetProps = {
@@ -83,8 +84,8 @@ export function BottomSheet({ className, headerActions, open, title, onClose, ch
     if (shouldClose) onClose();
   };
 
-  return (
-    <div className="bottom-sheet-layer">
+  return createPortal((
+    <div className="bottom-sheet-layer" onClick={(event) => event.stopPropagation()}>
       <button aria-label="背景を閉じる" className="bottom-sheet__backdrop" onClick={onClose} type="button" />
       <section
         aria-labelledby={titleId}
@@ -106,5 +107,5 @@ export function BottomSheet({ className, headerActions, open, title, onClose, ch
         <div className="bottom-sheet__content">{children}</div>
       </section>
     </div>
-  );
+  ), document.body);
 }

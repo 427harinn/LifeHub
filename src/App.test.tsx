@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
-import type { Event } from "./api/client";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import type { Event, MoneyItem } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
@@ -363,5 +363,11 @@ describe("Money status check grammar", () => {
     rerender(<MoneyStatusIcon status="actual" />);
     expect(screen.getByRole("img", { name: "確定" })).toHaveClass("money-status-icon--settled");
     expect(screen.getByRole("img", { name: "確定" }).querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("uses a full-width primary action in inline Money detail", () => {
+    const item = { id: "money-1", userId: "user-1", type: "expense", title: "電気代", categoryId: "cat-1", plannedAmount: 5000, date: "2026-09-10", time: null, recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "", settlementStatus: null } as MoneyItem;
+    render(<MoneyInlineDetail item={item} onActual={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "金額を確定" })).toHaveClass("money-inline-detail__action");
   });
 });
