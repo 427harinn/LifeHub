@@ -27,18 +27,22 @@ async function chooseDate(page: import("@playwright/test").Page, date: string) {
 async function swipeLeft(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator, yRatio = 0.5) {
   const box = await locator.boundingBox();
   if (!box) throw new Error("swipe target is not visible");
-  await page.mouse.move(box.x + box.width - 24, box.y + box.height * yRatio);
+  const viewportHeight = page.viewportSize()?.height ?? 844;
+  const y = Math.min(box.y + box.height * yRatio, viewportHeight - 80);
+  await page.mouse.move(box.x + box.width - 56, y);
   await page.mouse.down();
-  await page.mouse.move(box.x + 24, box.y + box.height * yRatio, { steps: 8 });
+  await page.mouse.move(box.x + 56, y, { steps: 8 });
   await page.mouse.up();
 }
 
 async function swipeRight(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator, yRatio = 0.5) {
   const box = await locator.boundingBox();
   if (!box) throw new Error("swipe target is not visible");
-  await page.mouse.move(box.x + 24, box.y + box.height * yRatio);
+  const viewportHeight = page.viewportSize()?.height ?? 844;
+  const y = Math.min(box.y + box.height * yRatio, viewportHeight - 80);
+  await page.mouse.move(box.x + 56, y);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width - 24, box.y + box.height * yRatio, { steps: 8 });
+  await page.mouse.move(box.x + box.width - 56, y, { steps: 8 });
   await page.mouse.up();
 }
 

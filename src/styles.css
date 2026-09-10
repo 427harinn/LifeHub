@@ -305,7 +305,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .delete-confirm p { margin: 0; font-size: .9375rem; line-height: 1.6; }
 .delete-confirm__note { color: var(--color-text-secondary); font-size: .8125rem !important; }
 
-.money-page { align-content: start; gap: var(--space-4); }
+.money-page { min-height: calc(100svh - 76px); align-content: start; gap: var(--space-4); }
 .money-month-body { display: grid; gap: var(--space-4); touch-action: pan-y; transform: translateX(var(--money-swipe-offset, 0)); transition: transform 180ms ease-out; }
 .money-month-body.is-swipe-dragging { transition: none; }
 .money-month-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; }
