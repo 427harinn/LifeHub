@@ -53,6 +53,9 @@ test("Money UI regression evidence at 390x844", async ({ page }) => {
   await page.getByRole("button", { name: "カレンダー" }).click();
   await page.getByRole("tab", { name: "お金" }).click();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-tab-390x844.png") });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-money-tab-375x812.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
   const dayButton = page.getByRole("button", { name: `${Number(today.slice(-2))}日`, exact: true });
   await dayButton.click();
   const dateSheet = page.getByRole("dialog", { name: /月/ });

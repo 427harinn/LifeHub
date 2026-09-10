@@ -18,7 +18,7 @@ const timedEvent = (overrides: Partial<Event> = {}): Event => ({
   createdAt: "2026-09-09T00:00:00.000Z", updatedAt: "2026-09-09T00:00:00.000Z", ...overrides
 });
 
-const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} {...props} />);
+const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} {...props} />);
 
 describe("LifeHub M2 shell", () => {
   beforeEach(() => {
@@ -69,6 +69,7 @@ describe("LifeHub M2 shell", () => {
     expect(screen.getByRole("button", { name: "家を追加" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "家を追加" }));
     expect(await screen.findByRole("heading", { name: "予定を追加" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "以前の項目から選ぶ" })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalled();
   });
 
@@ -236,6 +237,24 @@ describe("Calendar adaptive row allocation", () => {
     expect(moneyTabOneDetail.emptyRows).toBe(1);
     expect(moneyTabOneDetail.visibleMoney.at(-1)?.isSummary).toBe(true);
   });
+
+  it("allocates only rendered rows across compact calendar capacities", () => {
+    const money = [
+      { amount: -5200, category: "expense" as const, label: "電気代" },
+      { amount: -800, category: "expense" as const, label: "交通費" },
+      { amount: -6000, category: "expense" as const, isSummary: true, label: "収支" },
+    ];
+    for (const rowCapacity of [3, 4]) {
+      const allocation = allocateCalendarCellRows([projectedEvent("event-a"), projectedEvent("event-b")], 2, money, rowCapacity);
+      expect(allocation.visibleEvents.length + allocation.visibleMoney.length + allocation.emptyRows).toBeLessThanOrEqual(rowCapacity);
+      expect(allocation.visibleMoney.at(-1)?.isSummary).toBe(true);
+      expect(allocation.hiddenCount).toBeGreaterThanOrEqual(0);
+    }
+
+    const moneyTab = allocateCalendarCellRows([], 0, money, 3);
+    expect(moneyTab.visibleMoney.map((item) => item.label)).toEqual(["電気代", "交通費", "収支"]);
+    expect(moneyTab.hiddenCount).toBe(0);
+  });
 });
 
 describe("Calendar date and money projections", () => {
@@ -290,7 +309,7 @@ describe("recurrence form summaries", () => {
 describe("MoneyForm settlement mode", () => {
   const category = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "green", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
   const createdMoney = { id: "money-1", userId: "user-1", type: "expense" as const, title: "ランチ", categoryId: category.id, plannedAmount: 1200, date: "2026-09-10", time: null, recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "" };
-  const renderMoneyForm = () => render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} />);
+  const renderMoneyForm = () => render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} />);
 
   it("defaults to actual and auto-selects planned when recurrence is added", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
@@ -315,6 +334,16 @@ describe("MoneyForm settlement mode", () => {
     fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
     const settlementSheet = screen.getByRole("dialog", { name: "金額の状態" });
     expect(within(settlementSheet).getByRole("button", { name: "確定" }).querySelector(".form-row__chevron")).toBeNull();
+  });
+
+  it("requires a fresh pointer lifecycle before opening Recent after mount", () => {
+    render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen />);
+    const recentTrigger = screen.getByRole("button", { name: "以前の項目から選ぶ" });
+    fireEvent.click(recentTrigger);
+    expect(screen.queryByRole("dialog", { name: "以前の項目から選ぶ" })).not.toBeInTheDocument();
+    fireEvent.pointerDown(recentTrigger);
+    fireEvent.click(recentTrigger);
+    expect(screen.getByRole("dialog", { name: "以前の項目から選ぶ" })).toBeInTheDocument();
   });
 
   it("keeps a manually selected mode when recurrence changes", async () => {
