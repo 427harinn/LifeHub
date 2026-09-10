@@ -51,12 +51,10 @@ test("Money UI regression evidence at 390x844", async ({ page }) => {
 
   await page.getByRole("button", { name: "カレンダー" }).click();
   await page.getByRole("tab", { name: "お金" }).click();
+  await page.waitForTimeout(300);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-tab-390x844.png") });
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.screenshot({ path: path.join(evidenceDir, "calendar-money-tab-375x812.png") });
-  await page.setViewportSize({ width: 390, height: 844 });
   const dayButton = page.getByRole("button", { name: `${Number(today.slice(-2))}日`, exact: true });
-  await dayButton.click();
+  await dayButton.locator(".calendar-cell__date").click();
   const dateSheet = page.getByRole("dialog", { name: /月/ });
   await expect(dateSheet).toContainText("電気代");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-money-normal-390x844.png") });
@@ -71,6 +69,10 @@ test("Money UI regression evidence at 390x844", async ({ page }) => {
   await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-money-swipe-390x844.png") });
 
   await dateSheet.getByRole("button", { name: "閉じる" }).click();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-money-tab-375x812.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(300);
   await page.getByRole("button", { name: "お金", exact: true }).click();
   await openMoneyForm(page);
   await page.screenshot({ path: path.join(evidenceDir, "money-form-direct-date-memo-390x844.png") });

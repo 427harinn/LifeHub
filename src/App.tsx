@@ -83,7 +83,6 @@ function useHorizontalSwipe(onSwipe: (direction: "previous" | "next") => void, s
     if (shouldIgnore?.(pointerEvent.target)) return;
     gesture.current = { axis: "pending", x: pointerEvent.clientX, y: pointerEvent.clientY };
     suppressClick.current = false;
-    pointerEvent.currentTarget.setPointerCapture?.(pointerEvent.pointerId);
   };
   const pointerMove = (pointerEvent: ReactPointerEvent<HTMLElement>) => {
     const current = gesture.current;

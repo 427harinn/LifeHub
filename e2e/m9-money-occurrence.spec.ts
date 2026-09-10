@@ -145,10 +145,11 @@ test("M9 Money occurrence override, actual, shared calendar/daily projection, an
   await page.waitForTimeout(250);
   await swipeRight(page, page.locator(".money-month-nav"));
   await expect(monthHeading).toHaveText(currentMonthLabel ?? "");
-  await swipeLeft(page, page.locator(".money-month-body"), 0.92);
+  await swipeLeft(page, page.locator(".money-page"), 0.7);
   await expect(monthHeading).not.toHaveText(currentMonthLabel ?? "");
   await page.screenshot({ path: path.join(evidenceDir, "money-blank-area-month-swipe-390x844.png") });
-  await swipeRight(page, page.locator(".money-month-body"));
+  await page.waitForTimeout(250);
+  await swipeRight(page, page.locator(".money-page"), 0.7);
   await expect(monthHeading).toHaveText(currentMonthLabel ?? "");
 
   const currentMonth = await page.request.get(`/api/money/month?month=${monthKey(today)}`).then(async (response) => { expect(response.ok()).toBeTruthy(); return await response.json() as { occurrences: Array<{ id: string; occurrenceKey: string; effectiveAmount: number; settlementStatus: string | null }> }; });
@@ -171,7 +172,7 @@ test("M9 Money occurrence override, actual, shared calendar/daily projection, an
    await page.screenshot({ path: path.join(evidenceDir, "calendar-actual-390x844.png") });
    await page.getByRole("tab", { name: "お金" }).click();
    await page.screenshot({ path: path.join(evidenceDir, "calendar-money-actual-390x844.png") });
-   await dayButton.click();
+   await dayButton.locator(".calendar-cell__date").click();
   const dateSheet = page.getByRole("dialog", { name: /月/ });
   await expect(dateSheet).toContainText("-5,200円");
    await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-actual-390x844.png") });
