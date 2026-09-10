@@ -32,8 +32,8 @@ M9実装中。ベースはPR #9 merge済み最新`origin/main` (`c63041cab6c62ab
 
 ## 検証記録（2026-09-10）
 
-- localは全unit 84件、typecheck / lint / build、M8 Money回帰E2E、M9 UI E2E、Event scope API回帰を通過。Evidenceは`artifacts/evidence/m9/`、videoはPlaywright artifactへ保存した。
-- stagingは`lifehub-staging`のみを対象に再deploy（Worker version `732946aa-f900-409a-8e16-f0c1caa15ee5`）。追加migrationはなく、migration listは`No migrations to apply!`、health HTTP 200、M9 UI E2E、M8 Money回帰、notification API smokeを通過した。実Push通知のみブラウザ権限拒否で未完了。
+- localは全unit 84件、typecheck / lint / build、M8 Money回帰E2E、M9 UI E2E、Event scope API回帰を通過。最終UIではMoney rowのtap / swipe排他、通常高action、共通primary、FormRow choice sheetを確認した。Evidenceは`artifacts/evidence/m9/`、videoはPlaywright artifactへ保存した。
+- stagingは`lifehub-staging`のみを対象に再deploy（Worker version `a0a7128a-f27a-4aec-bdf2-bfb9e818570f`）。追加migrationはなく、migration listは`No migrations to apply!`、health HTTP 200、最終M9 UI E2E、M8 Money回帰を通過した。実Push通知のみブラウザ権限拒否で未完了。
 - Cloudflare API 7403は今回再発しなかった。production/default、HouseToDoの操作はない。
 
 ---

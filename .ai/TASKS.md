@@ -15,6 +15,7 @@
 - [x] T11: self-review、docs同期、commit / push / PR作成。auto-mergeなし
 - [x] T12: Money UI polish（header / summary / shared month swipe / row icon / inline detail / actual flow / Form mode / Calendar title / Daily row / expense donut）
 - [x] T13: UI polish regression、Evidence、staging再deploy / smoke、PR #10追加commit / push。auto-mergeなし
+- [x] T14: 最終UI調整（Money row tap / swipe排他、通常高action、共通primary、FormRow choice sheet）、M8/M9 regression、staging確認、PR #10へpush
 
 ## M9セルフレビュー
 

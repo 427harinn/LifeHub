@@ -201,8 +201,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .bottom-sheet__content { display: grid; gap: var(--space-3); }
 @keyframes sheet-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(var(--sheet-drag-offset, 0)); } }
 
-.event-swipe-row { position: relative; overflow: hidden; border-bottom: 1px solid var(--color-border); isolation: isolate; touch-action: pan-y; }
+.event-swipe-row { position: relative; overflow: hidden; border-bottom: 1px solid var(--color-border); isolation: isolate; touch-action: pan-y; user-select: none; }
 .event-swipe-row__content { position: relative; z-index: 1; display: flex; min-height: 48px; align-items: stretch; transform: translateX(var(--event-swipe-offset, 0)); transition: transform 180ms ease-out; background: transparent; }
+.event-swipe-row.is-actions-open .event-swipe-row__content { transition: none; }
 .event-swipe-row.is-dragging .event-swipe-row__content { transition: none; }
 .event-swipe-row__main { display: grid; grid-template-columns: auto minmax(0, 1fr); width: 100%; min-height: 48px; align-items: center; gap: var(--space-3); padding: 10px 0; border: 0; color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
 .event-swipe-row__main.fixture-row { border-bottom: 0; }
@@ -329,7 +330,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .daily-money-row > span:nth-child(2) strong { font-size: .875rem; font-weight: 500; }
 .daily-money-row > span:nth-child(2) small { margin-top: 3px; color: var(--color-text-secondary); font-size: .6875rem; }
 .money-inline-detail { gap: var(--space-3); padding: 4px 0 14px 40px; border-bottom: 0; }
-.money-inline-detail__action { justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--color-primary-strong); border-radius: var(--radius-input); color: var(--color-primary-strong); background: transparent; font: inherit; cursor: pointer; }
+.money-inline-detail__action { justify-self: start; width: auto; min-height: 48px; }
 .money-inline-detail__list { display: grid; margin: 0; border-top: 1px solid var(--color-border); }
 .money-inline-detail__list > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); min-height: 40px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .8125rem; }
 .money-inline-detail__list dd { margin: 0; color: var(--color-text); overflow-wrap: anywhere; }
@@ -346,11 +347,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-chart__legend > div { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: .75rem; }
 .money-chart__legend-dot { width: 9px; height: 9px; border-radius: 50%; }
 .money-chart__legend strong { font-weight: 600; white-space: nowrap; }
+.money-list .event-swipe-row__actions, .daily-section .event-swipe-row__actions { inset: 0 0 auto auto; height: 64px; }
+.daily-section .event-swipe-row__actions { height: 48px; }
+.calendar-date-sheet .event-swipe-row__actions { inset: 0 0 auto auto; height: 52px; }
+.calendar-date-sheet .money-list-row { min-height: 52px; }
 .actual-sheet { display: grid; gap: var(--space-3); }
-.money-form-page .screen-header { gap: var(--space-2); }
-.money-type-label { color: var(--color-text-secondary); font-size: .75rem; }
-.money-type-label--expense { color: #b65445; }
-.money-type-label--income { color: #527c9c; }
 .money-type-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .money-type-switch button { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text-secondary); background: transparent; font: inherit; cursor: pointer; }
 .money-type-switch button.is-selected { border-color: var(--color-primary-strong); color: var(--color-primary-strong); background: var(--color-primary-soft); }

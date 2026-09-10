@@ -286,20 +286,21 @@ describe("MoneyForm settlement mode", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
     renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    expect(screen.getByRole("button", { name: /^実績$/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "登録内容" })).toHaveTextContent("実績");
     fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
-    expect(screen.getByRole("button", { name: /^予定$/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "登録内容" })).toHaveTextContent("予定");
   });
 
   it("keeps a manually selected mode when recurrence changes", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
     renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    fireEvent.click(screen.getByRole("button", { name: /^予定$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "登録内容" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "登録内容" })).getByRole("button", { name: "予定" }));
     fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
-    expect(screen.getByRole("button", { name: /^予定$/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "登録内容" })).toHaveTextContent("予定");
   });
 
   it("creates an actual settlement for actual registration and none for planned registration", async () => {
@@ -320,7 +321,8 @@ describe("MoneyForm settlement mode", () => {
     firstForm.unmount();
     renderMoneyForm();
     await screen.findByRole("button", { name: "お金カテゴリ" });
-    fireEvent.click(screen.getByRole("button", { name: /^予定$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "登録内容" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "登録内容" })).getByRole("button", { name: "予定" }));
     fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "ランチ予定" } });
     fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
     fireEvent.click(screen.getByRole("button", { name: "登録" }));

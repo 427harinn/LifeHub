@@ -25,7 +25,7 @@ async function chooseDate(page: import("@playwright/test").Page, date: string) {
 }
 
 async function fillMoney(page: import("@playwright/test").Page, type: "expense" | "income", title: string, amount: string, date: string) {
-  if (type === "income") await page.getByRole("button", { name: "収入", exact: true }).click();
+  if (type === "income") { await page.getByRole("button", { name: "お金の種類" }).click(); await page.getByRole("dialog", { name: "種類" }).getByRole("button", { name: "収入" }).click(); }
   await page.getByLabel("タイトル").fill(title);
   await page.getByLabel("金額").fill(amount);
   await chooseDate(page, date);
@@ -62,7 +62,7 @@ test("Money MVP recurrence, projections, UI grammar, and swipe actions", async (
   await recurrenceSheet.getByRole("button", { name: "毎月" }).click();
   await expect(page.getByRole("button", { name: "お金の繰り返し" })).toContainText("毎月");
   await page.screenshot({ path: path.join(evidenceDir, "money-form-recurrence-monthly-390x844.png") });
-  await page.getByRole("button", { name: "登録" }).click();
+  await page.getByRole("button", { name: "登録", exact: true }).click();
 
   await page.locator("nav.mobile-nav button[aria-label='お金']").click();
   await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
@@ -74,7 +74,7 @@ test("Money MVP recurrence, projections, UI grammar, and swipe actions", async (
   await expect(page.getByRole("heading", { name: "お金を登録" })).toBeVisible();
   await fillMoney(page, "income", "給料", "210000", date);
   await page.screenshot({ path: path.join(evidenceDir, "money-form-income-390x844.png") });
-  await page.getByRole("button", { name: "登録" }).click();
+  await page.getByRole("button", { name: "登録", exact: true }).click();
   await expect(page.locator(".money-summary > div:nth-child(2) .money-summary__income")).toContainText("210,000円");
   await expect(page.locator(".money-summary > div:nth-child(3) .money-summary__income")).toContainText("140,000円");
   await page.screenshot({ path: path.join(evidenceDir, "money-month-summary-390x844.png") });
