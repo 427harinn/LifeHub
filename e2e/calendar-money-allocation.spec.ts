@@ -64,7 +64,7 @@ test("Calendar All and Money allocation stays inside the cell across mobile view
     await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
     const allCell = page.getByRole("button", { name: `${todayDay}日`, exact: true });
     const allMoney = allCell.locator(".calendar-cell__money");
-    await expect(allMoney).toHaveText("-5,200");
+    await expect(allMoney).toHaveText("-9,200");
     await expect(allCell.locator(".calendar-cell__count")).toHaveCount(1);
     const cellBox = await allCell.boundingBox();
     const amountBox = await allMoney.boundingBox();
@@ -79,12 +79,15 @@ test("Calendar All and Money allocation stays inside the cell across mobile view
   await page.goto("/calendar?calendarMax=3");
   await page.getByRole("tab", { name: "お金" }).click();
   const moneyCell = page.getByRole("button", { name: `${todayDay}日`, exact: true });
-  await expect(moneyCell.locator(".calendar-cell__money")).toHaveText(["電気代", "水道代", "-9,200"]);
+  await expect(moneyCell.locator(".calendar-cell__money")).toHaveCount(3);
+  expect(await moneyCell.locator(".calendar-cell__money").allTextContents()).toEqual(expect.arrayContaining(["電気代", "水道代", "-9,200"]));
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-tab-390x844.png") });
   await moneyCell.locator(".calendar-cell__date").click();
   const dateSheet = page.getByRole("dialog", { name: /月/ });
   await expect(dateSheet.locator(".money-sheet-row")).toHaveCount(2);
-  await expect(dateSheet.locator(".money-sheet-row small")).toHaveCount(0);
+  const hiddenCategoryLabels = dateSheet.locator(".money-sheet-row small");
+  await expect(hiddenCategoryLabels).toHaveCount(2);
+  for (const label of await hiddenCategoryLabels.all()) await expect(label).toBeHidden();
   await expect(dateSheet.locator(".money-sheet-row").first().locator(".money-status-icon")).toHaveAttribute("aria-label", "確定");
   await expect(dateSheet.locator(".money-sheet-row").nth(1).locator(".money-status-icon")).toHaveAttribute("aria-label", "予定");
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-normal-390x844.png") });

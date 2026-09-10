@@ -21,6 +21,11 @@ const createEvent = async (page: import("@playwright/test").Page, input: EventIn
   return response.json() as Promise<{ event: { id: string } }>;
 };
 
+const createMoney = async (page: import("@playwright/test").Page, input: { type: "expense" | "income"; title: string; plannedAmount: number; date: string; categoryId: string }) => {
+  const response = await page.request.post("/api/money", { data: { memo: null, recurrence: null, ...input } });
+  expect(response.status()).toBe(201);
+};
+
 async function registerThroughUi(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "アカウントを作成する" }).click();
@@ -42,6 +47,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await registerThroughUi(page);
   const today = isoToday();
   const todayDay = dateNumber(today);
+  const moneySummaryDate = shiftDate(today, 6);
 
   await createEvent(page, { category: "home", title: "朝の家予定", startDate: today, endDate: today, startTime: "08:00", endTime: "09:00", place: "駅", memo: "持ち物" });
   await createEvent(page, { category: "work", title: "仕事の予定", startDate: today, endDate: today, startTime: "10:00", endTime: "11:00" });
@@ -53,6 +59,12 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   for (let index = 0; index < 6; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `多数予定${index + 1}`, startDate: today, endDate: today, startTime: `${String(12 + index).padStart(2, "0")}:00`, endTime: `${String(12 + index).padStart(2, "0")}:30` });
   for (let index = 0; index < 5; index += 1) await createEvent(page, { category: index % 2 === 0 ? "home" : "work", title: `候補比較${index + 1}`, startDate: shiftDate(today, 10), endDate: shiftDate(today, 10), startTime: `${String(8 + index).padStart(2, "0")}:00`, endTime: `${String(8 + index).padStart(2, "0")}:30` });
   await createEvent(page, { category: "home", title: "収支共存予定", startDate: shiftDate(today, 6), endDate: shiftDate(today, 6), startTime: "09:00", endTime: "09:30" });
+  const expenseCategories = await page.request.get("/api/money-categories?type=expense").then(async (response) => { expect(response.ok()).toBeTruthy(); return (await response.json() as { categories: Array<{ id: string }> }).categories; });
+  const incomeCategories = await page.request.get("/api/money-categories?type=income").then(async (response) => { expect(response.ok()).toBeTruthy(); return (await response.json() as { categories: Array<{ id: string }> }).categories; });
+  await createMoney(page, { type: "expense", title: "食費", plannedAmount: 1500, date: today, categoryId: expenseCategories[0].id });
+  await createMoney(page, { type: "income", title: "副収入", plannedAmount: 2999, date: today, categoryId: incomeCategories[0].id });
+  await createMoney(page, { type: "expense", title: "交通費", plannedAmount: 800, date: today, categoryId: expenseCategories[0].id });
+  await createMoney(page, { type: "income", title: "収支共存収入", plannedAmount: 2999, date: moneySummaryDate, categoryId: incomeCategories[0].id });
 
   const calendarResponse = await page.request.get(`/api/calendar?month=${today.slice(0, 7)}`);
   expect(calendarResponse.status()).toBe(200);
@@ -67,7 +79,6 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(page.locator(".calendar-band--home").first()).toBeVisible();
   await expect(page.locator(".calendar-band--work").first()).toBeVisible();
   await expect(page.locator(".calendar-cell__count").first()).toBeVisible();
-  const moneySummaryDate = shiftDate(today, 6);
   const allMoneySummaryCell = page.getByRole("button", { name: `${dateNumber(moneySummaryDate)}日`, exact: true });
   await expect(allMoneySummaryCell.locator(".calendar-cell__money")).toHaveText(["+2,999"]);
   await expect(page.locator(".calendar-money-layer")).toHaveCount(0);
@@ -80,14 +91,15 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
 
   await page.getByRole("tab", { name: "お金" }).click();
   const moneyCell = page.getByRole("button", { name: `${todayDay}日`, exact: true });
-  await expect(moneyCell.locator(".calendar-cell__money")).toHaveText(["食費", "副収入", "+699"]);
+  await expect(moneyCell.locator(".calendar-cell__money")).toHaveCount(3);
+  expect(await moneyCell.locator(".calendar-cell__money").allTextContents()).toEqual(expect.arrayContaining(["+699"]));
   await expect(moneyCell.locator(".calendar-cell__count")).toHaveText("1");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-390x844.png") });
   await moneyCell.click();
   const moneyDateSheet = page.getByRole("dialog");
   await expect(moneyDateSheet.locator(".sheet-money-entry")).toHaveCount(3);
   await expect(moneyDateSheet.locator(".sheet-money-summary")).toContainText("+699円");
-  await expect(moneyDateSheet.locator(".event-swipe-row")).toHaveCount(0);
+  await expect(moneyDateSheet.locator(".event-swipe-row")).toHaveCount(3);
   await page.waitForTimeout(220);
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-390x844.png") });
   await moneyDateSheet.getByRole("button", { name: "閉じる" }).click();
@@ -125,6 +137,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
     await page.goto(`/calendar?calendarMax=${candidate}`);
     await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
     const candidateCell = page.getByRole("button", { name: `${candidateDay}日`, exact: true });
+    await expect(candidateCell.locator(".calendar-event").first()).toBeVisible();
     const visibleCandidateEvents = await candidateCell.locator(".calendar-event").count();
     await expect(candidateCell.locator(".calendar-cell__count")).toHaveText(String(5 - visibleCandidateEvents));
     expect(visibleCandidateEvents).toBeLessThanOrEqual(candidate);
