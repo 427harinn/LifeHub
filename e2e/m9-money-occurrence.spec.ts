@@ -24,21 +24,21 @@ async function chooseDate(page: import("@playwright/test").Page, date: string) {
   await page.getByLabel("日付").fill(date);
 }
 
-async function swipeLeft(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator) {
+async function swipeLeft(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator, yRatio = 0.5) {
   const box = await locator.boundingBox();
   if (!box) throw new Error("swipe target is not visible");
-  await page.mouse.move(box.x + box.width - 24, box.y + box.height / 2);
+  await page.mouse.move(box.x + box.width - 24, box.y + box.height * yRatio);
   await page.mouse.down();
-  await page.mouse.move(box.x + 24, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.move(box.x + 24, box.y + box.height * yRatio, { steps: 8 });
   await page.mouse.up();
 }
 
-async function swipeRight(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator) {
+async function swipeRight(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator, yRatio = 0.5) {
   const box = await locator.boundingBox();
   if (!box) throw new Error("swipe target is not visible");
-  await page.mouse.move(box.x + 24, box.y + box.height / 2);
+  await page.mouse.move(box.x + 24, box.y + box.height * yRatio);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width - 24, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.move(box.x + box.width - 24, box.y + box.height * yRatio, { steps: 8 });
   await page.mouse.up();
 }
 
@@ -139,9 +139,10 @@ test("M9 Money occurrence override, actual, shared calendar/daily projection, an
   await swipeLeft(page, page.locator(".money-month-nav"));
   await expect(monthHeading).not.toHaveText(currentMonthLabel ?? "");
   await page.screenshot({ path: path.join(evidenceDir, "money-next-month-swipe-390x844.png") });
+  await page.waitForTimeout(250);
   await swipeRight(page, page.locator(".money-month-nav"));
   await expect(monthHeading).toHaveText(currentMonthLabel ?? "");
-  await swipeLeft(page, page.locator(".money-month-body"));
+  await swipeLeft(page, page.locator(".money-month-body"), 0.92);
   await expect(monthHeading).not.toHaveText(currentMonthLabel ?? "");
   await page.screenshot({ path: path.join(evidenceDir, "money-blank-area-month-swipe-390x844.png") });
   await swipeRight(page, page.locator(".money-month-body"));
