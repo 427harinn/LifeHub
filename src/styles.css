@@ -302,6 +302,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .delete-confirm__note { color: var(--color-text-secondary); font-size: .8125rem !important; }
 
 .money-page { align-content: start; gap: var(--space-4); }
+.money-month-body { display: grid; gap: var(--space-4); touch-action: pan-y; }
+.money-month-body.is-swipe-dragging { transform: translateX(var(--money-swipe-offset, 0)); }
 .money-month-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; }
 .money-month-nav h2 { margin: 0; font-size: 1rem; font-weight: 600; }
 .money-month-nav button { min-height: 44px; border: 0; color: var(--color-primary-strong); background: transparent; font-size: 1.5rem; cursor: pointer; }
@@ -309,20 +311,41 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-summary > div { display: flex; min-height: 54px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); }
 .money-summary span { color: var(--color-text-secondary); font-size: .8125rem; }
 .money-summary strong { font-size: 1.2rem; font-weight: 600; }
-.money-summary__support { display: grid !important; grid-template-columns: 1fr auto 1fr auto; min-height: 40px !important; gap: 8px; color: var(--color-text-secondary); font-size: .75rem; }
-.money-summary__support strong { color: var(--color-text); font-size: .8125rem; }
 .money-summary__expense, .money-amount--expense, .daily-money--expense { color: #b65445; }
 .money-summary__income, .money-amount--income, .daily-money--income { color: #527c9c; }
 .money-list { display: grid; gap: 0; }
 .money-list h2 { margin: var(--space-2) 0 0; font-size: .9375rem; font-weight: 600; }
-.money-list-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--space-3); min-height: 64px; align-items: center; padding: 10px 0; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
-.money-list-row time { color: var(--color-text-secondary); font-size: .8125rem; }
+.money-list-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: var(--space-3); width: 100%; min-height: 64px; align-items: center; padding: 10px 0; border: 0; border-bottom: 0; color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
+.money-status-icon { display: inline-grid; width: 22px; height: 22px; place-items: center; color: var(--color-text-secondary); font-size: 1.2rem; line-height: 1; }
+.money-status-icon--settled { color: var(--color-primary-strong); font-size: 1.05rem; }
 .money-list-row span { min-width: 0; }
 .money-list-row strong, .money-list-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .money-list-row strong { font-size: .9375rem; font-weight: 500; }
 .money-list-row small { margin-top: 3px; color: var(--color-text-secondary); font-size: .75rem; }
 .money-list-row b { font-size: .9375rem; font-weight: 600; white-space: nowrap; }
-.daily-money-row { width: 100%; border: 0; color: var(--color-text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.daily-money-row { grid-template-columns: 28px minmax(0, 1fr) auto; width: 100%; border: 0; color: var(--color-text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.daily-money-row > span:nth-child(2) { min-width: 0; }
+.daily-money-row > span:nth-child(2) strong, .daily-money-row > span:nth-child(2) small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daily-money-row > span:nth-child(2) strong { font-size: .875rem; font-weight: 500; }
+.daily-money-row > span:nth-child(2) small { margin-top: 3px; color: var(--color-text-secondary); font-size: .6875rem; }
+.money-inline-detail { gap: var(--space-3); padding: 4px 0 14px 40px; border-bottom: 0; }
+.money-inline-detail__action { justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--color-primary-strong); border-radius: var(--radius-input); color: var(--color-primary-strong); background: transparent; font: inherit; cursor: pointer; }
+.money-inline-detail__list { display: grid; margin: 0; border-top: 1px solid var(--color-border); }
+.money-inline-detail__list > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); min-height: 40px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .8125rem; }
+.money-inline-detail__list dd { margin: 0; color: var(--color-text); overflow-wrap: anywhere; }
+.money-inline-detail__memo { white-space: pre-wrap; }
+.money-chart-section { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.money-chart-section h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.money-chart { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--space-4); align-items: center; }
+.money-donut { display: grid; width: 132px; height: 132px; place-items: center; border-radius: 50%; background: var(--money-donut); }
+.money-donut::after { width: 84px; height: 84px; border-radius: 50%; background: var(--color-surface); content: ""; grid-area: 1 / 1; }
+.money-donut__label { z-index: 1; display: grid; gap: 2px; place-items: center; grid-area: 1 / 1; text-align: center; }
+.money-donut__label span { color: var(--color-text-secondary); font-size: .6875rem; }
+.money-donut__label strong { font-size: .8125rem; }
+.money-chart__legend { display: grid; gap: 8px; min-width: 0; }
+.money-chart__legend > div { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: .75rem; }
+.money-chart__legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+.money-chart__legend strong { font-weight: 600; white-space: nowrap; }
 .actual-sheet { display: grid; gap: var(--space-3); }
 .money-form-page .screen-header { gap: var(--space-2); }
 .money-type-label { color: var(--color-text-secondary); font-size: .75rem; }

@@ -13,6 +13,8 @@
 - [x] T9: unit / typecheck / lint / build / local migrationを実行
 - [x] T10: M9 E2E、390×844 screenshots / videos、staging migration / deploy / smoke（Worker version `bc31a798-3275-4515-bae1-08bd89ccd02a`）
 - [x] T11: self-review、docs同期、commit / push / PR作成。auto-mergeなし
+- [x] T12: Money UI polish（header / summary / shared month swipe / row icon / inline detail / actual flow / Form mode / Calendar title / Daily row / expense donut）
+- [x] T13: UI polish regression、Evidence、staging再deploy / smoke、PR #10追加commit / push。auto-mergeなし
 
 ## M9セルフレビュー
 
@@ -21,7 +23,7 @@
 - base plannedAmountをactualで上書きせず、series編集でも過去settlementを変更しない
 - Calendar / Daily / Moneyは同じMoney projectionのeffective amountを利用している
 - userId ownership、cancelled occurrence、invalid occurrenceKey、migration_locked writeをroute/serviceで検証している
-- production/default、HouseToDo、M10 Visualizationには触れない
+- production/default、HouseToDo、M10 Visualizationの残りには触れない（M9 UI polishとして当月expense donutのみ先行）
 
 ---
 

@@ -15,14 +15,15 @@ M9実装中。ベースはPR #9 merge済み最新`origin/main` (`c63041cab6c62ab
 - [x] 月末estimated_actual serviceを既存scheduled handlerへ`waitUntil`接続
 - [x] unit / typecheck / lint / build / local migrationを実行
 - [x] M9 E2E / 390×844 Evidence、staging migration / deploy / smoke（Worker version `bc31a798-3275-4515-bae1-08bd89ccd02a`）
-- [x] self-review、commit / push / PR作成（auto-mergeなし）
+- [x] Money UI polish（Daily/EventForm grammar、inline detail、状態icon、month swipe、カテゴリ別支出donut）を実装
+- [x] UI polishのunit / E2E / 390×844 Evidence、staging再deploy / smoke、PR #10追加commit（auto-mergeなし）
 
 ## 実装境界
 
 - Settlementは`actual`と`estimated_actual`を同一occurrenceでupsertし、actual取消時は当時保存したestimated値へ戻せる。base plannedAmountは変更しない。
 - 過去月はactual、次にestimated_actualを優先し、未settleの既存データだけ安全なplanned fallbackを使う。現在月・未来はactualがなければoverride適用後plannedを使う。
 - followingは元RecurrenceRuleを対象直前で終了し、対象日開始の新MoneyItem + RecurrenceRuleへ分割する。対象以降のoverride / settlement参照も新seriesへ移す。
-- Money画面は従来の見込みsummaryを主役にし、`実績` / `予定` / `予定額のまま`のみ表示する。内部語`actual` / `estimated_actual`は通常UIに出さない。
+- Money画面は従来の3行見込みsummaryを主役にし、予定は空丸、actual / estimated_actualはチェック丸で示す。内部語`actual` / `estimated_actual`は通常UIに出さない。カテゴリ別支出donutはM9 UI polishの先行範囲で、M10の残りは未着手。
 
 ## STOP条件
 
@@ -31,8 +32,8 @@ M9実装中。ベースはPR #9 merge済み最新`origin/main` (`c63041cab6c62ab
 
 ## 検証記録（2026-09-10）
 
-- localは全unit 78件、M8 Money回帰E2E、M9 E2Eを通過。Evidenceは`artifacts/evidence/m9/`、videoはPlaywright artifactへ保存した。
-- stagingは`lifehub-staging`のみを対象に`0011_m9_money_occurrence.sql`を適用し、再migration listは`No migrations to apply!`。schema read-only確認、health HTTP 200、M9 E2E（actual修正・取消、following splitを含む）を通過した。
+- localは全unit 84件、typecheck / lint / build、M8 Money回帰E2E、M9 UI E2E、Event scope API回帰を通過。Evidenceは`artifacts/evidence/m9/`、videoはPlaywright artifactへ保存した。
+- stagingは`lifehub-staging`のみを対象に再deploy（Worker version `732946aa-f900-409a-8e16-f0c1caa15ee5`）。追加migrationはなく、migration listは`No migrations to apply!`、health HTTP 200、M9 UI E2E、M8 Money回帰、notification API smokeを通過した。実Push通知のみブラウザ権限拒否で未完了。
 - Cloudflare API 7403は今回再発しなかった。production/default、HouseToDoの操作はない。
 
 ---

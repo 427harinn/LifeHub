@@ -344,7 +344,8 @@ M5ではrecurrence周辺だけをUIレビュー対象とし、M4のフォーム�
 5. 日付
 6. 繰り返し
 7. メモ
-8. 登録
+8. 登録内容（新規のみ: 実績 / 予定）
+9. 登録
 
 通知は持たない。
 MoneyFormのカテゴリ・日付・繰り返しはEventFormと同じFormRow + BottomSheetを使う。M8のMoneyFormには時間入力・`時間を追加` rowを表示しない。
@@ -368,12 +369,10 @@ MoneyFormのカテゴリ・日付・繰り返しはEventFormと同じFormRow + B
 
 その下に:
 
-- 実績 / 見込みの簡潔な内訳
-- カテゴリ構成グラフ
-- カテゴリ別金額
 - 今月のお金一覧
+- カテゴリ別の支出（当月effective amountのdonut）
 
-M9では共通MoneyProjectionのeffective amountを表示する。actualは`実績`、未来plannedは`予定`、過去のestimated_actualは`予定額のまま`として控えめに表示し、内部語は通常画面に出さない。繰り返しMoneyの編集・削除ではEventと同じBottomSheetで`この項目のみ / この項目以降 / すべての項目`を選ぶ。実績入力は既存Money rowの編集相当UIから行い、登録フォームへは追加しない。
+M9では共通MoneyProjectionのeffective amountを表示する。予定は空丸、actual / estimated_actualはチェック丸で状態を控えめに示し、内部語は通常画面に出さない。Money rowのtapは既存Event/Dailyと同じinline detailを開き、実績登録・変更へ進む。繰り返しMoneyの編集・削除ではEventと同じBottomSheetで`この項目のみ / この項目以降 / すべての項目`を選ぶ。新規登録時のみ、登録内容として実績 / 予定を選択できる。カテゴリ別の支出donutはeffective amountを使うM9 UI polishの先行範囲であり、M10の月別・長期・比較グラフは未着手とする。
 
 M8前のshellでも `記録はありません` だけで終わらせず、最終UIを判断できる仮の金額・カテゴリ・明細を表示する。
 

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
 import type { Event } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
@@ -274,5 +274,56 @@ describe("recurrence form summaries", () => {
   it("preserves explicitly customized cadence fields when the base date changes", () => {
     expect(recurrenceAfterBaseDateChange({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 31, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", dayOfMonth: 31 });
     expect(recurrenceAfterBaseDateChange({ frequency: "weekly", interval: 1, weekdays: [4], dayOfMonth: null, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", weekdays: [4] });
+  });
+});
+
+describe("MoneyForm settlement mode", () => {
+  const category = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "green", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+  const createdMoney = { id: "money-1", userId: "user-1", type: "expense" as const, title: "ランチ", categoryId: category.id, plannedAmount: 1200, date: "2026-09-10", time: null, recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "" };
+  const renderMoneyForm = () => render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+  it("defaults to actual and auto-selects planned when recurrence is added", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    expect(screen.getByRole("button", { name: /^実績$/ })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
+    expect(screen.getByRole("button", { name: /^予定$/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps a manually selected mode when recurrence changes", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.click(screen.getByRole("button", { name: /^予定$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
+    expect(screen.getByRole("button", { name: /^予定$/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("creates an actual settlement for actual registration and none for planned registration", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const path = requestPath(input);
+      if (path.includes("/api/money-categories")) return Promise.resolve(response({ categories: [category] }));
+      if (path === "/api/money" && init?.method === "POST") return Promise.resolve(response({ money: createdMoney }));
+      if (path.includes("/actual")) return Promise.resolve(response({ settlement: { status: "actual", amount: 1200 } }));
+      return Promise.resolve(response({}));
+    });
+    const firstForm = renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "ランチ" } });
+    fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
+    fireEvent.click(screen.getByRole("button", { name: "登録" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => requestPath(input).includes("/actual") && init?.method === "PUT")).toBe(true));
+    fetchMock.mockClear();
+    firstForm.unmount();
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.click(screen.getByRole("button", { name: /^予定$/ }));
+    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "ランチ予定" } });
+    fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
+    fireEvent.click(screen.getByRole("button", { name: "登録" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/actual"))).toBe(false));
   });
 });
