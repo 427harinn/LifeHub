@@ -28,8 +28,9 @@ async function createFixtures(page: import("@playwright/test").Page) {
   const periodEnd = dateKey(16);
   const weekday = new Date(`${start}T00:00:00Z`).getUTCDay();
   const events = [
-    { category: "home", title: "博多歯科", place: "博多駅", memo: "定期検診メモ", timingType: "scheduled", allDay: false, startDate: start, startTime: "10:00", endDate: start, endTime: "11:00", periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrence: null },
-    { category: "work", title: "週次レビュー", place: "東京オフィス", memo: "議事録メモ", timingType: "scheduled", allDay: false, startDate: start, startTime: "14:00", endDate: start, endTime: "15:00", periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrence: { frequency: "weekly", interval: 1, weekdays: [weekday], dayOfMonth: null, startsOn: start, endsOn: dateKey(28) } },
+    { category: "home", title: "博多歯科", place: "博多駅前", memo: "定期検診メモ", timingType: "scheduled", allDay: false, startDate: start, startTime: "10:00", endDate: start, endTime: "11:00", periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrence: null },
+    { category: "work", title: "とても長い週次レビューのタイトル確認用", place: "東京オフィス", memo: "議事録メモ", timingType: "scheduled", allDay: false, startDate: start, startTime: "14:00", endDate: start, endTime: "15:00", periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrence: { frequency: "weekly", interval: 1, weekdays: [weekday], dayOfMonth: null, startsOn: start, endsOn: dateKey(28) } },
+    { category: "home", title: "終日予定", place: null, memo: null, timingType: "scheduled", allDay: true, startDate: start, startTime: null, endDate: start, endTime: null, periodWindowType: null, periodAnchorDate: null, periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrence: null },
     { category: "home", title: "春の整理", place: null, memo: "期間メモ", timingType: "period", allDay: null, startDate: null, startTime: null, endDate: null, endTime: null, periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: periodStart, periodEndDate: periodEnd, deadlineTime: "21:00", recurrence: null }
   ];
   const createdIds: string[] = [];
@@ -61,16 +62,35 @@ test("M11 Calendar Search shows server results and jumps to the occurrence", asy
   const input = page.getByRole("textbox", { name: "予定を検索" });
   await input.fill("博多");
   await expect(page.getByRole("button", { name: /博多歯科/ })).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "calendar-search-title-place-390x844.png") });
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-search-home-result-390x844.png") });
+  await input.fill("駅前");
+  const placeResult = page.getByRole("button", { name: /博多歯科/ });
+  await expect(placeResult.locator(".calendar-search-result__context")).toHaveText("場所 博多駅前");
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-search-place-hit-390x844.png") });
   await input.fill("定期");
   await expect(page.getByRole("button", { name: /博多歯科/ })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-search-memo-390x844.png") });
   await input.fill("週次");
   await expect(page.locator(".calendar-search-result")).toHaveCount(4);
+  const recurringRow = page.locator(".calendar-search-result").first();
+  await expect(recurringRow.locator(".calendar-search-result__title")).toHaveCSS("text-overflow", "ellipsis");
+  const rowLayout = await recurringRow.evaluate((element) => { const title = element.querySelector(".calendar-search-result__title")?.getBoundingClientRect(); const datetime = element.querySelector(".calendar-search-result__datetime")?.getBoundingClientRect(); return { titleRight: title?.right ?? 0, datetimeLeft: datetime?.left ?? 0, datetimeWidth: datetime?.width ?? 0 }; });
+  expect(rowLayout.datetimeWidth).toBeGreaterThan(0);
+  expect(rowLayout.titleRight).toBeLessThanOrEqual(rowLayout.datetimeLeft - 8);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-search-multiple-occurrences-390x844.png") });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(recurringRow.locator(".calendar-search-result__datetime")).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-search-narrow-375x812.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
   await input.fill("期間");
-  await expect(page.getByRole("button", { name: /春の整理/ })).toBeVisible();
+  const periodResult = page.getByRole("button", { name: /春の整理/ });
+  await expect(periodResult).toBeVisible();
+  await expect(periodResult).toContainText("9月25日(金)〜9月27日(日)");
+  await expect(periodResult).not.toContainText("9月25日(金) 9月25日");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-search-period-390x844.png") });
+  await input.fill("終日");
+  await expect(page.getByRole("button", { name: /終日予定/ })).toContainText("終日");
+  await page.screenshot({ path: path.join(evidenceDir, "calendar-search-all-day-390x844.png") });
   await input.fill("存在しない予定");
   await expect(page.getByText("見つかりませんでした", { exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-search-no-results-390x844.png") });
@@ -115,7 +135,7 @@ test("M11 Event and Money reuse search keep category scope and copy semantics", 
   await expect(workSheet.getByRole("button", { name: /週次レビュー/ })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "event-work-reuse-search-390x844.png") });
   await workSheet.getByRole("button", { name: /週次レビュー/ }).click();
-  await expect(page.getByLabel("タイトル")).toHaveValue("週次レビュー");
+  await expect(page.getByLabel("タイトル")).toHaveValue("とても長い週次レビューのタイトル確認用");
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
 
   await page.getByRole("button", { name: "お金", exact: true }).click();
