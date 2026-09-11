@@ -14,7 +14,7 @@
 - [x] T10: local migration、lint / typecheck / unit / build / E2E、390×844 Evidenceを実行
 - [x] T11: staging target / database ID / environmentを再確認し、migration / deploy / health / smokeを実行する。7403発生時はSTOP
 - [x] T12: E2Eでarchive前D1、local保存後D1残存、confirm後対象のみ削除、active parent / future projection / UI表示をassert
-- [ ] T13: docs同期、self-review、commit / push、main向けPR作成。auto-mergeしない
+- [x] T13: docs同期、self-review、commit `c9f3a06`、push、main向けPR #14作成。auto-mergeしない
 
 ## M12セルフレビュー観点
 
