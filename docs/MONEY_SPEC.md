@@ -104,7 +104,9 @@ M8: plannedAmount
 
 M8のMoneyFormは時間を扱わない。MoneyItemの`time`列を残す場合も、M8で作成するMoneyは常にnullとする。
 
-最上部に `以前の項目から選ぶ >` を置く。
+最上部に「以前の項目から選ぶ >」を置く。
+
+M11では「以前の項目から選ぶ」を検索可能なBottomSheetへ拡張する。未入力時は直近8件、2文字以上の入力時はserver側でtitle / category name / memoを検索し、金額自体は検索対象にしない。候補選択時は既存のMoney recent copy semantics（recurrence、settlement mode、date、actual / plannedのルール）を維持する。
 
 ---
 

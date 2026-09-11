@@ -142,7 +142,7 @@ describe("LifeHub M2 shell", () => {
     expect(fetchMock).toHaveBeenCalled();
   });
 
-  it("opens calendar date details and the search placeholder", async () => {
+  it("opens calendar date details and the dedicated search screen", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const path = requestPath(input);
       if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
@@ -159,8 +159,9 @@ describe("LifeHub M2 shell", () => {
     expect(await screen.findByRole("heading", { name: "予定を追加" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "予定一覧へ戻る" }));
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
-    expect(screen.getByRole("dialog", { name: "検索" })).toBeInTheDocument();
-    expect(screen.getByText("検索は後のMilestoneで追加します。")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "検索" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "予定を検索" })).toBeInTheDocument();
+    expect(screen.queryByText("検索は後のMilestoneで追加します。")).not.toBeInTheDocument();
   });
 
   it("shows login failure from the API", async () => {
@@ -175,6 +176,80 @@ describe("LifeHub M2 shell", () => {
     fireEvent.change(screen.getByLabelText("パスワード"), { target: { value: "invalid-password" } });
     fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("ログインできません。"));
+  });
+});
+
+describe("M11 search", () => {
+  it("debounces trimmed calendar queries and jumps to the selected occurrence", async () => {
+    const result = { ...timedEvent({ id: "search-event", title: "歯医者", place: "博多駅", memo: "保険証", startDate: "2026-09-18", endDate: "2026-09-18" }), source: "server" as const, occurrenceDate: "2026-09-18", matchContext: { fields: ["place", "memo"] as Array<"title" | "place" | "memo">, text: "博多駅" } };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
+      if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      if (path.startsWith("/api/events/search")) return Promise.resolve(response({ events: [result] }));
+      if (path.startsWith("/api/calendar")) return Promise.resolve(response({ events: [result], money: { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] } }));
+      return Promise.resolve(response({}));
+    });
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    expect(screen.getByRole("heading", { name: "検索" })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "予定を検索" }), { target: { value: "a" } });
+    await new Promise((resolve) => window.setTimeout(resolve, 320));
+    expect(fetchMock.mock.calls.some(([input]) => requestPath(input).startsWith("/api/events/search"))).toBe(false);
+    fireEvent.change(screen.getByRole("textbox", { name: "予定を検索" }), { target: { value: "  博多 " } });
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => requestPath(input) === "/api/events/search?q=%E5%8D%9A%E5%A4%9A&limit=50")).toBe(true));
+    expect(await screen.findByRole("button", { name: /歯医者/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /歯医者/ }));
+    expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(window.location.search).toContain("date=2026-09-18");
+  });
+
+  it("scopes Event reuse to the form category, searches old candidates, copies fields, and closes the sheet", async () => {
+    const recent = timedEvent({ id: "recent-home", title: "最近の家予定", place: null, memo: null });
+    const old = timedEvent({ id: "old-home", title: "古い予定", place: "博多駅", memo: "保険証" });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.startsWith("/api/events/reuse-search") && path.includes("q=%E5%8D%9A%E5%A4%9A")) return Promise.resolve(response({ events: [old] }));
+      if (path.startsWith("/api/events/reuse-search")) return Promise.resolve(response({ events: [recent] }));
+      return Promise.resolve(response({}));
+    });
+    renderEventForm();
+    fireEvent.click(screen.getByRole("button", { name: "以前の項目から選ぶ" }));
+    const sheet = await screen.findByRole("dialog", { name: "以前の項目から選ぶ" });
+    expect(await within(sheet).findByRole("button", { name: /最近の家予定/ })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("category=home"))).toBe(true);
+    fireEvent.change(within(sheet).getByRole("textbox", { name: "以前の予定を検索" }), { target: { value: "博多" } });
+    expect(await within(sheet).findByRole("button", { name: /古い予定/ })).toBeInTheDocument();
+    fireEvent.click(within(sheet).getByRole("button", { name: /古い予定/ }));
+    expect(screen.getByLabelText("タイトル")).toHaveValue("古い予定");
+    expect(screen.getByLabelText("場所")).toHaveValue("博多駅");
+    expect(screen.queryByRole("dialog", { name: "以前の項目から選ぶ" })).not.toBeInTheDocument();
+  });
+
+  it("uses the same reuse sheet for Money title/category search and preserves copied recurrence defaults", async () => {
+    const category = { id: "fixed", userId: "user-1", type: "expense" as const, name: "固定費", colorKey: "orange", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+    const old = moneyItem({ id: "old-money", title: "家賃", categoryId: category.id, category, plannedAmount: 70000, memo: "更新料", recurrence: { frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 25, startsOn: "2025-01-25", endsOn: null } });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.startsWith("/api/money-categories")) return Promise.resolve(response({ categories: [category] }));
+      if (path.startsWith("/api/money/reuse-search") && path.includes("q=%E5%9B%BA%E5%AE%9A")) return Promise.resolve(response({ definitions: [old] }));
+      if (path.startsWith("/api/money/reuse-search")) return Promise.resolve(response({ definitions: [] }));
+      return Promise.resolve(response({}));
+    });
+    render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} />);
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.click(screen.getByRole("button", { name: "以前の項目から選ぶ" }));
+    const sheet = await screen.findByRole("dialog", { name: "以前の項目から選ぶ" });
+    fireEvent.change(within(sheet).getByRole("textbox", { name: "以前のお金を検索" }), { target: { value: "固定" } });
+    expect(await within(sheet).findByRole("button", { name: /家賃/ })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/api/money/reuse-search?q=%E5%9B%BA%E5%AE%9A"))).toBe(true);
+    fireEvent.click(within(sheet).getByRole("button", { name: /家賃/ }));
+    expect(screen.getByLabelText("項目名")).toHaveValue("家賃");
+    expect(screen.getByLabelText("金額")).toHaveValue("70,000");
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("予定");
+    expect(screen.queryByRole("dialog", { name: "以前の項目から選ぶ" })).not.toBeInTheDocument();
   });
 });
 

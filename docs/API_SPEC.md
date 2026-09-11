@@ -264,17 +264,34 @@ Daily画面の取得は `/api/daily` に含め、編集だけ独立APIにする�
 
 ## 10. Search
 
-```text
-GET /api/search?q=美容院
-```
+Calendar全体検索と再利用候補検索は責務を分離する。すべて認証ユーザーの所有データだけを対象とする。
 
-初期検索対象:
+Calendar検索:
 
-- Event title
-- Event place
-- Event memo
+GET /api/events/search?q=美容院&limit=50
 
-D1からアーカイブ済みの履歴は端末側IndexedDB検索と統合する。
+- Eventのtitle / place / memoを対象とする。
+- qはtrim後2文字未満なら空結果とする。
+- 過去・未来を含むoccurrence単位で、最大50件を決定的順序で返す。
+- recurrence / period / cancelled override / modified overrideはEventProjectionServiceで解決する。
+- resultはsource=server、eventId、id、occurrenceKey、occurrenceDate、category、timingType、日時、place、memo、matchContextを持ち、将来source=archiveを追加できる形にする。
+- periodのoccurrenceDateはCalendar表示の代表日（week start / month start / periodStartDate）とする。
+
+Event再利用:
+
+GET /api/events/reuse-search?q=&category=home&limit=8
+
+- categoryはhomeまたはwork必須で、カテゴリを跨がない。
+- qが空ならupdated_at順の直近8件、2文字以上ならtitle / place / memoのserver検索を最大50件返す。
+
+Money再利用:
+
+GET /api/money/reuse-search?q=&limit=8
+
+- qが空ならupdated_at順の直近8件、2文字以上ならtitle / category name / memoのserver検索を最大50件返す。
+- 金額は検索対象にしない。
+
+検索APIはfrontendで全定義を取得してfilterしない。M12でD1とIndexedDB archiveの結果を同じresult interfaceへ統合する。
 
 ---
 

@@ -1,3 +1,36 @@
+# Milestone 11: Search
+
+## 現在のMilestone
+
+M11実装完了。最新origin/main（006f815）からcodex/m11-searchを作成した。対象はCalendar全体のEvent検索と、家 / 仕事EventForm・MoneyFormの「以前の項目から選ぶ」server検索。Calendar検索は専用sub screen、再利用検索はHouseToDoのBottomSheet grammarをLifeHubのorange / DESIGN.mdへ合わせて実装した。production/default・HouseToDoは操作していない。
+
+## 完了条件
+
+- [x] Calendar Searchでtitle / place / memoを2文字以上・trim・case-insensitive・debounce検索し、past / futureのEvent occurrenceを最大50件表示
+- [x] recurring / period / cancelled / overrideを既存projectionで解決し、結果tapで該当month・selected date・Date Sheetへ戻る
+- [x] Event reuseはhome / workカテゴリを跨がず、未入力は直近8件、入力はserver検索で古い候補も取得する
+- [x] Money reuseは未入力直近8件、title / category name（必要に応じmemo）のserver検索を追加し、既存copy / recurrence / settlement semanticsを維持する
+- [x] 共通ReuseSearchSheet、keyboard / safe-area / scroll / click-through regressionを確認する
+- [x] unit / component / E2E、390×844 Evidence、staging smoke、docs更新を完了する
+- [ ] branch push・PR作成まで行い、auto-mergeせずSTOP
+
+## 実装境界
+
+- Calendar検索対象はuser所有のEventのみ。MoneyはCalendar検索対象外。
+- Search resultはsource: serverを持つ将来拡張可能なinterfaceとし、occurrence単位で返す。
+- Calendar検索は専用APIでD1から取得し、frontendで全Eventをfilterしない。
+- 再利用検索は未入力時limit=8、入力時limit=50。1文字は検索しない。
+- 新規migrationは原則追加しない。Cloudflare API 7403が出た場合は停止する。
+
+## M11検証記録（2026-09-11）
+
+- HouseToDo参照: `src/App.tsx`のTaskForm（`reuseQuery` / `filteredRecent` / `selectReuse` / reuse BottomSheet）と`ShoppingReusePanel`、`src/api/tasks.ts`の`listRecentTaskDefinitions(limit=8)`、`src/api/shopping.ts`の`listRecentShoppingItems(limit=8)`、`src/styles.css`の`.m2-task-form__reuse-trigger` / `.m2-task-sheet__reuse` / `.m2-task-sheet__list` / `.shopping-m4-reuse-trigger` / `.shopping-m4-reuse-sheet` / `.shopping-m4-reuse-list`を実読した。HouseToDoは未変更。
+- local: typecheck / lint（既存warning 13件のみ）/ unit 109件 / build / M11 Playwright 2件を通過。Evidenceは`artifacts/evidence/m11/`、interaction videoは`artifacts/playwright/m11-search/test-results/`。
+- staging: `lifehub-staging`へdeploy成功、health HTTP 200、M11 Playwright 2件pass。Worker version `d147d8e1-7a83-45f9-ab2c-27f4530bb52f`。
+- Cloudflare API 7403は今回発生なし。新規migrationなし。production/default・HouseToDoは未操作。auto-mergeなし。
+
+---
+
 # Milestone 10: Money Visualization
 
 ## 現在のMilestone

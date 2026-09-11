@@ -454,6 +454,8 @@ HouseToDo と同じ。
 - drag/close pattern can follow HouseToDo
 - large sheets may cover most of screen while leaving context slightly visible
 
+M11検索UIでは、Calendar全体検索を専用sub screen、Event / Moneyの再利用検索をBottomSheetとして分ける。再利用sheetはinput 16px以上、min-height 52px程度のdivider付きflat list、no card、no shadow、tapで選択してcloseとする。入力中もsheetのviewport基準・safe-area・list scrollを維持し、0件は「見つかりませんでした」とだけ表示する。
+
 ---
 
 # 18. Evidence / Design review rule
