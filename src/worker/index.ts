@@ -13,6 +13,7 @@ import { UserStateRepository } from "./repositories/user-state-repository";
 import { NotificationRepository } from "./repositories/notification-repository";
 import { PushSubscriptionRepository } from "./repositories/push-subscription-repository";
 import { MoneyCategoryRepository } from "./repositories/money-category-repository";
+import { isMoneyCategoryColorKey } from "../lib/money-category-colors";
 import { MoneyRepository } from "./repositories/money-repository";
 import { AuthService } from "./services/auth-service";
 import { EventService } from "./services/event-service";
@@ -268,7 +269,7 @@ const createMoneyCategory = requireAuth(async ({ request, env, user }) => {
   const name = stringValue(body.name);
   const colorKey = body.colorKey === null || body.colorKey === undefined ? null : stringValue(body.colorKey);
   const sortOrder = body.sortOrder === undefined ? 99 : Number(body.sortOrder);
-  if (!type || !name || name.length > 40 || !Number.isInteger(sortOrder) || sortOrder < 0 || (colorKey !== null && !["orange", "blue", "green", "red", "purple", "gold"].includes(colorKey))) throw validationError({ category: "カテゴリの入力が不正です。" });
+  if (!type || !name || name.length > 40 || !Number.isInteger(sortOrder) || sortOrder < 0 || (colorKey !== null && !isMoneyCategoryColorKey(colorKey))) throw validationError({ category: "カテゴリの入力が不正です。" });
   const category = await new MoneyCategoryRepository(env.DB).create(user.id, { type, name, colorKey, sortOrder }, nowIso());
   return json({ category }, { status: 201 });
 });
@@ -278,7 +279,7 @@ const updateMoneyCategory = requireAuth(async ({ request, env, user }) => {
   const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
   const body = await parseObject(request); const input: { name?: string; colorKey?: string | null; sortOrder?: number } = {};
   if (body.name !== undefined) { const name = stringValue(body.name); if (!name || name.length > 40) throw validationError({ name: "カテゴリ名を入力してください。" }); input.name = name; }
-  if (body.colorKey !== undefined) { if (body.colorKey !== null && !["orange", "blue", "green", "red", "purple", "gold"].includes(stringValue(body.colorKey))) throw validationError({ colorKey: "色を選択してください。" }); input.colorKey = body.colorKey === null ? null : stringValue(body.colorKey); }
+  if (body.colorKey !== undefined) { if (body.colorKey !== null && !isMoneyCategoryColorKey(stringValue(body.colorKey))) throw validationError({ colorKey: "色を選択してください。" }); input.colorKey = body.colorKey === null ? null : stringValue(body.colorKey); }
   if (body.sortOrder !== undefined) { if (!Number.isInteger(body.sortOrder) || Number(body.sortOrder) < 0) throw validationError({ sortOrder: "並び順が不正です。" }); input.sortOrder = Number(body.sortOrder); }
   const category = await new MoneyCategoryRepository(env.DB).update(user.id, id, input, nowIso());
   if (!category) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");

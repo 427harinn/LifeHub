@@ -158,6 +158,8 @@ MoneyはCalendar予定種別色とは別に、落ち着いたゴールド系を�
 --color-money-soft: #f8f0df;
 ```
 
+MoneyCategoryの `colorKey` は、donut segment・legend・Settingsカテゴリ一覧のdotで共通利用する。未設定カテゴリは初期カテゴリ名、または安定したID/名前fallbackで色を決定し、再描画や月移動で色を変えない。
+
 支出 / 収入の判別は `- / +` を必ず表示し、色だけで意味を伝えない。
 
 ---

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
 import type { Event, MoneyItem } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
@@ -19,6 +19,75 @@ const timedEvent = (overrides: Partial<Event> = {}): Event => ({
 });
 
 const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} {...props} />);
+
+const moneyItem = (overrides: Partial<MoneyItem> = {}): MoneyItem => ({
+  id: "money-1", userId: "user-1", type: "expense", title: "支出", categoryId: "category-1", plannedAmount: 1000, date: "2026-09-01", time: null,
+  recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "", ...overrides
+});
+
+describe("Money category donut colors", () => {
+  it("keeps income out and shares each category color between donut and legend", () => {
+    const expense = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: null, sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+    const fixed = { id: "fixed", userId: "user-1", type: "expense" as const, name: "固定費", colorKey: null, sortOrder: 1, active: true, createdAt: "", updatedAt: "" };
+    render(<MoneyCategoryDonut occurrences={[
+      moneyItem({ id: "food-item", categoryId: expense.id, category: expense, plannedAmount: 1000, effectiveAmount: 1000 }),
+      moneyItem({ id: "fixed-item", categoryId: fixed.id, category: fixed, plannedAmount: 2000, effectiveAmount: 1800, settlementStatus: "actual" }),
+      moneyItem({ id: "income-item", type: "income", categoryId: "income", plannedAmount: 9000, category: { ...expense, id: "income", type: "income", name: "給料" } })
+    ]} />);
+
+    const dots = screen.getAllByTestId("money-chart-legend-dot");
+    expect(dots).toHaveLength(2);
+    expect(dots[0]).toHaveAttribute("data-color-key", "blue");
+    expect(dots[1]).toHaveAttribute("data-color-key", "orange");
+    const donut = screen.getByLabelText("今月の支出 2,800円");
+    expect(donut.getAttribute("style")).toContain("#527c9c");
+    expect(donut.getAttribute("style")).toContain("#d47b4f");
+    expect(screen.queryByText("給料")).not.toBeInTheDocument();
+  });
+
+  it("keeps a category color when the amount state changes", () => {
+    const category = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "orange", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+    const { rerender } = render(<MoneyCategoryDonut occurrences={[moneyItem({ category, effectiveAmount: 1200, settlementStatus: "actual" })]} />);
+    expect(screen.getByTestId("money-chart-legend-dot")).toHaveAttribute("data-color-key", "orange");
+    rerender(<MoneyCategoryDonut occurrences={[moneyItem({ category, effectiveAmount: 900, settlementStatus: null })]} />);
+    expect(screen.getByTestId("money-chart-legend-dot")).toHaveAttribute("data-color-key", "orange");
+  });
+});
+
+describe("Money category donut modes", () => {
+  const food = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "orange", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+  const fixed = { id: "fixed", userId: "user-1", type: "expense" as const, name: "固定費", colorKey: "blue", sortOrder: 1, active: true, createdAt: "", updatedAt: "" };
+  const daily = { id: "daily", userId: "user-1", type: "expense" as const, name: "日用品", colorKey: "green", sortOrder: 2, active: true, createdAt: "", updatedAt: "" };
+  const entertainment = { id: "entertainment", userId: "user-1", type: "expense" as const, name: "娯楽", colorKey: "pink", sortOrder: 3, active: true, createdAt: "", updatedAt: "" };
+
+  it("defaults to forecast, includes planned amounts, and switches actual aggregation", () => {
+    render(<MoneyCategoryDonut occurrences={[
+      moneyItem({ id: "planned-food", categoryId: food.id, category: food, plannedAmount: 1000, effectiveAmount: 1000, settlementStatus: null }),
+      moneyItem({ id: "actual-food", categoryId: food.id, category: food, plannedAmount: 700, effectiveAmount: 500, settlementStatus: "actual" }),
+      moneyItem({ id: "actual-fixed", categoryId: fixed.id, category: fixed, plannedAmount: 2000, effectiveAmount: 1800, settlementStatus: "actual" }),
+      moneyItem({ id: "estimated-daily", categoryId: daily.id, category: daily, plannedAmount: 3000, effectiveAmount: 2500, settlementStatus: "estimated_actual" }),
+      moneyItem({ id: "planned-entertainment", categoryId: entertainment.id, category: entertainment, plannedAmount: 1000, effectiveAmount: 1000, settlementStatus: null }),
+      moneyItem({ id: "income", type: "income", categoryId: "income", plannedAmount: 9000, effectiveAmount: 9000, settlementStatus: "actual" })
+    ]} />);
+
+    expect(screen.getByRole("button", { name: "見込み" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("今月の支出 6,800円")).toBeInTheDocument();
+    expect(screen.getAllByTestId("money-chart-legend-dot")).toHaveLength(4);
+    fireEvent.click(screen.getByRole("button", { name: "実績" }));
+    expect(screen.getByRole("button", { name: "実績" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("確定した支出 4,800円")).toBeInTheDocument();
+    expect(screen.getAllByTestId("money-chart-legend-dot")).toHaveLength(3);
+    expect(screen.queryByText("娯楽")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("money-chart-legend-dot").map((dot) => dot.getAttribute("data-color-key"))).toEqual(expect.arrayContaining(["orange", "blue", "green"]));
+  });
+
+  it("shows the actual empty state when no occurrence is settled", () => {
+    render(<MoneyCategoryDonut occurrences={[moneyItem({ category: food, effectiveAmount: 1000, settlementStatus: null })]} />);
+    fireEvent.click(screen.getByRole("button", { name: "実績" }));
+    expect(screen.getByText("まだ確定した支出はありません")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/確定した支出/)).not.toBeInTheDocument();
+  });
+});
 
 describe("LifeHub M2 shell", () => {
   beforeEach(() => {

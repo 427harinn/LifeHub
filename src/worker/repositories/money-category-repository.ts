@@ -1,4 +1,5 @@
 import type { MoneyCategory, MoneyType } from "../types";
+import { moneyCategoryColorKey } from "../../lib/money-category-colors";
 
 type MoneyCategoryRow = {
   id: string; user_id: string; type: MoneyType; name: string; color_key: string | null;
@@ -7,7 +8,7 @@ type MoneyCategoryRow = {
 
 const select = "id, user_id, type, name, color_key, sort_order, active, created_at, updated_at";
 const toCategory = (row: MoneyCategoryRow): MoneyCategory => ({
-  id: row.id, userId: row.user_id, type: row.type, name: row.name, colorKey: row.color_key,
+  id: row.id, userId: row.user_id, type: row.type, name: row.name, colorKey: row.color_key ?? moneyCategoryColorKey({ id: row.id, name: row.name }),
   sortOrder: row.sort_order, active: row.active === 1, createdAt: row.created_at, updatedAt: row.updated_at
 });
 
@@ -22,7 +23,7 @@ export class MoneyCategoryRepository {
     ];
     await this.db.batch(defaults.map(([type, name, sortOrder]) => this.db.prepare(
       "INSERT OR IGNORE INTO money_categories (id, user_id, type, name, color_key, sort_order, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)"
-    ).bind(crypto.randomUUID(), userId, type, name, null, sortOrder, now, now)));
+    ).bind(crypto.randomUUID(), userId, type, name, moneyCategoryColorKey({ name }), sortOrder, now, now)));
   }
 
   async list(userId: string, type?: MoneyType, includeInactive = false): Promise<MoneyCategory[]> {
