@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
-import type { Event } from "./api/client";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import type { Event, MoneyItem } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
@@ -18,7 +18,7 @@ const timedEvent = (overrides: Partial<Event> = {}): Event => ({
   createdAt: "2026-09-09T00:00:00.000Z", updatedAt: "2026-09-09T00:00:00.000Z", ...overrides
 });
 
-const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} {...props} />);
+const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} {...props} />);
 
 describe("LifeHub M2 shell", () => {
   beforeEach(() => {
@@ -69,6 +69,7 @@ describe("LifeHub M2 shell", () => {
     expect(screen.getByRole("button", { name: "家を追加" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "家を追加" }));
     expect(await screen.findByRole("heading", { name: "予定を追加" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "以前の項目から選ぶ" })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalled();
   });
 
@@ -109,6 +110,15 @@ describe("LifeHub M2 shell", () => {
 });
 
 describe("EventForm timed start defaults", () => {
+  it("uses direct date inputs and always-visible memo without duplicate headings", () => {
+    renderEventForm();
+    expect(screen.getByLabelText("日付")).toHaveValue("2026-09-10");
+    expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-10");
+    expect(screen.getByLabelText("メモ")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "予定の種類" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "日時" })).not.toBeInTheDocument();
+  });
+
   it("derives a one-hour end time and keeps it in the same day", () => {
     expect(defaultEndTimeForStart("09:00")).toBe("10:00");
     expect(defaultEndTimeForStart("14:30")).toBe("15:30");
@@ -183,8 +193,9 @@ describe("Calendar adaptive row allocation", () => {
     expect(screen.queryByRole("button", { name: /^日付$/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "実施時期" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "実施時期" })).getByRole("button", { name: "日付範囲を指定" }));
-    expect(screen.getByRole("button", { name: /^期間/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^開始日/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^期間/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("開始日")).toHaveValue("2026-09-10");
+    expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-10");
     expect(screen.queryByRole("button", { name: /^繰り返し$/ })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "同日範囲" } });
     fireEvent.click(screen.getByRole("button", { name: "登録" }));
@@ -200,11 +211,13 @@ describe("Calendar adaptive row allocation", () => {
     expect(threeRowsFourEvents.hiddenCount).toBe(2);
     const threeRowsOneEvent = allocateCalendarCellRows([projectedEvent("a")], 0, money, 3);
     expect(threeRowsOneEvent.visibleEvents).toHaveLength(1);
-    expect(threeRowsOneEvent.emptyRows).toBe(1);
+    expect(threeRowsOneEvent.contentRows).toBe(2);
+    expect(threeRowsOneEvent.emptyRows).toBe(0);
     expect(threeRowsOneEvent.visibleMoney).toEqual(money);
     expect(threeRowsOneEvent.hiddenCount).toBe(0);
     const threeRowsNoEvents = allocateCalendarCellRows([], 0, money, 3);
-    expect(threeRowsNoEvents.emptyRows).toBe(2);
+    expect(threeRowsNoEvents.contentRows).toBe(1);
+    expect(threeRowsNoEvents.emptyRows).toBe(0);
     expect(threeRowsNoEvents.visibleMoney).toEqual(money);
     expect(threeRowsNoEvents.hiddenCount).toBe(0);
     const fourRowsFourEvents = allocateCalendarCellRows(["a", "b", "c", "d"].map(projectedEvent), 0, money, 4);
@@ -223,8 +236,46 @@ describe("Calendar adaptive row allocation", () => {
     expect(moneyTab.emptyRows).toBe(0);
     expect(moneyTab.visibleMoney.map((entry) => entry.label)).toEqual(["夜ごはん", "歯医者", "収支"]);
     const moneyTabOneDetail = allocateCalendarCellRows([], 0, [{ amount: -1500, category: "expense" as const, label: "夜ごはん" }, { amount: -1500, category: "expense" as const, isSummary: true, label: "収支" }], 3);
-    expect(moneyTabOneDetail.emptyRows).toBe(1);
+    expect(moneyTabOneDetail.contentRows).toBe(2);
+    expect(moneyTabOneDetail.emptyRows).toBe(0);
     expect(moneyTabOneDetail.visibleMoney.at(-1)?.isSummary).toBe(true);
+  });
+
+  it("reserves the final rendered row for All-tab Money summary before events", () => {
+    const money = [{ amount: -5200, category: "expense" as const, isSummary: true, label: "収支" }];
+    const allocation = allocateCalendarCellRows([projectedEvent("event-a"), projectedEvent("event-b")], 2, money, 4);
+    expect(allocation.visibleBandCount).toBe(2);
+    expect(allocation.visibleEvents).toHaveLength(1);
+    expect(allocation.visibleMoney).toEqual(money);
+    expect(allocation.contentRows).toBe(2);
+    expect(allocation.summaryRowIndex).toBe(2);
+    expect(allocation.hiddenCount).toBe(1);
+
+    const overflow = allocateCalendarCellRows([projectedEvent("event-a")], 3, money, 3);
+    expect(overflow.visibleBandCount).toBe(2);
+    expect(overflow.visibleEvents).toHaveLength(0);
+    expect(overflow.visibleMoney).toEqual(money);
+    expect(overflow.contentRows).toBe(1);
+    expect(overflow.summaryRowIndex).toBe(1);
+    expect(overflow.hiddenCount).toBe(2);
+  });
+
+  it("allocates only rendered rows across compact calendar capacities", () => {
+    const money = [
+      { amount: -5200, category: "expense" as const, label: "電気代" },
+      { amount: -800, category: "expense" as const, label: "交通費" },
+      { amount: -6000, category: "expense" as const, isSummary: true, label: "収支" },
+    ];
+    for (const rowCapacity of [3, 4]) {
+      const allocation = allocateCalendarCellRows([projectedEvent("event-a"), projectedEvent("event-b")], 2, money, rowCapacity);
+      expect(allocation.visibleEvents.length + allocation.visibleMoney.length + allocation.emptyRows).toBeLessThanOrEqual(rowCapacity);
+      expect(allocation.visibleMoney.at(-1)?.isSummary).toBe(true);
+      expect(allocation.hiddenCount).toBeGreaterThanOrEqual(0);
+    }
+
+    const moneyTab = allocateCalendarCellRows([], 0, money, 3);
+    expect(moneyTab.visibleMoney.map((item) => item.label)).toEqual(["電気代", "交通費", "収支"]);
+    expect(moneyTab.hiddenCount).toBe(0);
   });
 });
 
@@ -274,5 +325,100 @@ describe("recurrence form summaries", () => {
   it("preserves explicitly customized cadence fields when the base date changes", () => {
     expect(recurrenceAfterBaseDateChange({ frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 31, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", dayOfMonth: 31 });
     expect(recurrenceAfterBaseDateChange({ frequency: "weekly", interval: 1, weekdays: [4], dayOfMonth: null, startsOn: "2026-09-09", endsOn: null }, "2026-09-09", "2026-09-15")).toMatchObject({ startsOn: "2026-09-15", weekdays: [4] });
+  });
+});
+
+describe("MoneyForm settlement mode", () => {
+  const category = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "green", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+  const createdMoney = { id: "money-1", userId: "user-1", type: "expense" as const, title: "ランチ", categoryId: category.id, plannedAmount: 1200, date: "2026-09-10", time: null, recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "" };
+  const renderMoneyForm = () => render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} />);
+
+  it("defaults to actual and auto-selects planned when recurrence is added", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("確定");
+    fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("予定");
+  });
+
+  it("uses the shared direct date/memo grammar and terminal choices have no chevron", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    expect(screen.getByLabelText("日付")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("メモ")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "お金の種類" }));
+    const typeSheet = screen.getByRole("dialog", { name: "種類" });
+    expect(within(typeSheet).getByRole("button", { name: "支出" }).querySelector(".form-row__chevron")).toBeNull();
+    fireEvent.click(within(typeSheet).getByRole("button", { name: "支出" }));
+    fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
+    const settlementSheet = screen.getByRole("dialog", { name: "金額の状態" });
+    expect(within(settlementSheet).getByRole("button", { name: "確定" }).querySelector(".form-row__chevron")).toBeNull();
+  });
+
+  it("requires a fresh pointer lifecycle before opening Recent after mount", () => {
+    render(<MoneyForm initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen />);
+    const recentTrigger = screen.getByRole("button", { name: "以前の項目から選ぶ" });
+    fireEvent.click(recentTrigger);
+    expect(screen.queryByRole("dialog", { name: "以前の項目から選ぶ" })).not.toBeInTheDocument();
+    fireEvent.pointerDown(recentTrigger);
+    fireEvent.click(recentTrigger);
+    expect(screen.getByRole("dialog", { name: "以前の項目から選ぶ" })).toBeInTheDocument();
+  });
+
+  it("keeps a manually selected mode when recurrence changes", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ categories: [category] }));
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "金額の状態" })).getByRole("button", { name: "予定" }));
+    fireEvent.click(screen.getByRole("button", { name: "お金の繰り返し" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "繰り返し" })).getByRole("button", { name: "毎月" }));
+    expect(screen.getByRole("button", { name: "金額の状態" })).toHaveTextContent("予定");
+  });
+
+  it("creates an actual settlement for actual registration and none for planned registration", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const path = requestPath(input);
+      if (path.includes("/api/money-categories")) return Promise.resolve(response({ categories: [category] }));
+      if (path === "/api/money" && init?.method === "POST") return Promise.resolve(response({ money: createdMoney }));
+      if (path.includes("/actual")) return Promise.resolve(response({ settlement: { status: "actual", amount: 1200 } }));
+      return Promise.resolve(response({}));
+    });
+    const firstForm = renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.change(screen.getByLabelText("項目名"), { target: { value: "ランチ" } });
+    fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
+    fireEvent.click(screen.getByRole("button", { name: "登録" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => requestPath(input).includes("/actual") && init?.method === "PUT")).toBe(true));
+    fetchMock.mockClear();
+    firstForm.unmount();
+    renderMoneyForm();
+    await screen.findByRole("button", { name: "お金カテゴリ" });
+    fireEvent.click(screen.getByRole("button", { name: "金額の状態" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "金額の状態" })).getByRole("button", { name: "予定" }));
+    fireEvent.change(screen.getByLabelText("項目名"), { target: { value: "ランチ予定" } });
+    fireEvent.change(screen.getByLabelText("金額"), { target: { value: "1200" } });
+    fireEvent.click(screen.getByRole("button", { name: "登録" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/actual"))).toBe(false));
+  });
+});
+
+describe("Money status check grammar", () => {
+  it("matches the HouseToDo empty and final checked states", () => {
+    const { rerender } = render(<MoneyStatusIcon />);
+    expect(screen.getByRole("img", { name: "予定" })).toHaveClass("money-status-icon");
+    expect(screen.getByRole("img", { name: "予定" }).querySelector("svg")).toBeNull();
+    rerender(<MoneyStatusIcon status="actual" />);
+    expect(screen.getByRole("img", { name: "確定" })).toHaveClass("money-status-icon--settled");
+    expect(screen.getByRole("img", { name: "確定" }).querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("uses a full-width primary action in inline Money detail", () => {
+    const item = { id: "money-1", userId: "user-1", type: "expense", title: "電気代", categoryId: "cat-1", plannedAmount: 5000, date: "2026-09-10", time: null, recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "", settlementStatus: null } as MoneyItem;
+    render(<MoneyInlineDetail item={item} onActual={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "金額を確定" })).toHaveClass("money-inline-detail__action");
   });
 });

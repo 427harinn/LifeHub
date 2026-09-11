@@ -7,7 +7,7 @@ LifeHubのお金機能は、厳密な家計簿ではなく、**今月だいた�
 細かい入力を強制しない。
 予定額を先に置き、実際の金額が分かったものだけ後から置き換えられることを中心にする。
 
-M8ではplannedAmountだけを使うMoney projectionを実装する。actualAmount、estimated_actual、月末確定はM9で追加する。
+M9ではplannedAmountを基準に、occurrence overrideとsettlementを合成するMoneyProjectionを実装する。actualAmountはbase MoneyItemへ持たせず、MoneyOccurrenceSettlementへ保存する。
 
 ---
 
@@ -56,7 +56,7 @@ MoneyItemには基準となる `plannedAmount` を持つ。
 
 ## 4. 今月の考え方
 
-最終像では「確定済み実績 + 未確定予定」を混ぜて、着地見込みを表示する。M8ではactualが存在しないため、当月のactive occurrenceをすべてplannedAmountで集計する。
+最終像では「確定済み実績 + 未確定予定」を混ぜて、着地見込みを表示する。M9ではactualを優先し、未入力回はoverride適用後plannedAmountで集計する。
 
 ### 支出見込み
 
@@ -67,7 +67,7 @@ M8: plannedAmount
 
 ### 収入見込み
 
-M8は支出と同じplannedAmount集計を使う。actual導入後も同じ決定ロジックを使う。
+支出と収入は同じMoneyProjectionの決定ロジックを使い、actual導入後も画面ごとに判定を複製しない。
 
 ### 残りそう
 
@@ -159,7 +159,7 @@ Eventと同じ共通RecurrenceRuleを利用する。
 - 毎月の電気代予定
 - 毎週の定期支出
 
-M8ではEventと共通のRecurrenceRuleを再利用し、なし / daily / weekly / monthly / interval / weekdays / dayOfMonth / startsOn / endsOnをprojectionする。毎月31日は短月の月末へclampし、occurrenceKeyは安定した値を使う。編集・削除は系列全体のみとし、overrideやoccurrence単位の変更はM9とする。
+Eventと共通のRecurrenceRuleを再利用し、なし / daily / weekly / monthly / interval / weekdays / dayOfMonth / startsOn / endsOnをprojectionする。毎月31日は短月の月末へclampし、occurrenceKeyは`money:<moneyItemId>:<YYYY-MM-DD>`の安定した値を使う。M9ではoccurrence / following / seriesをEventと同じscope grammarで扱う。
 
 ---
 
@@ -167,12 +167,11 @@ M8ではEventと共通のRecurrenceRuleを再利用し、なし / daily / weekly
 
 Eventと同じ考え方を利用する。
 
-- M8: 系列全体
 - M9: 今回のみ / これ以降 / すべて
 
-今回のみの金額変更はM9でMoneyOccurrenceOverrideへ保存する。
+今回のみのtitle / type / category / plannedAmount / date / memo変更はMoneyOccurrenceOverrideへ保存する。削除はcancelled overrideとして保存する。
 
-これ以降の予定額変更による系列分割と、過去のactual / estimated_actual保持もM9の対象とする。
+これ以降の予定額変更は元seriesを対象直前で終了し、対象occurrence日開始の新MoneyItem + RecurrenceRuleへ分割する。過去のactual / estimated_actualは旧seriesに保持する。
 
 ---
 
@@ -194,6 +193,8 @@ actualを消した場合:
 
 - 今月中ならplannedAmountへ戻す
 - 過去月なら必要に応じてestimated_actualへ戻す
+
+MoneyProjectionの表示状態は通常UIでは`実績`、`予定`、`予定額のまま`とする。金額決定はCalendar / Daily / Moneyで共通化する。
 
 ---
 

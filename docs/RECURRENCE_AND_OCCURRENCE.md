@@ -11,6 +11,8 @@ LifeHubの予定における以下を定義する。
 
 LifeHubは完全個人用であり、完了状態は持たない。
 
+Moneyもこの共通RecurrenceRuleとoccurrenceKey / scope grammarを再利用する。Money専用のrecurrence engineは作らず、M9のOverrideは予定定義の例外、Settlementは実績確定として別々にprojectionへ合成する。
+
 ---
 
 ## 2. 大原則

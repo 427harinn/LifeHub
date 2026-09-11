@@ -1,3 +1,33 @@
+# Milestone 9 Tasks
+
+## 小タスク
+
+- [x] T1: PR #9 merge済み最新`origin/main`から`codex/m9-money-occurrence`を作成
+- [x] T2: EventのRecurrenceRule / scope BottomSheet / following splitとM8 Money projectionを監査
+- [x] T3: `0011_m9_money_occurrence.sql`、override / settlement repositoryを実装
+- [x] T4: occurrence / following / seriesのMoney PATCH / DELETEとownership / migration_lockedを実装
+- [x] T5: actual PUT / DELETE、positive integer validation、cancelled不可、estimated置換を実装
+- [x] T6: 共通MoneyProjectionのeffective amount / display stateをCalendar / Daily / Moneyへ接続
+- [x] T7: 月末estimated_actual serviceをtimezone基準でidempotent scheduled処理へ接続
+- [x] T8: Money一覧の実績入力とscope interactionを実装
+- [x] T9: unit / typecheck / lint / build / local migrationを実行
+- [x] T10: M9 E2E、390×844 screenshots / videos、staging migration / deploy / smoke（Worker version `bc31a798-3275-4515-bae1-08bd89ccd02a`）
+- [x] T11: self-review、docs同期、commit / push / PR作成。auto-mergeなし
+- [x] T12: Money UI polish（header / summary / shared month swipe / row icon / inline detail / actual flow / Form mode / Calendar title / Daily row / expense donut）
+- [x] T13: UI polish regression、Evidence、staging再deploy / smoke、PR #10追加commit / push。auto-mergeなし
+- [x] T14: 最終UI調整（Money row tap / swipe排他、通常高action、共通primary、FormRow choice sheet）、M8/M9 regression、staging確認、PR #10へpush
+
+## M9セルフレビュー
+
+- occurrenceを事前生成せず、既存RecurrenceRule projectionを範囲内で合成している
+- Override（予定定義の変更）とSettlement（実績の確定）を別table・別repositoryで扱っている
+- base plannedAmountをactualで上書きせず、series編集でも過去settlementを変更しない
+- Calendar / Daily / Moneyは同じMoney projectionのeffective amountを利用している
+- userId ownership、cancelled occurrence、invalid occurrenceKey、migration_locked writeをroute/serviceで検証している
+- production/default、HouseToDo、M10 Visualizationの残りには触れない（M9 UI polishとして当月expense donutのみ先行）
+
+---
+
 # EventForm UX follow-up tasks
 
 ## 小タスク
@@ -40,7 +70,7 @@
 ## M8 implementation note
 
 - 既存mainのCalendar adaptive rows、Money summary予約row、hidden count、Date Sheet / Daily interactionを維持したまま、fixtureを共有projectionへ置換した。
-- M8ではplannedAmountのみを集計し、既存EventのRecurrenceRuleを要求月へprojectionする。actual / estimated_actual / occurrence override / settlement / series split / graph / budget / notificationは実装していない。
+- M8時点ではplannedAmountのみを集計していた。M9でactual / estimated_actual / occurrence override / settlement / series splitを追加し、graph / budget / notificationは引き続き後続対象とする。
 - MoneyFormの時間入力は削除し、SettingsカテゴリとMoney月一覧は共通swipe actionで操作する。stagingでは`0010_m8_money_recurrence.sql`適用後に再deploy・390×844 smokeを行う。
 
 ## M8セルフレビュー観点

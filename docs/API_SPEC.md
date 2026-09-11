@@ -163,7 +163,13 @@ PATCH  /api/money/:id
 DELETE /api/money/:id
 ```
 
-M8の繰り返しMoneyは既存EventのRecurrenceRuleを参照し、月projection・Calendar・Dailyへ展開する。更新・削除は系列全体のみとし、occurrence / following scopeはM9で追加する。
+Moneyは既存EventのRecurrenceRuleを参照し、月projection・Calendar・Dailyへ展開する。M9ではEventと同じscope grammarでoccurrence / following / seriesを指定できる。
+
+```json
+{ "scope": "occurrence | following | series", "occurrenceKey": "money:<moneyItemId>:<YYYY-MM-DD>" }
+```
+
+`occurrence` / `following`では`occurrenceKey`が必須。occurrenceはoverride、followingは元seriesを対象直前で終了して対象日開始の新seriesへ分割、seriesはbase definitionを更新する。
 
 月表示は:
 
@@ -172,13 +178,13 @@ M8の繰り返しMoneyは既存EventのRecurrenceRuleを参照し、月projectio
 - 残りそう
 - occurrence一覧
 
-M8の集計値は全てplannedAmountを使う。actual / estimated_actual、カテゴリ別グラフ、月末確定はM9以降とする。
+月projectionは共通MoneyProjectionのeffective amountを返す。現在月・未来はactualがなければoverride適用後planned、過去月はactual、estimated_actual、既存未settleデータ向けplanned fallbackの順で決定する。summaryには必要に応じてconfirmed / planned補助集計を含む。
 
 を返す。
 
 ---
 
-## 7. Money actual（M9）
+## 7. Money actual（M9実装済み）
 
 ```text
 PUT /api/money/:id/occurrences/:occurrenceKey/actual
@@ -193,6 +199,8 @@ DELETE /api/money/:id/occurrences/:occurrenceKey/actual
 - actual取消
 
 月末処理でactual未入力occurrenceは `estimated_actual` として当時の予定額をDB保存する。
+
+cancelled occurrenceにはactualを登録できない。actual取消は現在月ならplannedへ戻り、過去月で以前estimated_actualを置換していた場合は固定済みestimated値へ戻る。
 
 ---
 

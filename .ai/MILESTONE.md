@@ -1,3 +1,43 @@
+# Milestone 9: Money occurrence override / actual / estimated_actual / series split / 月末確定
+
+## 現在のMilestone
+
+M9実装中。ベースはPR #9 merge済み最新`origin/main` (`c63041cab6c62ab5e741926d8016c4454dc2500e`)、branchは`codex/m9-money-occurrence`。Moneyのoccurrence単位planned override、occurrence/following/series scope、actual、過去月のestimated_actual固定、Calendar / Daily / Money共通projectionを対象とする。M10 Visualizationは対象外。
+
+## 進捗
+
+- [x] 最新origin/main取得、PR #9 merge済みSHA確認、新規branch作成
+- [x] Event recurrence / scope grammarとM8 Money recurrence / projectionを監査
+- [x] `0011_m9_money_occurrence.sql`、MoneyOccurrenceOverride / Settlement repositoryを追加
+- [x] occurrence / following split / series scope APIとactual APIを実装
+- [x] 共通MoneyProjectionへoverride・settlement・display stateを統合
+- [x] Money一覧の実績入力、Eventと同じscope BottomSheet、Calendar / Daily接続を実装
+- [x] 月末estimated_actual serviceを既存scheduled handlerへ`waitUntil`接続
+- [x] unit / typecheck / lint / build / local migrationを実行
+- [x] M9 E2E / 390×844 Evidence、staging migration / deploy / smoke（Worker version `bc31a798-3275-4515-bae1-08bd89ccd02a`）
+- [x] Money UI polish（Daily/EventForm grammar、inline detail、状態icon、month swipe、カテゴリ別支出donut）を実装
+- [x] UI polishのunit / E2E / 390×844 Evidence、staging再deploy / smoke、PR #10追加commit（auto-mergeなし）
+
+## 実装境界
+
+- Settlementは`actual`と`estimated_actual`を同一occurrenceでupsertし、actual取消時は当時保存したestimated値へ戻せる。base plannedAmountは変更しない。
+- 過去月はactual、次にestimated_actualを優先し、未settleの既存データだけ安全なplanned fallbackを使う。現在月・未来はactualがなければoverride適用後plannedを使う。
+- followingは元RecurrenceRuleを対象直前で終了し、対象日開始の新MoneyItem + RecurrenceRuleへ分割する。対象以降のoverride / settlement参照も新seriesへ移す。
+- Money画面は従来の3行見込みsummaryを主役にし、予定は空丸、actual / estimated_actualはチェック丸で示す。内部語`actual` / `estimated_actual`は通常UIに出さない。カテゴリ別支出donutはM9 UI polishの先行範囲で、M10の残りは未着手。
+
+## STOP条件
+
+- stagingのみへmigration / deployする。Cloudflare API 7403が出た場合は直ちに停止する。
+- production/default、HouseToDoは操作・変更しない。M10 Visualizationへ進まない。auto-mergeは実行しない。
+
+## 検証記録（2026-09-10）
+
+- localは全unit 84件、typecheck / lint / build、M8 Money回帰E2E、M9 UI E2E、Event scope API回帰を通過。最終UIではMoney rowのtap / swipe排他、通常高action、共通primary、FormRow choice sheetを確認した。Evidenceは`artifacts/evidence/m9/`、videoはPlaywright artifactへ保存した。
+- stagingは`lifehub-staging`のみを対象に再deploy（Worker version `a0a7128a-f27a-4aec-bdf2-bfb9e818570f`）。追加migrationはなく、migration listは`No migrations to apply!`、health HTTP 200、最終M9 UI E2E、M8 Money回帰を通過した。実Push通知のみブラウザ権限拒否で未完了。
+- Cloudflare API 7403は今回再発しなかった。production/default、HouseToDoの操作はない。
+
+---
+
 # EventForm UX follow-up: timed start default
 
 ## 現在のMilestone
@@ -69,8 +109,8 @@ M8実装中。ベースはPR #8 merge済み `origin/main` (`6d22c3315d9672c9dec2
 - `/api/money`、`/api/money/month`、`/api/money/recent-definitions`、`/api/money-categories`一式を実装。共有Money projectionをCalendar / Date Sheet / Daily / Money画面で利用した。
 - MoneyFormはexpense/income、numeric正数、category/date/recurrenceのFormRow + BottomSheet、メモのprogressive disclosure、recent定義、編集・削除に対応し、時間入力は持たない。Settingsのお金カテゴリとMoney月一覧は共通swipe actionでedit/inactiveをrevealする。
 - local migration、recurrence unit/component tests、typecheck、lint、build、M8 Playwright E2Eを完了。Evidenceは`artifacts/evidence/m8/`に保存。
-- stagingは前回`0009`まで適用済み。今回`0010_m8_money_recurrence.sql`をstagingへ適用し、再deploy・smokeを行う。production/defaultとHouseToDoは操作しない。M9（occurrence override、actual、estimated_actual、series split、月末確定）は未着手。auto-mergeは実行しない。
-- production/defaultとHouseToDoは操作していない。M9（occurrence override、actual、estimated_actual、series split、月末確定）は未着手。auto-mergeは実行していない。
+- M8時点のstaging記録。M9では`0011_m9_money_occurrence.sql`をstagingへ適用し、再deploy・smokeを行う。production/defaultとHouseToDoは操作しない。auto-mergeは実行しない。
+- M8時点ではproduction/defaultとHouseToDoは操作していない。M9の作業でも同じ境界を維持する。
 
 
 # Milestone 7: Notification

@@ -470,7 +470,7 @@ MoneyItem
 
 金額は正数保存。符号はtypeで決める。
 
-M8では`recurrenceRuleId`は既存`recurrence_rules`へのuserId所有参照として利用する。occurrenceは要求範囲へprojectionし、Money occurrence専用テーブルは作成しない。`time`列を残してもM8の作成・更新値はnullとする。MoneyOccurrenceOverride / Settlement / actual系はM9以降。
+`recurrenceRuleId`は既存`recurrence_rules`へのuserId所有参照として利用する。occurrenceは要求範囲へprojectionし、大量事前生成しない。M9では例外状態だけをMoney occurrence専用tableへ保存する。
 
 ---
 
@@ -485,17 +485,20 @@ MoneyOccurrenceOverride
 - moneyItemId
 - occurrenceKey
 - overrideType: modified | cancelled
+- type nullable
 - title nullable
 - categoryId nullable
 - plannedAmount nullable
 - date nullable
-- time nullable
+- patchJson nullable
 - memo nullable
 - createdAt
 - updatedAt
 ```
 
 `moneyItemId + occurrenceKey` は一意。
+
+`userId`はMoneyItemと同一ownerで、`money_item_id`削除時はcascadeする。`modified`は非null patchを保存し、`cancelled`はcancel markerとして保存する。
 
 ---
 
@@ -511,6 +514,7 @@ MoneyOccurrenceSettlement
 - amount
 - finalizedAt
 - updatedAt
+- estimatedAmount nullable（estimated_actualをactualへ置換した後、actual取消時に固定値へ戻すための内部保持）
 ```
 
 `moneyItemId + occurrenceKey` は一意。
@@ -528,6 +532,8 @@ MoneyOccurrenceSettlement
 
 1. actual
 2. estimated_actual
+
+現在月・未来はactualがなければeffective plannedへ戻る。SettlementはOverrideと別tableであり、base plannedAmountを変更しない。
 
 ---
 
