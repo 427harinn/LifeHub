@@ -625,3 +625,20 @@ password hash / session token / VAPID private key / Cloudflare secrets等は含�
 - migration_locked中は通常書き込みAPIを拒否する
 - D1削除前にIndexedDB保存・checksum確認を必須にする
 - Production/defaultへ明示指示なくdeploy / migrationしない
+
+## 25. M12 Local Archive schema
+
+M12のIndexedDBは `lifehub-archive`、schemaVersion `1` とする。
+
+```text
+archiveBatches: id, userId, schemaVersion, archivedAt, retentionBoundary,
+  minDate, maxDate, recordCount, recordCountsByType, checksum, status, confirmedAt?
+archiveRecords: rowKey, archiveBatchId, retentionBoundary, type, id, userId, recordDate?, updatedAt?, record
+archivedSearchIndex: id, archiveBatchId, userId, type, recordId, text
+```
+
+ArchiveRecordは表示再構築用snapshotをbatch内に保持する。全storeはuserIdでscopeし、batch保存はtransaction、putはidempotentとする。D1の `archive_batches` はchecksum、manifest、recordCount、retentionBoundary、candidate / confirmed statusだけを保持し、archive内容そのものを複製しない。
+
+M12ではJSON export / import、migration_locked、機種変更flowは持たない。
+
+Projection authority: `ArchiveRecord.archiveBatchId` / `retentionBoundary`でbatchを識別し、local projectionはboundary未満だけに制限する。D1とlocalのstable occurrence identityが重複する場合はD1を採用する。親snapshotは過去表示用であり、current / future occurrenceの第二定義ソースではない。

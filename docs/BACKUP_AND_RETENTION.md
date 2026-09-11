@@ -272,3 +272,27 @@ UI上で明確に分ける。
 - 機種変更: 完全バックアップを新端末へ移し、旧クラウド状態を整理する操作
 
 アーカイブされた予定はCalendar上から消えない。
+
+---
+
+## 16. M12 Local Archive 実装固定事項
+
+M12では、機種変更JSONの実装は行わず、端末IndexedDBへのforeground archiveだけを実装する。
+
+保持境界はUserSettingsのtimezoneで現在日を求め、calendar month基準で12か月戻した日付とする。`date < retentionBoundary` がarchive対象であり、境界当日はD1に残す。`createdAt`や単純な365日前では判定しない。
+
+DB名は `lifehub-archive`、schemaVersionは `1`。storesは `archiveBatches`、`archiveRecords`、`archivedSearchIndex` とし、batch transaction、userId scope、同一checksumのidempotent put、read-back検証を行う。保存失敗・read-back失敗・件数 / ID / checksum不一致時はrollbackし、confirmを呼ばない。logoutでは削除しない。
+
+serverはschemaVersion、generatedAt、userId、retentionBoundary、archiveBatchId、表示再構築用snapshotと、D1 delete対象だけを列挙したmanifestを返す。継続中の親定義をsnapshotへ含める場合があってもdelete manifestへ含めない。checksumはWeb Crypto SHA-256で、object keyを再帰的にsortしarray順序を維持するcanonical serializationをclient / Workerで共有する。
+
+処理順は `GET /api/archive/candidates` → IndexedDB保存 → read-back → IDs / 件数 / checksum検証 → local metadata verified / confirm_pending → `POST /api/archive/confirm` → server再検証 → atomic D1 delete → local metadata confirmed と固定する。stale batch、confirm 409/500、confirm後network disconnectでもlocal archiveは保持し、未確認ならD1を削除しない。confirmは同じbatchの再試行を許可する。
+
+単発 / period Eventは実効終了日、終了済みrecurrence系列は`endsOn`、DailyNoteは日付、Moneyは単発・終了済み系列の定義と古いoverride / actual / estimated_actualを対象にする。継続中Event / RecurrenceRule / MoneyItem / Money recurrenceはD1に残し、古いoverride / settlementだけを対象にできる。将来へ移動したoverrideは残す。
+
+Calendar / Daily / Money / Searchはserver projectionとIndexedDB snapshotをstable occurrence identityでmergeし、archive済み履歴を通常画面から消さない。
+
+### M12 authority / projection correction
+
+Archive recordは`archiveBatchId`と`retentionBoundary`を保持する。local projectionは各batchについて`date < retentionBoundary`へrequest rangeをclampし、継続中の親snapshotからboundary日以降のoccurrenceを生成しない。D1 projectionとIndexedDB projectionが同じstable occurrence identityを返した場合は、Calendar Event / MoneyともD1を最終authorityとする。Searchもarchive batchの保持期間だけを対象とし、親snapshotを将来5年へ投影しない。
+
+SettingsのJSON Backup rowはM13まで表示しない。M12で表示するbackup関連UIはLocal Archiveの状態と手動確認導線だけである。

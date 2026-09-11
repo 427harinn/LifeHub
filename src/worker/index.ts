@@ -24,6 +24,7 @@ import { MoneyService } from "./services/money-service";
 import { MoneyOccurrenceOverrideRepository } from "./repositories/money-occurrence-override-repository";
 import { MoneyOccurrenceSettlementRepository } from "./repositories/money-occurrence-settlement-repository";
 import { runMoneySettlement } from "./services/money-settlement-service";
+import { ArchiveService } from "./services/archive-service";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
 const nowIso = () => new Date().toISOString();
@@ -117,9 +118,23 @@ const getUserState = requireAuth(async ({ env, user }) => {
   return json({ state });
 });
 
+const getArchiveCandidates = requireAuth(async ({ env, user }) => {
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  return json(await archiveService(env).createCandidate(user.id, settings.timezone, new Date()));
+});
+
+const confirmArchive = requireAuth(async ({ request, env, user }) => {
+  const body = await parseObject(request);
+  const manifest = body.manifest;
+  if (typeof body.archiveBatchId !== "string" || typeof body.checksum !== "string" || !Number.isInteger(body.recordCount) || !Number.isInteger(body.schemaVersion) || !Number.isInteger(body.manifestVersion) || !manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw validationError({ archive: "アーカイブ確認情報が不正です。" });
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  return json(await archiveService(env).confirm(user.id, settings.timezone, new Date(), { archiveBatchId: body.archiveBatchId, checksum: body.checksum, recordCount: Number(body.recordCount), schemaVersion: Number(body.schemaVersion), manifestVersion: Number(body.manifestVersion), manifest: manifest as never }));
+});
+
 const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
 const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env), new NotificationRepository(env.DB));
 const moneyService = (env: Env) => new MoneyService(new MoneyRepository(env.DB), new MoneyCategoryRepository(env.DB), new RecurrenceRepository(env.DB), new MoneyOccurrenceOverrideRepository(env.DB), new MoneyOccurrenceSettlementRepository(env.DB));
+const archiveService = (env: Env) => new ArchiveService(env.DB);
 const withEventNotifications = async (userId: string, events: Event[], db: D1Database) => {
   const repository = new NotificationRepository(db);
   const offsets = new Map<string, Promise<number[]>>();
@@ -442,6 +457,8 @@ export default {
       if (notificationTemplatePath && request.method === "PATCH") return await updateNotificationTemplate(context);
       if (notificationTemplatePath && request.method === "DELETE") return await deleteNotificationTemplate(context);
       if (url.pathname === "/api/user-state" && request.method === "GET") return await getUserState(context);
+      if (url.pathname === "/api/archive/candidates" && request.method === "GET") return await getArchiveCandidates(context);
+      if (url.pathname === "/api/archive/confirm" && request.method === "POST") return await confirmArchive(context);
       if (url.pathname === "/api/calendar" && request.method === "GET") return await getCalendar(context);
       if (url.pathname === "/api/daily" && request.method === "GET") return await getDaily(context);
       if (url.pathname === "/api/money/month" && request.method === "GET") return await getMoneyMonth(context);

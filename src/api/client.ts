@@ -1,3 +1,5 @@
+import type { ArchiveCandidateResponse, ArchiveManifest } from "../lib/archive";
+
 export type AuthUser = { id: string; email: string; displayName: string };
 export type UserSettings = {
   userId: string;
@@ -40,7 +42,7 @@ export type Event = {
   notifications?: number[];
 };
 export type CalendarSearchResult = Event & {
-  source: "server";
+  source: "server" | "archive";
   eventId: string;
   occurrenceDate: string;
   matchContext: { fields: Array<"title" | "place" | "memo">; text?: string };
@@ -116,3 +118,5 @@ export const updateMoney = (id: string, input: Partial<{ type: MoneyType; title:
 export const deleteMoney = (id: string, scope: EventScope = "series", occurrenceKey?: string) => request<{ deleted: boolean }>(`/api/money/${encodeURIComponent(id)}?scope=${scope}${occurrenceKey ? `&occurrenceKey=${encodeURIComponent(occurrenceKey)}` : ""}`, { method: "DELETE" });
 export const putMoneyActual = (id: string, occurrenceKey: string, amount: number) => request<{ settlement: { status: "actual" | "estimated_actual"; amount: number } }>(`/api/money/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(occurrenceKey)}/actual`, { method: "PUT", body: JSON.stringify({ amount }) });
 export const deleteMoneyActual = (id: string, occurrenceKey: string) => request<{ deleted: boolean }>(`/api/money/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(occurrenceKey)}/actual`, { method: "DELETE" });
+export const getArchiveCandidates = () => request<ArchiveCandidateResponse>("/api/archive/candidates");
+export const confirmArchive = (input: { archiveBatchId: string; checksum: string; recordCount: number; schemaVersion: number; manifestVersion: number; manifest: ArchiveManifest }) => request<{ confirmed: boolean; archiveBatchId: string; alreadyConfirmed: boolean; deletedRecordCount: number }>("/api/archive/confirm", { method: "POST", body: JSON.stringify(input) });

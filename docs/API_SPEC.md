@@ -441,3 +441,20 @@ M2では機種変更フロー自体とlock操作UIは未実装だが、Workerの
 - migration_lockedをWorker側で強制する
 - stagingでmigration/API検証後にPRを作る
 - Production/defaultへ明示指示なしでdeploy / migrationしない
+
+## 19. M12 Local Archive API
+
+```text
+GET  /api/archive/candidates
+POST /api/archive/confirm
+```
+
+`GET /api/archive/candidates` はUserSettings timezoneから算出した`retentionBoundary`、`archiveBatchId`、schemaVersion、表示再構築用ArchiveBundle、delete対象manifest、recordCount、SHA-256 checksumを返す。候補生成時点の内容はD1 `archive_batches`へmetadataだけ保存する。
+
+`POST /api/archive/confirm` は`archiveBatchId`、schemaVersion、manifestVersion、checksum、recordCount、manifestを受け取る。serverはuser ownership、batch一致、schema、manifest、checksum、件数、現行candidate setを再確認する。candidate生成後に対象recordのupdatedAtや内容が変化した場合は409 `ARCHIVE_STALE`としDELETEしない。同一batchのconfirm済み再送はidempotentに成功扱いとする。
+
+server側deleteはmanifestに列挙したevent / override / notification / daily_note / money item / override / settlement / 不要なrecurrence ruleだけをatomicに処理する。active Event、active MoneyItem、未来occurrence生成に必要なRecurrenceRule、継続中Money recurrenceは削除しない。clientがIDだけを送ってもmanifest外は削除しない。
+
+保存処理の順序はcandidate取得、IndexedDB transaction、read-back、ID / 件数 / canonical checksum検証、local metadata verified、confirm、server delete、local confirmed更新。JSON migration APIはM13の対象である。
+
+Archive dataはclient側でbatch boundaryをprojectionへ渡す。`date < retentionBoundary`がlocal authority範囲であり、boundary日以降はD1がauthorityとなる。同一stable occurrence identityのmergeではD1 resultを優先する。

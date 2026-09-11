@@ -1,3 +1,44 @@
+# Milestone 12 Tasks
+
+## 小タスク
+
+- [x] T1: latest `origin/main` SHA確認、新規branch作成、指定docs・既存Event / Money / Daily / Search / Settings / D1 schema監査
+- [x] T2: M12境界、archive payload、IndexedDB、checksum、confirm safety、M13境界を`.ai`へ記録
+- [x] T3: shared archive types、retention boundary、canonical serialization、SHA-256、manifestを実装
+- [x] T4: `0012_m12_archive.sql` とserver candidate / confirm service・routeを実装
+- [x] T5: Event / recurrence / period / override / DailyNote / Money / settlement candidate判定とactive parent保護を実装
+- [x] T6: versioned IndexedDB storage、transaction rollback、read-back、duplicate batch safety、user scopeを実装
+- [x] T7: Calendar / Daily / Money / Searchのlocal archive adapterとserver/local dedupe mergeを実装
+- [x] T8: Settings Archive UI（empty / candidate / saving / verified / confirm pending / complete / error）をDESIGN.md準拠で実装
+- [x] T9: unit / repository-service integration / failure / boundary / timezone / recurrence parent / retry testを追加
+- [x] T10: local migration、lint / typecheck / unit / build / E2E、390×844 Evidenceを実行
+- [x] T11: staging target / database ID / environmentを再確認し、migration / deploy / health / smokeを実行する。7403発生時はSTOP
+- [x] T12: E2Eでarchive前D1、local保存後D1残存、confirm後対象のみ削除、active parent / future projection / UI表示をassert
+- [x] T13: docs同期、self-review、commit `c9f3a06`、push、main向けPR #14作成。auto-mergeしない
+
+## M12セルフレビュー観点
+
+- `docs/BACKUP_AND_RETENTION.md`に反してcreatedAtだけで判定していない
+- boundaryは`date < boundary`、user timezone、calendar month基準であり、boundary日を削除しない
+- local保存→read-back→ID / count / checksum→verified metadata→confirm→server recheck→atomic D1 deleteの順序を守っている
+- candidate payloadは自己完結し、表示snapshotとdelete manifestを分離している
+- active Event / recurrence parent / future occurrence生成に必要なrule / active MoneyItem / active Money recurrenceを削除しない
+- M9 historical settlement anchor semanticsを壊さず、過去planned変更でarchive済み金額が変わらない
+- userId scope、duplicate batch、retry、confirm idempotency、stale batch拒否を確認している
+- Calendar / Daily / Money / Searchは既存UIを置換せず、server + IndexedDBをstable identityでmergeしている
+- Settingsはdashboard化せず、怖いDELETE表現を主操作にしない。390×844で状態別Evidenceを残す
+- stagingのみを操作し、production/default・HouseToDo・server Cron delete・auto-mergeを行っていない
+
+## PR #14 review correction
+
+- [x] ArchiveRecordへbatch boundaryを保持し、local Event / Money / Search projectionを`date < retentionBoundary`へ制限
+- [x] archive期間（`date < retentionBoundary`）はlocalをauthority、boundary以降とboundary重複はserver / D1をauthorityとしてmerge
+- [x] active親snapshotのcurrent / future漏出、old/current title、Money planned amount、Search 5年projectionの回帰testを追加
+- [x] 未実装JSON Backup rowをSettingsから除去し、Evidenceを更新
+- [x] staging再deploy / staging E2E：Worker version `2e3bb591-4f54-48dc-a5f1-36918f4d14a8`、health HTTP 200、1件pass。7403再発なし
+
+---
+
 # Milestone 11 Tasks
 
 ## 小タスク
