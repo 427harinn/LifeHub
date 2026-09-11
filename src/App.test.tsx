@@ -54,6 +54,41 @@ describe("Money category donut colors", () => {
   });
 });
 
+describe("Money category donut modes", () => {
+  const food = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "orange", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+  const fixed = { id: "fixed", userId: "user-1", type: "expense" as const, name: "固定費", colorKey: "blue", sortOrder: 1, active: true, createdAt: "", updatedAt: "" };
+  const daily = { id: "daily", userId: "user-1", type: "expense" as const, name: "日用品", colorKey: "green", sortOrder: 2, active: true, createdAt: "", updatedAt: "" };
+  const entertainment = { id: "entertainment", userId: "user-1", type: "expense" as const, name: "娯楽", colorKey: "pink", sortOrder: 3, active: true, createdAt: "", updatedAt: "" };
+
+  it("defaults to forecast, includes planned amounts, and switches actual aggregation", () => {
+    render(<MoneyCategoryDonut occurrences={[
+      moneyItem({ id: "planned-food", categoryId: food.id, category: food, plannedAmount: 1000, effectiveAmount: 1000, settlementStatus: null }),
+      moneyItem({ id: "actual-food", categoryId: food.id, category: food, plannedAmount: 700, effectiveAmount: 500, settlementStatus: "actual" }),
+      moneyItem({ id: "actual-fixed", categoryId: fixed.id, category: fixed, plannedAmount: 2000, effectiveAmount: 1800, settlementStatus: "actual" }),
+      moneyItem({ id: "estimated-daily", categoryId: daily.id, category: daily, plannedAmount: 3000, effectiveAmount: 2500, settlementStatus: "estimated_actual" }),
+      moneyItem({ id: "planned-entertainment", categoryId: entertainment.id, category: entertainment, plannedAmount: 1000, effectiveAmount: 1000, settlementStatus: null }),
+      moneyItem({ id: "income", type: "income", categoryId: "income", plannedAmount: 9000, effectiveAmount: 9000, settlementStatus: "actual" })
+    ]} />);
+
+    expect(screen.getByRole("button", { name: "見込み" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("今月の支出 6,800円")).toBeInTheDocument();
+    expect(screen.getAllByTestId("money-chart-legend-dot")).toHaveLength(4);
+    fireEvent.click(screen.getByRole("button", { name: "実績" }));
+    expect(screen.getByRole("button", { name: "実績" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("確定した支出 4,800円")).toBeInTheDocument();
+    expect(screen.getAllByTestId("money-chart-legend-dot")).toHaveLength(3);
+    expect(screen.queryByText("娯楽")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("money-chart-legend-dot").map((dot) => dot.getAttribute("data-color-key"))).toEqual(expect.arrayContaining(["orange", "blue", "green"]));
+  });
+
+  it("shows the actual empty state when no occurrence is settled", () => {
+    render(<MoneyCategoryDonut occurrences={[moneyItem({ category: food, effectiveAmount: 1000, settlementStatus: null })]} />);
+    fireEvent.click(screen.getByRole("button", { name: "実績" }));
+    expect(screen.getByText("まだ確定した支出はありません")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/確定した支出/)).not.toBeInTheDocument();
+  });
+});
+
 describe("LifeHub M2 shell", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/calendar");

@@ -352,6 +352,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-inline-detail__memo { white-space: pre-wrap; }
 .money-chart-section { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
 .money-chart-section h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.money-chart-section__heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.money-chart-mode-switch { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 2px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); }
+.money-chart-mode-switch button { min-height: 28px; padding: 3px 8px; border: 0; border-radius: 999px; color: var(--color-text-secondary); background: transparent; font: inherit; font-size: .6875rem; cursor: pointer; }
+.money-chart-mode-switch button[aria-pressed="true"] { color: var(--color-primary-strong); background: var(--color-primary-soft); }
 .money-chart { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--space-4); align-items: center; }
 .money-donut { display: grid; width: 132px; height: 132px; place-items: center; border-radius: 50%; background: var(--money-donut); }
 .money-donut::after { width: 84px; height: 84px; border-radius: 50%; background: var(--color-surface); content: ""; grid-area: 1 / 1; }

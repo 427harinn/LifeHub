@@ -22,6 +22,12 @@ async function register(page: import("@playwright/test").Page) {
 async function createExpense(page: import("@playwright/test").Page, categoryId: string, title: string, amount: number, date: string) {
   const response = await page.request.post("/api/money", { data: { type: "expense", title, plannedAmount: amount, categoryId, date, memo: null, recurrence: null } });
   expect(response.ok()).toBeTruthy();
+  return (await response.json() as { money: { id: string } }).money.id;
+}
+
+async function setActual(page: import("@playwright/test").Page, moneyId: string, date: string, amount: number) {
+  const response = await page.request.put(`/api/money/${moneyId}/occurrences/money:${moneyId}:${date}/actual`, { data: { amount } });
+  expect(response.ok()).toBeTruthy();
 }
 
 async function showMoneyChart(page: import("@playwright/test").Page) {
@@ -40,12 +46,12 @@ test("keeps Money category colors distinct and stable across UI surfaces", async
   const categories = (await categoriesResponse.json() as { categories: Array<{ id: string; name: string }> }).categories;
   const categoryId = (name: string) => categories.find((category) => category.name === name)?.id ?? (() => { throw new Error(`missing category: ${name}`); })();
 
-  await createExpense(page, categoryId("食費"), "食費の支出", 1200, date);
+  const foodId = await createExpense(page, categoryId("食費"), "食費の支出", 1200, date);
   let chart = await showMoneyChart(page);
   await expect(chart.locator(".money-chart__legend > div")).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "one-category-food-390x844.png") });
 
-  await createExpense(page, categoryId("固定費"), "固定費の支出", 5000, date);
+  const fixedId = await createExpense(page, categoryId("固定費"), "固定費の支出", 5000, date);
   await page.reload();
   chart = await showMoneyChart(page);
   await expect(chart.locator(".money-chart__legend > div")).toHaveCount(2);
@@ -75,9 +81,31 @@ test("keeps Money category colors distinct and stable across UI surfaces", async
 
   await page.getByRole("button", { name: "お金" }).last().click();
   chart = await showMoneyChart(page);
+  await chart.getByRole("button", { name: "実績" }).click();
+  await expect(chart.getByText("まだ確定した支出はありません")).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "actual-empty-390x844.png") });
+
+  await setActual(page, foodId, date, 1000);
+  await setActual(page, fixedId, date, 4500);
+  await page.reload();
+  chart = await showMoneyChart(page);
+  await chart.getByRole("button", { name: "実績" }).click();
+  await expect(chart.locator(".money-donut")).toHaveAttribute("data-mode", "actual");
+  await expect(chart.locator(".money-donut")).toHaveAttribute("aria-label", "確定した支出 5,500円");
+  await expect(chart.locator(".money-chart__legend > div")).toHaveCount(2);
+  await expect(chart.locator(".money-chart__legend > div").filter({ hasText: "食費" }).locator(".money-chart__legend-dot")).toHaveAttribute("data-color-key", "orange");
+  await expect(chart.locator(".money-chart__legend > div").filter({ hasText: "固定費" }).locator(".money-chart__legend-dot")).toHaveAttribute("data-color-key", "blue");
+  await expect(chart.getByText("日用品")).not.toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "actual-food-fixed-390x844.png") });
+
+  await page.getByRole("button", { name: "お金" }).last().click();
+  chart = await showMoneyChart(page);
+  await chart.getByRole("button", { name: "見込み" }).click();
+  await expect(chart.locator(".money-chart__legend-dot")).toHaveCount(3);
   const beforeReload = await chart.locator(".money-chart__legend-dot").evaluateAll((dots) => dots.map((dot) => dot.getAttribute("data-color-key")));
   await page.reload();
   chart = await showMoneyChart(page);
+  await expect(chart.locator(".money-chart__legend-dot")).toHaveCount(3);
   const afterReload = await chart.locator(".money-chart__legend-dot").evaluateAll((dots) => dots.map((dot) => dot.getAttribute("data-color-key")));
   expect(afterReload).toEqual(beforeReload);
   const currentMonth = await page.locator(".money-month-nav h2").textContent();

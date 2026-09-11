@@ -525,18 +525,25 @@ function MoneyChoiceSheet({ open, title, options, onClose, onSelect }: { open: b
   return <BottomSheet open={open} title={title} onClose={onClose}><div className="event-option-sheet">{options.map((option) => <button className="event-option-sheet__option" key={option.value} onClick={() => onSelect(option.value)} type="button"><span>{option.label}</span></button>)}</div></BottomSheet>;
 }
 
-export function MoneyCategoryDonut({ occurrences }: { occurrences: MoneyItem[] }) {
-  const groups = Array.from(occurrences.filter((item) => item.type === "expense").reduce((map, item) => {
+export type MoneyChartMode = "forecast" | "actual";
+type MoneyCategoryGroup = { amount: number; color: string; colorKey: string; name: string };
+
+export const moneyCategoryGroupsFor = (occurrences: MoneyItem[], mode: MoneyChartMode = "forecast"): MoneyCategoryGroup[] => Array.from(occurrences.filter((item) => item.type === "expense" && (mode === "forecast" || item.settlementStatus === "actual" || item.settlementStatus === "estimated_actual")).reduce((map, item) => {
     const key = item.category?.id ?? item.category?.name ?? "other";
     const current = map.get(key) ?? { amount: 0, color: moneyCategoryColor(item.category), colorKey: moneyCategoryColorKey(item.category), name: item.category?.name ?? "その他" };
     current.amount += Math.abs(item.effectiveAmount ?? item.signedAmount ?? item.plannedAmount);
     map.set(key, current);
     return map;
-  }, new Map<string, { amount: number; color: string; colorKey: string; name: string }>()).values()).sort((left, right) => right.amount - left.amount);
+  }, new Map<string, MoneyCategoryGroup>()).values()).sort((left, right) => right.amount - left.amount);
+
+export function MoneyCategoryDonut({ occurrences }: { occurrences: MoneyItem[] }) {
+  const [mode, setMode] = useState<MoneyChartMode>("forecast");
+  const groups = moneyCategoryGroupsFor(occurrences, mode);
   const total = groups.reduce((sum, group) => sum + group.amount, 0);
-  if (total === 0) return <section className="money-chart-section"><h2>カテゴリ別の支出</h2><p className="empty-state">まだ支出はありません</p></section>;
+  const centerLabel = mode === "forecast" ? "今月の支出" : "確定した支出";
+  if (total === 0) return <section className="money-chart-section"><div className="money-chart-section__heading"><h2>カテゴリ別の支出</h2><div aria-label="カテゴリ別の支出表示" className="money-chart-mode-switch" role="group"><button aria-pressed={mode === "forecast"} onClick={() => setMode("forecast")} type="button">見込み</button><button aria-pressed={mode === "actual"} onClick={() => setMode("actual")} type="button">実績</button></div></div><p className="empty-state">{mode === "actual" ? "まだ確定した支出はありません" : "まだ支出はありません"}</p></section>;
   const gradient = groups.reduce<{ cursor: number; parts: string[] }>((result, group) => { const next = result.cursor + (group.amount / total) * 100; result.parts.push(`${group.color} ${result.cursor}% ${next}%`); result.cursor = next; return result; }, { cursor: 0, parts: [] }).parts.join(", ");
-  return <section className="money-chart-section"><h2>カテゴリ別の支出</h2><div className="money-chart"><div aria-label={`今月の支出 ${total.toLocaleString("ja-JP")}円`} className="money-donut" style={{ "--money-donut": `conic-gradient(${gradient})` } as CSSProperties}><div className="money-donut__label"><span>今月の支出</span><strong>{total.toLocaleString("ja-JP")}円</strong></div></div><div className="money-chart__legend">{groups.map((group) => <div key={group.name}><span className="money-chart__legend-dot" data-color-key={group.colorKey} data-testid="money-chart-legend-dot" style={{ backgroundColor: group.color }} /><span>{group.name}</span><strong>{group.amount.toLocaleString("ja-JP")}円</strong></div>)}</div></div></section>;
+  return <section className="money-chart-section"><div className="money-chart-section__heading"><h2>カテゴリ別の支出</h2><div aria-label="カテゴリ別の支出表示" className="money-chart-mode-switch" role="group"><button aria-pressed={mode === "forecast"} onClick={() => setMode("forecast")} type="button">見込み</button><button aria-pressed={mode === "actual"} onClick={() => setMode("actual")} type="button">実績</button></div></div><div className="money-chart"><div aria-label={`${centerLabel} ${total.toLocaleString("ja-JP")}円`} className="money-donut" data-mode={mode} style={{ "--money-donut": `conic-gradient(${gradient})` } as CSSProperties}><div className="money-donut__label"><span>{centerLabel}</span><strong>{total.toLocaleString("ja-JP")}円</strong></div></div><div className="money-chart__legend">{groups.map((group) => <div key={group.name}><span className="money-chart__legend-dot" data-color-key={group.colorKey} data-testid="money-chart-legend-dot" style={{ backgroundColor: group.color }} /><span>{group.name}</span><strong>{group.amount.toLocaleString("ja-JP")}円</strong></div>)}</div></div></section>;
 }
 
 export function MoneyForm({ initialDate, item, scope = "series", onCancel, onSaved, onDelete, suppressInitialRecentOpen = true }: { initialDate: string; item?: MoneyItem; scope?: EventScope; onCancel: () => void; onSaved: (item: MoneyItem) => void; onDelete?: () => void; suppressInitialRecentOpen?: boolean }) {
