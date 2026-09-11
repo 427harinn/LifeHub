@@ -26,11 +26,16 @@ describe("archive projection authority and range", () => {
     expect(archived[0].title).toBe("旧週次レビュー");
     expect(archiveEventsForRange(rows, userId, { startDate: "2026-09-01", endDate: "2026-10-31" }, 1)).toHaveLength(0);
 
-    const current = { ...archived[0], title: "新週次レビュー", startTime: "11:00" };
-    const merged = mergeProjectedEvents([current], archived);
-    expect(merged).toHaveLength(1);
-    expect(merged[0].title).toBe("新週次レビュー");
-    expect(merged[0].startTime).toBe("11:00");
+    const staleCurrent = { ...archived[0], title: "新週次レビュー", startTime: "11:00" };
+    const oldMerged = mergeProjectedEvents([staleCurrent], archived, boundary);
+    expect(oldMerged).toHaveLength(1);
+    expect(oldMerged[0].title).toBe("旧週次レビュー");
+    expect(oldMerged[0].startTime).toBe("10:00");
+
+    const boundarySnapshot = { ...archived[0], title: "境界snapshot", startDate: boundary, endDate: boundary, occurrenceKey: `event:event-1:${boundary}T10:00` };
+    const boundaryServer = { ...boundarySnapshot, title: "境界D1", startTime: "11:00" };
+    const boundaryMerged = mergeProjectedEvents([boundaryServer], [boundarySnapshot], boundary);
+    expect(boundaryMerged[0].title).toBe("境界D1");
   });
 
   it("keeps old and current event titles in their respective authority ranges", () => {
@@ -48,7 +53,7 @@ describe("archive projection authority and range", () => {
 
     const current = { ...archived[0], date: "2026-10-01", plannedAmount: 80000, effectiveAmount: 80000, effectivePlannedAmount: 80000, basePlannedAmount: 80000, signedAmount: -80000, occurrenceKey: "money:money-1:2026-10-01" };
     const server = { occurrences: [current], summary: { expenseForecast: 80000, incomeForecast: 0, remaining: -80000 }, days: [] } as MoneyProjection;
-    const merged = mergeMoneyProjections(server, archived);
+    const merged = mergeMoneyProjections(server, archived, boundary);
     expect(merged.occurrences.map((item) => item.effectiveAmount)).toEqual([65000, 80000]);
     expect(merged.occurrences.find((item) => item.date === "2026-10-01")?.plannedAmount).toBe(80000);
   });

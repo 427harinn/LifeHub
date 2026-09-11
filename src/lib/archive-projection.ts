@@ -23,6 +23,7 @@ const archiveRangeForBatch = (range: DateRange, retentionBoundary: string): Date
 };
 const eventIdentity = (event: { id: string; occurrenceKey?: string | null; startDate?: string | null; periodStartDate?: string | null }) => `${event.id}:${event.occurrenceKey ?? "single"}:${event.startDate ?? event.periodStartDate ?? ""}`;
 const moneyIdentity = (item: { id: string; occurrenceKey?: string | null; date: string }) => `${item.id}:${item.occurrenceKey ?? item.date}`;
+const eventAuthorityDate = (event: { timingType?: string; startDate?: string | null; endDate?: string | null; periodStartDate?: string | null; periodEndDate?: string | null }) => event.timingType === "period" ? event.periodEndDate ?? event.endDate ?? event.periodStartDate ?? event.startDate : event.startDate;
 
 export const archiveEventsForRange = (rows: ArchiveRecord[], userId: string, range: DateRange, weekStartsOn: number): ProjectedEvent[] => {
   return archiveBatchGroups(rows).flatMap((batch) => {
@@ -50,10 +51,11 @@ export const archiveMoneyForRange = (rows: ArchiveRecord[], userId: string, rang
   }).sort((left, right) => `${left.date}:${left.id}:${left.occurrenceKey}`.localeCompare(`${right.date}:${right.id}:${right.occurrenceKey}`));
 };
 
-export const mergeProjectedEvents = (serverEvents: ApiEvent[], archivedEvents: ProjectedEvent[]): ApiEvent[] => {
+export const mergeProjectedEvents = (serverEvents: ApiEvent[], archivedEvents: ProjectedEvent[], retentionBoundary?: string): ApiEvent[] => {
   const result = new Map<string, ApiEvent>();
+  const localAuthorityKeys = new Set(archivedEvents.filter((event) => { const date = eventAuthorityDate(event); return Boolean(retentionBoundary && date && date < retentionBoundary); }).map(eventIdentity));
   archivedEvents.forEach((event) => result.set(eventIdentity(event), event));
-  serverEvents.forEach((event) => result.set(eventIdentity(event), event));
+  serverEvents.forEach((event) => { const key = eventIdentity(event); if (!localAuthorityKeys.has(key)) result.set(key, event); });
   return [...result.values()];
 };
 
@@ -62,10 +64,11 @@ const projectionSummary = (occurrences: MoneyOccurrence[]) => {
   return { ...summary, confirmedExpense: occurrences.filter((item) => item.type === "expense" && item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0), confirmedIncome: occurrences.filter((item) => item.type === "income" && item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0), plannedExpense: occurrences.filter((item) => item.type === "expense" && !item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0), plannedIncome: occurrences.filter((item) => item.type === "income" && !item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0) };
 };
 
-export const mergeMoneyProjections = (server: ApiMoneyProjection, archived: MoneyOccurrence[]): ApiMoneyProjection => {
+export const mergeMoneyProjections = (server: ApiMoneyProjection, archived: MoneyOccurrence[], retentionBoundary?: string): ApiMoneyProjection => {
   const byKey = new Map<string, MoneyOccurrence>();
+  const localAuthorityKeys = new Set(archived.filter((item) => Boolean(retentionBoundary && item.date < retentionBoundary)).map(moneyIdentity));
   archived.forEach((item) => byKey.set(moneyIdentity(item), item));
-  server.occurrences.forEach((item) => byKey.set(moneyIdentity(item), item as MoneyOccurrence));
+  server.occurrences.forEach((item) => { const key = moneyIdentity(item); if (!localAuthorityKeys.has(key)) byKey.set(key, item as MoneyOccurrence); });
   const occurrences = [...byKey.values()].sort((left, right) => `${left.date}:${left.id}:${left.occurrenceKey ?? ""}`.localeCompare(`${right.date}:${right.id}:${right.occurrenceKey ?? ""}`));
   const days = [...new Set(occurrences.map((item) => item.date))].sort().map((date) => ({ date, ...projectionSummary(occurrences.filter((item) => item.date === date)) }));
   return { occurrences: occurrences as ApiMoneyProjection["occurrences"], summary: projectionSummary(occurrences), days };

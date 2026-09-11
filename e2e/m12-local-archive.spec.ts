@@ -45,12 +45,21 @@ test("M12 archives old history locally before removing only eligible D1 records"
   expect(candidate.records.dailyNotes.map((item) => item.date)).toContain("2024-01-15");
   expect(candidate.manifest.records).toEqual(expect.arrayContaining([{ type: "event", id: singlePayload.event.id }, { type: "event", id: endedPayload.event.id }]));
   expect(candidate.manifest.records).not.toContainEqual({ type: "event", id: activePayload.event.id });
+  expect((await page.request.get(`/api/events/${singlePayload.event.id}`)).status()).toBe(200);
+  expect((await page.request.get(`/api/events/${endedPayload.event.id}`)).status()).toBe(200);
+  expect((await page.request.get(`/api/money/${activeMoneyPayload.money.id}`)).status()).toBe(200);
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "データとバックアップを開く" }).click();
+  const uiCandidateResponse = page.waitForResponse((response) => response.url().endsWith("/api/archive/candidates") && response.request().method() === "GET");
   await page.getByRole("button", { name: "アーカイブを確認" }).click();
+  const uiCandidate = await (await uiCandidateResponse).json() as { archiveBatchId: string; checksum: string; schemaVersion: number; manifestVersion: number; manifest: { version: number; records: Array<{ type: string; id: string }> }; metadata: { recordCount: number } };
   await expect(page.getByText("アーカイブ完了")).toBeVisible({ timeout: 15_000 });
   await page.screenshot({ path: "artifacts/evidence/m12/archive-complete-390x844.png", fullPage: true });
+
+  const duplicateConfirm = await page.request.post("/api/archive/confirm", { data: { archiveBatchId: uiCandidate.archiveBatchId, checksum: uiCandidate.checksum, recordCount: uiCandidate.metadata.recordCount, schemaVersion: uiCandidate.schemaVersion, manifestVersion: uiCandidate.manifestVersion, manifest: uiCandidate.manifest } });
+  expect(duplicateConfirm.ok()).toBeTruthy();
+  expect((await duplicateConfirm.json() as { alreadyConfirmed?: boolean }).alreadyConfirmed).toBe(true);
 
   const localState = await page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open("lifehub-archive"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
@@ -77,6 +86,16 @@ test("M12 archives old history locally before removing only eligible D1 records"
     expect(calendar.money.occurrences.find((entry) => entry.id === activeMoneyPayload.money.id)?.plannedAmount).toBe(80000);
   }
 
+  await page.goto("/calendar");
+  await expect(page.getByText("M12 新週次レビュー")).toBeVisible({ timeout: 15_000 });
+  await page.goto("/daily?date=2024-01-01");
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByText("M12 旧週次レビュー").first()).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "お金", exact: true }).click();
+  await expect(page.getByText("M12 旧家賃")).toBeVisible({ timeout: 15_000 });
+  await page.goto("/daily?date=2024-01-15");
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByText("M12 端末へ退避する日メモ")).toBeVisible({ timeout: 15_000 });
   await page.goto("/calendar");
   await page.getByRole("button", { name: "検索" }).click();
   await page.getByRole("textbox", { name: "予定を検索" }).fill("旧週次レビュー");
