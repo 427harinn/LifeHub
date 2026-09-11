@@ -300,6 +300,15 @@ const getMoneyMonth = requireAuth(async ({ request, env, user }) => {
   return json(await moneyService(env).projectMonth(user.id, month, settings.weekStartsOn, new Date(), settings.timezone));
 });
 
+const getMoneyYear = requireAuth(async ({ request, env, user }) => {
+  const rawYear = stringValue(new URL(request.url).searchParams.get("year"));
+  const year = Number(rawYear);
+  if (!/^\d{4}$/.test(rawYear) || !Number.isInteger(year) || year < 1 || year > 9999) throw validationError({ year: "表示年をYYYY形式で指定してください。" });
+  await moneyService(env).ensureCategories(user.id, nowIso());
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  return json(await moneyService(env).projectYear(user.id, year, settings.weekStartsOn, new Date(), settings.timezone));
+});
+
 const listRecentMoneyDefinitions = requireAuth(async ({ request, env, user }) => {
   const parsedLimit = Number(new URL(request.url).searchParams.get("limit") ?? "20");
   const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 20;
@@ -401,6 +410,7 @@ export default {
       if (url.pathname === "/api/calendar" && request.method === "GET") return await getCalendar(context);
       if (url.pathname === "/api/daily" && request.method === "GET") return await getDaily(context);
       if (url.pathname === "/api/money/month" && request.method === "GET") return await getMoneyMonth(context);
+      if (url.pathname === "/api/money/year-summary" && request.method === "GET") return await getMoneyYear(context);
       if (url.pathname === "/api/money" && request.method === "POST") return await createMoney(context);
       if (url.pathname === "/api/money/recent-definitions" && request.method === "GET") return await listRecentMoneyDefinitions(context);
       const moneyActualPath = url.pathname.match(/^\/api\/money\/([^/]+)\/occurrences\/([^/]+)\/actual$/);

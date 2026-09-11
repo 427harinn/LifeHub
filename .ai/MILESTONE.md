@@ -1,3 +1,33 @@
+# Milestone 10: Money Visualization
+
+## 現在のMilestone
+
+M10実装完了。PR #11 merge済みの最新`origin/main`（`f59717d7e9ca0cd5d927c121a224a6a0efe66b75`）から`codex/m10-money-analysis`を作成した。通常Money画面は維持し、Money配下の独立した`お金の分析`画面、年集計API、年間推移・選択月detail・年間カテゴリdonutを追加した。M9で確定したMoneyProjection / settlementを唯一の金額計算正本とし、production/default・HouseToDoには触れていない。
+
+## 完了条件
+
+- [x] Money headerに分析入口を追加し、Money配下のsub screenとして戻り導線・Bottom Navigation selected状態を維持
+- [x] `/api/money/year-summary`で1年12か月を一度にprojectionし、forecast / actual / category集計を返す
+- [x] 年選択、global見込み / 実績toggle、summary、12か月line chart、月detail、年間カテゴリdonut、empty stateを実装
+- [x] recurrence / override / cancelled / following split / settlement / historical anchorを既存projection経由で反映
+- [x] unit / component / E2E、390×844 Evidence、staging smoke、docs更新を完了
+- [ ] branch push・PR作成まで行い、auto-mergeせずSTOP
+
+## 実装境界
+
+- 通常Money画面のmonth切替、summary、一覧、既存donut、見込み / 実績toggleは作り直さない。
+- 年集計は`MoneyService.projectYear()`が1回のrange projectionから12か月へ集計する。実績はactual / estimated_actualのみ、planned-onlyは除外する。
+- 実績modeの未来月は0円の線を描かず、未確定として値を`null`にする。
+- graphは依存を増やさずSVGで描き、月ごとの44px相当hit areaを持たせる。カード・shadow・gradient・large orange surfaceは使わない。
+
+## M10検証記録（2026-09-11）
+
+- local: typecheck / lint（既存warningのみ）/ unit 104件 / build / M10 Playwright 390×844を通過。Evidenceは`artifacts/evidence/m10/`、操作videoは`artifacts/playwright/m10-money-analysis/test-results/`に保存した。
+- staging: `lifehub-staging`へdeploy成功。Worker version `fc22ee5e-046e-450c-b8b1-30e7ba9506a3`、health HTTP 200、remote migration `No migrations to apply!`、M10 staging Playwright smoke 1件pass。
+- Cloudflare API 7403は今回発生なし。migration追加なし。production/default・HouseToDoは未操作。auto-mergeなし。
+
+---
+
 # Milestone 9: Money occurrence override / actual / estimated_actual / series split / 月末確定
 
 ## 現在のMilestone

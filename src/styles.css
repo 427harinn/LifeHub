@@ -317,6 +317,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .delete-confirm__note { color: var(--color-text-secondary); font-size: .8125rem !important; }
 
 .money-page { min-height: calc(100svh - 76px); align-content: start; gap: var(--space-4); }
+.money-header-actions { display: flex; min-width: 0; align-items: center; gap: 2px; }
+.money-header-actions .daily-date-label { margin-left: 0; }
 .money-month-body { display: grid; gap: var(--space-4); touch-action: pan-y; transform: translateX(var(--money-swipe-offset, 0)); transition: transform 180ms ease-out; }
 .money-month-body.is-swipe-dragging { transition: none; }
 .money-month-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; }
@@ -384,3 +386,25 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-category-editor { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; flex: 1; gap: 6px; align-items: center; }
 .money-category-editor select { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-input); background: var(--color-surface); }
 .delete-confirm .button--secondary { color: var(--color-error); border-color: #e6b6ae; }
+
+.money-analysis-page { align-content: start; gap: var(--space-5); }
+.money-year-selector { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; transform: translateX(var(--money-year-swipe-offset, 0)); transition: transform 180ms ease-out; touch-action: pan-y; }
+.money-year-selector.is-swipe-dragging { transition: none; }
+.money-year-selector h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.money-year-selector button { min-height: 44px; border: 0; color: var(--color-primary-strong); background: transparent; font-size: 1.5rem; cursor: pointer; }
+.money-analysis-page > .money-chart-mode-switch { justify-self: end; }
+.money-analysis-section { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.money-analysis-section h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.money-analysis-summary .money-summary, .money-analysis-detail .money-summary { padding-top: 0; }
+.money-analysis-summary .money-summary > div, .money-analysis-detail .money-summary > div { min-height: 48px; }
+.money-analysis-summary .money-summary strong, .money-analysis-detail .money-summary strong { font-size: 1rem; }
+.money-year-chart { position: relative; width: 100%; min-height: 210px; }
+.money-year-chart__svg { display: block; width: 100%; height: 190px; overflow: visible; }
+.money-year-chart__grid { stroke: var(--color-border); stroke-width: 1; }
+.money-year-chart__line { fill: none; stroke: var(--color-primary-strong); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.money-year-chart__point { fill: var(--color-surface); stroke: var(--color-primary-strong); stroke-width: 2; }
+.money-year-chart__point.is-selected { fill: var(--color-primary-strong); }
+.money-year-chart__hit-areas { position: absolute; inset: 0 0 0 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.money-year-chart__hit-area { display: flex; min-width: 0; min-height: 44px; flex-direction: column; align-items: center; justify-content: flex-end; padding: 0 0 2px; border: 0; color: var(--color-text-secondary); background: transparent; font: inherit; font-size: .6875rem; cursor: pointer; }
+.money-year-chart__hit-area.is-selected { color: var(--color-primary-strong); font-weight: 600; }
+.money-chart-note { margin: 0; color: var(--color-text-secondary); font-size: .75rem; }

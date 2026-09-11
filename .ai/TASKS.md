@@ -1,3 +1,30 @@
+# Milestone 10 Tasks
+
+## 小タスク
+
+- [x] T1: 最新origin/main（PR #11 merge済み）から`codex/m10-money-analysis`を作成し、指定docs・既存Money UI・projectionを監査
+- [x] T2: M10の画面構成・year aggregation・forecast / actual / future month仕様を`.ai/MILESTONE.md`へ記録
+- [x] T3: MoneyService year projectionと`/api/money/year-summary`を実装する
+- [x] T4: Money画面headerの分析入口と`/money/analysis` sub screen navigationを実装する
+- [x] T5: 年selector、global toggle、summary、SVG line chart、月detail、年間category donut、empty stateを実装する
+- [x] T6: projection / aggregation / boundary / actual / category / future month unit testとcomponent / E2Eを追加する
+- [x] T7: 390×844 Evidence（通常Money、分析、toggle、year swipe、point tap、past/future、empty、back、bottom nav）を作成する
+- [x] T8: lint / typecheck / unit / build / E2E、staging deploy / health / smokeを実行する。7403発生時はSTOP
+- [x] T9: DESIGN.md self-review、関連docs同期、commit / push / PR作成。auto-mergeしない
+
+## M10セルフレビュー観点
+
+- 通常Money画面へ分析graphを追加していない
+- `お金の分析`は独立bottom-nav destinationではなく、Money selectedのsub screenである
+- `docs/DESIGN.md`のclean / reassuring / cardを乱用しない / dashboard化しない方針を守る
+- 年集計はMoneyProjectionを再利用し、chart専用の別recurrence計算を持たない
+- 実績modeでplanned-onlyと未来0円線を表示しない
+- category colorKeyは通常Money donutと同じfallback規則を使う
+- 390×844で情報量、tap target、scroll、Bottom Navigation、back navigationを確認する
+- production/default・HouseToDoへ操作しない
+
+---
+
 # Milestone 9 Tasks
 
 ## 小タスク

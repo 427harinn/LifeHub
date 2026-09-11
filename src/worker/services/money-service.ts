@@ -17,6 +17,31 @@ export type MoneyOccurrence = MoneyItem & { category: MoneyCategory | null; sign
 export type MoneySummary = { expenseForecast: number; incomeForecast: number; remaining: number; confirmedExpense?: number; confirmedIncome?: number; plannedExpense?: number; plannedIncome?: number };
 export type MoneyDay = MoneySummary & { date: string };
 export type MoneyProjection = { occurrences: MoneyOccurrence[]; summary: MoneySummary; days: MoneyDay[] };
+export type MoneyYearMonth = {
+  month: string;
+  expenseForecast: number;
+  incomeForecast: number;
+  remainingForecast: number;
+  expenseActual: number | null;
+  incomeActual: number | null;
+  remainingActual: number | null;
+};
+export type MoneyYearCategory = { category: MoneyCategory | null; amountForecast: number; amountActual: number };
+export type MoneyYearProjection = {
+  year: number;
+  currentMonth: string;
+  months: MoneyYearMonth[];
+  summary: {
+    expenseForecast: number;
+    incomeForecast: number;
+    remainingForecast: number;
+    expenseActual: number;
+    incomeActual: number;
+    remainingActual: number;
+  };
+  categoryForecast: MoneyYearCategory[];
+  categoryActual: MoneyYearCategory[];
+};
 export type MoneyProjectionDefinition = { item: MoneyItem; rule: RecurrenceRule | null; overrides?: MoneyOccurrenceOverride[] };
 export type MoneyScope = "occurrence" | "following" | "series";
 export type MoneyCommand = Partial<MoneyItemInput> & { scope?: MoneyScope; occurrenceKey?: string; recurrence?: Partial<RecurrenceRuleInput> | null };
@@ -45,6 +70,40 @@ const summaryWithStates = (items: MoneyOccurrence[]): MoneySummary => {
     confirmedIncome: items.filter((item) => item.type === "income" && item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0),
     plannedExpense: items.filter((item) => item.type === "expense" && !item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0),
     plannedIncome: items.filter((item) => item.type === "income" && !item.settlementStatus).reduce((sum, item) => sum + item.effectiveAmount, 0)
+  };
+};
+const actualOccurrences = (items: MoneyOccurrence[]) => items.filter((item) => Boolean(item.settlementStatus));
+const categorySummaryFor = (items: MoneyOccurrence[], actualOnly: boolean): MoneyYearCategory[] => {
+  const groups = new Map<string, MoneyYearCategory>();
+  for (const item of items) {
+    if (item.type !== "expense" || actualOnly && !item.settlementStatus) continue;
+    const key = item.category?.id ?? item.category?.name ?? "other";
+    const current = groups.get(key) ?? { category: item.category, amountForecast: 0, amountActual: 0 };
+    const amount = item.effectiveAmount;
+    if (actualOnly) current.amountActual += amount;
+    else current.amountForecast += amount;
+    groups.set(key, current);
+  }
+  return [...groups.values()].sort((left, right) => (actualOnly ? right.amountActual - left.amountActual : right.amountForecast - left.amountForecast));
+};
+export const moneyYearFromOccurrences = (year: number, occurrences: MoneyOccurrence[], currentMonth: string): MoneyYearProjection => {
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+    const monthOccurrences = occurrences.filter((item) => item.date.slice(0, 7) === month);
+    const forecast = moneySummaryFor(monthOccurrences);
+    const actual = moneySummaryFor(actualOccurrences(monthOccurrences));
+    const actualVisible = month <= currentMonth;
+    return { month, expenseForecast: forecast.expenseForecast, incomeForecast: forecast.incomeForecast, remainingForecast: forecast.remaining, expenseActual: actualVisible ? actual.expenseForecast : null, incomeActual: actualVisible ? actual.incomeForecast : null, remainingActual: actualVisible ? actual.remaining : null };
+  });
+  const forecast = moneySummaryFor(occurrences);
+  const actual = moneySummaryFor(actualOccurrences(occurrences));
+  return {
+    year,
+    currentMonth,
+    months,
+    summary: { expenseForecast: forecast.expenseForecast, incomeForecast: forecast.incomeForecast, remainingForecast: forecast.remaining, expenseActual: actual.expenseForecast, incomeActual: actual.incomeForecast, remainingActual: actual.remaining },
+    categoryForecast: categorySummaryFor(occurrences, false),
+    categoryActual: categorySummaryFor(occurrences, true)
   };
 };
 const applyOverride = (item: MoneyItem, override: MoneyOccurrenceOverride | undefined): MoneyItem | null => !override ? item : override.overrideType === "cancelled" ? null : { ...item, ...(override.patch ?? {}) };
@@ -162,6 +221,13 @@ export class MoneyService {
     const match = /^(\d{4})-(\d{2})$/.exec(month); if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) throw validationError({ month: "表示月をYYYY-MM形式で指定してください。" });
     const year = Number(match[1]); const monthIndex = Number(match[2]); const start = `${month}-01`; const nextMonth = monthIndex === 12 ? `${year + 1}-01-01` : `${year}-${String(monthIndex + 1).padStart(2, "0")}-01`; const endDate = new Date(`${nextMonth}T00:00:00Z`); endDate.setUTCDate(0);
     return { month, ...(await this.project(userId, start, endDate.toISOString().slice(0, 10), weekStartsOn, now, timezone)) };
+  }
+  async projectYear(userId: string, year: number, weekStartsOn = 1, now = new Date(), timezone = "UTC"): Promise<MoneyYearProjection> {
+    if (!Number.isInteger(year) || year < 1 || year > 9999) throw validationError({ year: "表示年が不正です。" });
+    const start = `${year}-01-01`;
+    const end = `${year}-12-31`;
+    const projection = await this.project(userId, start, end, weekStartsOn, now, timezone);
+    return moneyYearFromOccurrences(year, projection.occurrences, getLocalDate(now, timezone).slice(0, 7));
   }
   async projectDate(userId: string, date: string, weekStartsOn = 1, now = new Date(), timezone = "UTC") { return this.project(userId, date, date, weekStartsOn, now, timezone); }
 }

@@ -55,6 +55,9 @@ export type MoneyItem = { id: string; userId: string; type: MoneyType; title: st
 export type MoneySummary = { expenseForecast: number; incomeForecast: number; remaining: number; confirmedExpense?: number; confirmedIncome?: number; plannedExpense?: number; plannedIncome?: number };
 export type MoneyDay = MoneySummary & { date: string };
 export type MoneyProjection = { occurrences: MoneyItem[]; summary: MoneySummary; days: MoneyDay[] };
+export type MoneyYearMonth = { month: string; expenseForecast: number; incomeForecast: number; remainingForecast: number; expenseActual: number | null; incomeActual: number | null; remainingActual: number | null };
+export type MoneyYearCategory = { category: MoneyCategory | null; amountForecast: number; amountActual: number };
+export type MoneyYearProjection = { year: number; currentMonth: string; months: MoneyYearMonth[]; summary: { expenseForecast: number; incomeForecast: number; remainingForecast: number; expenseActual: number; incomeActual: number; remainingActual: number }; categoryForecast: MoneyYearCategory[]; categoryActual: MoneyYearCategory[] };
 
 class ApiError extends Error {
   constructor(readonly status: number, message: string) {
@@ -97,6 +100,7 @@ export const createMoneyCategory = (input: { type: MoneyType; name: string; colo
 export const updateMoneyCategory = (id: string, input: { name?: string; colorKey?: string | null }) => request<{ category: MoneyCategory }>(`/api/money-categories/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
 export const deleteMoneyCategory = (id: string) => request<{ deleted: boolean }>(`/api/money-categories/${encodeURIComponent(id)}`, { method: "DELETE" });
 export const getMoneyMonth = (month: string) => request<{ month: string } & MoneyProjection>(`/api/money/month?month=${encodeURIComponent(month.slice(0, 7))}`);
+export const getMoneyYear = (year: number) => request<MoneyYearProjection>(`/api/money/year-summary?year=${encodeURIComponent(String(year))}`);
 export const getRecentMoneyDefinitions = (limit = 20) => request<{ definitions: MoneyItem[] }>(`/api/money/recent-definitions?limit=${limit}`);
 export const createMoney = (input: { type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; memo: string | null; recurrence: RecurrenceRuleInput | null }) => request<{ money: MoneyItem }>("/api/money", { method: "POST", body: JSON.stringify(input) });
 export const updateMoney = (id: string, input: Partial<{ type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; memo: string | null; recurrence: RecurrenceRuleInput | null }> & { scope?: EventScope; occurrenceKey?: string }) => request<{ money: MoneyItem }>(`/api/money/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });

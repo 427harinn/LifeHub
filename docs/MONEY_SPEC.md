@@ -243,6 +243,14 @@ MoneyProjectionの表示状態は通常UIでは`実績`、`予定`、`予定額�
 
 過度に多種類のグラフを入れない。
 
+### M10 お金の分析画面
+
+通常のMoney画面は「今月のお金を見る / 登録・修正する」役割を維持し、長期の可視化はMoney配下の独立sub screen `/money/analysis`で扱う。分析画面は現在年を初期表示し、年selector、画面全体へ効く`見込み | 実績`切替、年間summary、1月〜12月の支出line chart、選択月detail、年間カテゴリ別支出donutを縦1列で表示する。
+
+年集計は`GET /api/money/year-summary?year=YYYY`を1回だけ呼び、`MoneyProjection`を1年rangeへ展開して12か月へ集計する。見込みはeffectiveAmount（planned / actual / estimated_actualを含む）、実績はactual / estimated_actualのみとする。実績の未来月は0円として扱わず、未確定値として線を描かない。カテゴリは`MoneyCategory.colorKey`と既存fallbackを通常Money donutと共有する。
+
+M10ではAI分析、budget、saving goal、複雑な前年比・financial KPI、複数グラフを並べたdashboardは扱わない。通常Money画面の既存month UI・一覧・当月donutは変更しない。
+
 ---
 
 ## 14. 今月一覧

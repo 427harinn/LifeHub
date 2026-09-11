@@ -477,7 +477,17 @@ Evidence reviewでは毎回以下を確認する。
 
 ---
 
-# 19. Source-of-truth relationship
+# 19. LifeHub Money analysis screen
+
+通常のMoney画面は今月の確認・登録・修正に集中し、長期の可視化はMoney配下の独立した`お金の分析`sub screenで扱う。分析画面も通常Moneyと同じscreen header、spacing、summary row、divider、Bottom Navigationを使い、SaaS dashboardや銀行KPI画面へ寄せない。
+
+分析画面は縦1列で、header、年selector、globalな`見込み | 実績`切替、年間summary、`月ごとの支出`line chart、選択月detail、`年間の支出カテゴリ`donutの順とする。sectionを大きなcardで囲まず、chartは背景・shadow・gradientなしの静かなSVGとし、各月の選択領域は44px程度を確保する。実績modeの未来月は0円線を描かず、未確定として線を切る。
+
+年選択は既存Money / Calendarのmonth selectorと同じ左右矢印・横swipe grammarを使う。分析画面でもBottom NavigationのMoneyをselectedに保ち、header backまたはMoney再選択で通常Moneyへ戻る。category色は通常Money donutと同じ`MoneyCategory.colorKey`を使い、分析画面だけの装飾色を追加しない。
+
+---
+
+# 20. Source-of-truth relationship
 
 Design precedence:
 
