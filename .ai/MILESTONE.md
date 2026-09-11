@@ -11,7 +11,7 @@ M10実装完了。PR #11 merge済みの最新`origin/main`（`f59717d7e9ca0cd5d9
 - [x] 年選択、global見込み / 実績toggle、summary、12か月line chart、月detail、年間カテゴリdonut、empty stateを実装
 - [x] recurrence / override / cancelled / following split / settlement / historical anchorを既存projection経由で反映
 - [x] unit / component / E2E、390×844 Evidence、staging smoke、docs更新を完了
-- [ ] branch push・PR作成まで行い、auto-mergeせずSTOP
+- [x] branch push・PR作成まで行い、auto-mergeせずSTOP
 
 ## 実装境界
 
