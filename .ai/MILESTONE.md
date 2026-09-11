@@ -1,3 +1,46 @@
+# Milestone 12: Local Archive
+
+## 現在のMilestone
+
+M12実装完了（commit / push / PR作成前）。`origin/main` の `88c28dae0d6674255b208b5a116c130aed06c50d` から `codex/m12-local-archive` を作成した。`docs/BACKUP_AND_RETENTION.md` を正本とし、user timezone基準で12か月より古い履歴をIndexedDBへ保存・検証した後にのみstaging D1から厳密な対象を削除する。activeなEvent / RecurrenceRule / MoneyItem / Money recurrenceは定義年齢だけでは削除しない。production/default・HouseToDoは操作せず、auto-mergeしない。
+
+## 完了条件
+
+- [x] versioned IndexedDB `lifehub-archive` とArchiveMetadata、user scope、idempotent batch保存を実装
+- [x] user timezoneのcalendar-month boundaryとEvent / period / recurrence / Money settlement / DailyNoteのcandidate判定を実装
+- [x] `/api/archive/candidates` と`/api/archive/confirm` を実装し、batch ownership / checksum / manifest / count / stale snapshotを検証
+- [x] IndexedDB保存、read-back、ID / 件数 / checksum検証に失敗した場合はconfirm / D1 DELETEを実行しない
+- [x] confirm成功後だけD1のarchive対象をatomicに削除し、active parentとfuture projection定義を残す
+- [x] Calendar / Daily / Money / Calendar SearchへIndexedDB archiveを統合し、boundary monthをdedupe merge
+- [x] Settings > データ / バックアップにArchive状態と手動確認導線を追加
+- [x] failure / recurrence parent / boundary / timezone / retry / E2E / 390×844 Evidenceを追加
+- [x] docs、unit / integration / E2E、staging deploy / smokeを完了する。commit / push / PRは最終工程
+
+## M12検証記録（2026-09-11）
+
+- local: migration `0012_m12_archive.sql`適用、unit 115件、lint（既存warning 13件のみ）、typecheck、buildを通過。
+- staging: `lifehub-staging` のみへmigration / deploy。health HTTP 200、migration listは`No migrations to apply!`。Worker version `9a10d859-3949-431f-9835-9b21c5964cc9`。
+- staging E2E: archive前D1候補、local保存後のIndexedDB、confirm後のeligible D1削除、active recurrence parent保持、Search表示をassertし1件pass。
+- Evidence: `artifacts/evidence/m12/archive-complete-390x844.png`、`artifacts/evidence/m12/archive-search-390x844.png`。
+- Cloudflare API 7403は今回発生なし。production/default・HouseToDoは未操作。auto-mergeなし。
+
+## 実装境界
+
+- archive DB名は `lifehub-archive`、IndexedDB schemaVersionはM12で固定値を持たせ、record storeは将来分割可能なgeneric archive recordsとする。
+- checksumはWeb Crypto SHA-256。object keyを再帰的にsortするcanonical serializationをclient/serverで共有する。
+- Archive bundleは表示再構築用snapshotとD1 delete manifestを分離し、serverはclient申告だけを信用しない。
+- `date < retentionBoundary` をarchive対象とし、boundary当日はD1に残す。boundaryはUTC日付ではなくUserSettings timezoneの現在日付からcalendar monthで12か月戻す。
+- active recurrence parent / MoneyItem / RecurrenceRuleは保持し、古いoverride / settlementだけを移せる。終了済み系列は表示再構築に必要な定義一式をlocalへ保存してから整理する。
+- M13のJSON export / import / migration_locked / 機種変更flowは実装しない。
+
+## STOP条件
+
+- `IndexedDB保存失敗・read-back不一致・件数不一致・ID不一致・checksum不一致・confirm 409/500` のいずれでもD1削除しない。
+- Cloudflare API `7403` がstaging migrationで発生した場合はその場で停止し、別DB・別環境のworkaroundを使わない。
+- production/default、HouseToDo、server Cronによる勝手なarchive削除には触れない。auto-mergeしない。
+
+---
+
 # Milestone 11: Search
 
 ## 現在のMilestone

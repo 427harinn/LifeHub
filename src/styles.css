@@ -111,6 +111,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .settings-root-list, .settings-detail-list { display: grid; }
 .settings-section { display: grid; gap: var(--space-2); }
 .settings-list { display: grid; }
+.archive-settings { display: grid; gap: var(--space-3); padding-top: var(--space-3); }
+.archive-status-row { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--color-border); font-size: .875rem; }
+.archive-status-row span { color: var(--color-text-secondary); }
+.archive-status-row strong { font-weight: 500; text-align: right; }
+.archive-note { margin: 0; color: var(--color-text-secondary); font-size: .8125rem; line-height: 1.5; }
 .logout-button { margin-top: var(--space-4); }
 .selection-note { position: fixed; right: 16px; bottom: calc(78px + env(safe-area-inset-bottom)); left: 16px; z-index: 5; width: min(calc(100% - 32px), 358px); margin: 0 auto; padding: 12px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-action); color: var(--color-text); background: var(--color-surface); font-size: .875rem; pointer-events: none; }
 

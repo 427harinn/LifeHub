@@ -550,6 +550,10 @@ D1を無期限に膨らませず、1年超の履歴を端末へ安全に退避�
 - Archive設定画面
 - 過去Calendar表示
 
+M12実装固定事項: archive DBは`lifehub-archive` version 1（`archiveBatches` / `archiveRecords` / `archivedSearchIndex`）。保持境界はuser timezoneの現在日からcalendar monthで12か月戻し、`date < boundary`。ArchiveBundleのsnapshotとD1 delete manifestを分離し、server metadataだけを`archive_batches`へ保持する。clientはlocal transaction、read-back、ID / count / canonical SHA-256を検証してからconfirmし、serverはcandidate setを再計算してstale batchを409で拒否する。active recurrence parent / future projection定義 / active MoneyItemは削除しない。
+
+Calendar / Daily / Money / Searchはstable occurrence identityでD1とIndexedDBをmergeする。M13のJSON export / import、機種変更、migration_lockedはM12に含めない。
+
 ---
 
 # Milestone 13: Backup / Device Migration
