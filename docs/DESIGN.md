@@ -509,3 +509,5 @@ HouseToDo固有のTask / Shopping / Household / completion UIはLifeHubへ持ち
 Settings > データ / バックアップ内のArchiveは、管理ダッシュボードや削除確認画面にしない。flat list、divider、spacing、既存FormRow/Button grammarを使い、端末保存件数・クラウド保持範囲・状態・最終確認を短く表示する。
 
 状態は「未確認 / 候補あり / 保存中 / 確認待ち / アーカイブ完了 / 確認できませんでした」とし、主操作は「アーカイブを確認」とする。「削除」を主ラベルにせず、IndexedDB保存と検証が先に完了する安心感を伝える。390×844でempty、candidate、saving、complete、confirm pending/error、archived rangeを確認する。大きなカード、shadow、gradient、KPI dashboard、常設の英語装飾は追加しない。
+
+JSON Backup rowはM13のJSON export実装まで表示しない。M12のSettings data detailはLocal Archive機能だけを表示する。

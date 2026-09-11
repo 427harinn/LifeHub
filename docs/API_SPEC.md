@@ -456,3 +456,5 @@ POST /api/archive/confirm
 server側deleteはmanifestに列挙したevent / override / notification / daily_note / money item / override / settlement / 不要なrecurrence ruleだけをatomicに処理する。active Event、active MoneyItem、未来occurrence生成に必要なRecurrenceRule、継続中Money recurrenceは削除しない。clientがIDだけを送ってもmanifest外は削除しない。
 
 保存処理の順序はcandidate取得、IndexedDB transaction、read-back、ID / 件数 / canonical checksum検証、local metadata verified、confirm、server delete、local confirmed更新。JSON migration APIはM13の対象である。
+
+Archive dataはclient側でbatch boundaryをprojectionへ渡す。`date < retentionBoundary`がlocal authority範囲であり、boundary日以降はD1がauthorityとなる。同一stable occurrence identityのmergeではD1 resultを優先する。

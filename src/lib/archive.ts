@@ -5,7 +5,7 @@ export const ARCHIVE_SCHEMA_VERSION = 1;
 export const ARCHIVE_MANIFEST_VERSION = 1;
 
 export type ArchiveRecordType = "event" | "recurrence_rule" | "event_override" | "event_notification" | "daily_note" | "money_item" | "money_override" | "money_settlement" | "money_category";
-export type ArchiveRecord = { type: ArchiveRecordType; id: string; userId: string; record: unknown; recordDate?: string; updatedAt?: string };
+export type ArchiveRecord = { type: ArchiveRecordType; id: string; userId: string; record: unknown; recordDate?: string; updatedAt?: string; archiveBatchId?: string; retentionBoundary?: string };
 export type ArchiveRecords = {
   events: Event[];
   recurrenceRules: RecurrenceRule[];

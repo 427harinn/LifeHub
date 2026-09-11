@@ -3,6 +3,7 @@
 ## 現在のMilestone
 
 M12実装完了。`origin/main` の `88c28dae0d6674255b208b5a116c130aed06c50d` から `codex/m12-local-archive` を作成し、commit `c9f3a06`、PR #14を作成した。`docs/BACKUP_AND_RETENTION.md` を正本とし、user timezone基準で12か月より古い履歴をIndexedDBへ保存・検証した後にのみstaging D1から厳密な対象を削除する。activeなEvent / RecurrenceRule / MoneyItem / Money recurrenceは定義年齢だけでは削除しない。production/default・HouseToDoは操作せず、auto-mergeしない。
+PR #14 review correction: archive snapshotは`archiveBatchId` / `retentionBoundary`未満へclampし、同一stable occurrenceではD1を最終authorityとする。active親snapshotをcurrent / futureへprojectionせず、Searchの将来5年projectionを削除した。未実装JSON Backup rowも非表示にした。
 
 ## 完了条件
 
@@ -23,6 +24,12 @@ M12実装完了。`origin/main` の `88c28dae0d6674255b208b5a116c130aed06c50d` �
 - staging E2E: archive前D1候補、local保存後のIndexedDB、confirm後のeligible D1削除、active recurrence parent保持、Search表示をassertし1件pass。
 - Evidence: `artifacts/evidence/m12/archive-complete-390x844.png`、`artifacts/evidence/m12/archive-search-390x844.png`。
 - Cloudflare API 7403は今回発生なし。production/default・HouseToDoは未操作。auto-mergeなし。
+
+## PR #14 review correction verification（2026-09-11）
+
+- local: unit 119件、typecheck、build、lint（既存warning 13件のみ）、authority projection E2E 1件pass。
+- 回帰: active Event/Money snapshotはboundary未満だけを投影し、D1 current/future変更値が優先される。old Searchは旧snapshot、future Searchはserver結果を使う。
+- staging再deploy前のtarget確認でCloudflare API `7403`が再発したため、指示どおりstaging deploy / staging E2Eは停止。別DB・別環境workaroundなし。
 
 ## 実装境界
 

@@ -633,10 +633,12 @@ M12のIndexedDBは `lifehub-archive`、schemaVersion `1` とする。
 ```text
 archiveBatches: id, userId, schemaVersion, archivedAt, retentionBoundary,
   minDate, maxDate, recordCount, recordCountsByType, checksum, status, confirmedAt?
-archiveRecords: rowKey, archiveBatchId, type, id, userId, recordDate?, updatedAt?, record
+archiveRecords: rowKey, archiveBatchId, retentionBoundary, type, id, userId, recordDate?, updatedAt?, record
 archivedSearchIndex: id, archiveBatchId, userId, type, recordId, text
 ```
 
 ArchiveRecordは表示再構築用snapshotをbatch内に保持する。全storeはuserIdでscopeし、batch保存はtransaction、putはidempotentとする。D1の `archive_batches` はchecksum、manifest、recordCount、retentionBoundary、candidate / confirmed statusだけを保持し、archive内容そのものを複製しない。
 
 M12ではJSON export / import、migration_locked、機種変更flowは持たない。
+
+Projection authority: `ArchiveRecord.archiveBatchId` / `retentionBoundary`でbatchを識別し、local projectionはboundary未満だけに制限する。D1とlocalのstable occurrence identityが重複する場合はD1を採用する。親snapshotは過去表示用であり、current / future occurrenceの第二定義ソースではない。

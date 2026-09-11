@@ -290,3 +290,9 @@ serverはschemaVersion、generatedAt、userId、retentionBoundary、archiveBatch
 単発 / period Eventは実効終了日、終了済みrecurrence系列は`endsOn`、DailyNoteは日付、Moneyは単発・終了済み系列の定義と古いoverride / actual / estimated_actualを対象にする。継続中Event / RecurrenceRule / MoneyItem / Money recurrenceはD1に残し、古いoverride / settlementだけを対象にできる。将来へ移動したoverrideは残す。
 
 Calendar / Daily / Money / Searchはserver projectionとIndexedDB snapshotをstable occurrence identityでmergeし、archive済み履歴を通常画面から消さない。
+
+### M12 authority / projection correction
+
+Archive recordは`archiveBatchId`と`retentionBoundary`を保持する。local projectionは各batchについて`date < retentionBoundary`へrequest rangeをclampし、継続中の親snapshotからboundary日以降のoccurrenceを生成しない。D1 projectionとIndexedDB projectionが同じstable occurrence identityを返した場合は、Calendar Event / MoneyともD1を最終authorityとする。Searchもarchive batchの保持期間だけを対象とし、親snapshotを将来5年へ投影しない。
+
+SettingsのJSON Backup rowはM13まで表示しない。M12で表示するbackup関連UIはLocal Archiveの状態と手動確認導線だけである。

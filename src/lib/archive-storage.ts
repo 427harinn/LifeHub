@@ -1,6 +1,6 @@
 import { ARCHIVE_DB_NAME, ARCHIVE_SCHEMA_VERSION, archiveChecksum, archiveRecordCount, archiveRecordsToRows, canonicalSerialize, type ArchiveBundle, type ArchiveMetadata, type ArchiveRecord, type ArchiveRecordType } from "./archive";
 
-type StoredRow = ArchiveRecord & { rowKey: string; archiveBatchId: string; ordinal: number };
+type StoredRow = ArchiveRecord & { rowKey: string; archiveBatchId: string; retentionBoundary: string; ordinal: number };
 type StoredBatch = ArchiveMetadata & { id: string };
 type StoredSearchIndex = { id: string; userId: string; archiveBatchId: string; type: ArchiveRecordType; text: string; recordId: string };
 
@@ -63,7 +63,8 @@ export const saveArchiveBundle = async (bundle: ArchiveBundle): Promise<ArchiveM
     db = await openArchiveDatabase();
     const rows = archiveRecordsToRows(bundle.records, bundle.userId);
     const recordCount = archiveRecordCount(bundle.records);
-    if (rows.length !== recordCount || rows.length !== bundle.manifest.records.length) throw new ArchiveStorageError("アーカイブ件数が一致しません。");
+    const rowKeys = new Set(rows.map((row) => `${row.type}:${row.id}`));
+    if (rows.length !== recordCount || bundle.manifest.records.some((entry) => !rowKeys.has(`${entry.type}:${entry.id}`))) throw new ArchiveStorageError("アーカイブ件数またはmanifest対象が一致しません。");
     const recordCountsByType = rows.reduce<Record<string, number>>((counts, row) => { counts[row.type] = (counts[row.type] ?? 0) + 1; return counts; }, {});
     const metadata: ArchiveMetadata = { archiveBatchId: bundle.archiveBatchId, userId: bundle.userId, schemaVersion: bundle.schemaVersion, archivedAt: bundle.generatedAt, retentionBoundary: bundle.retentionBoundary, minDate: rows.map((row) => row.recordDate).filter((date): date is string => Boolean(date)).sort()[0] ?? null, maxDate: rows.map((row) => row.recordDate).filter((date): date is string => Boolean(date)).sort().at(-1) ?? null, recordCount, recordCountsByType, checksum: bundle.checksum, status: "verified" };
     const transaction = db.transaction(["archiveBatches", "archiveRecords", "archivedSearchIndex"], "readwrite");
@@ -76,7 +77,7 @@ export const saveArchiveBundle = async (bundle: ArchiveBundle): Promise<ArchiveM
     await deleteByIndex(indexStore, "batchId", bundle.archiveBatchId);
     batches.put({ ...metadata, id: bundle.archiveBatchId });
     rows.forEach((row, ordinal) => {
-      const stored: StoredRow = { ...row, rowKey: `${bundle.archiveBatchId}:${row.type}:${row.id}`, archiveBatchId: bundle.archiveBatchId, ordinal };
+      const stored: StoredRow = { ...row, rowKey: `${bundle.archiveBatchId}:${row.type}:${row.id}`, archiveBatchId: bundle.archiveBatchId, retentionBoundary: bundle.retentionBoundary, ordinal };
       recordsStore.put(stored);
       if (row.type === "event" || row.type === "daily_note" || row.type === "money_item") indexStore.put({ id: stored.rowKey, userId: bundle.userId, archiveBatchId: bundle.archiveBatchId, type: row.type, recordId: row.id, text: searchText(row.record) } satisfies StoredSearchIndex);
     });
@@ -84,7 +85,7 @@ export const saveArchiveBundle = async (bundle: ArchiveBundle): Promise<ArchiveM
     const verified = await readArchiveBatch(bundle.userId, bundle.archiveBatchId);
     if (!verified || verified.rows.length !== recordCount) throw new ArchiveStorageError("IndexedDB保存後の件数確認に失敗しました。");
     const expectedRows = rows.map((row, ordinal) => ({ ...row, ordinal }));
-    const actualRows = verified.rows.map((row) => { const { rowKey, archiveBatchId, ...record } = row; void rowKey; void archiveBatchId; return { ...record, ordinal: row.ordinal }; });
+    const actualRows = verified.rows.map((row) => { const { rowKey, archiveBatchId, retentionBoundary, ...record } = row; void rowKey; void archiveBatchId; void retentionBoundary; return { ...record, ordinal: row.ordinal }; });
     if (canonicalSerialize(expectedRows) !== canonicalSerialize(actualRows)) throw new ArchiveStorageError("IndexedDB保存後のIDまたは内容確認に失敗しました。");
     if (await archiveChecksum(bundle) !== bundle.checksum) throw new ArchiveStorageError("アーカイブchecksumの検証に失敗しました。");
     return verified.metadata;

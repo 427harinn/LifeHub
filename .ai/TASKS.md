@@ -29,6 +29,14 @@
 - Settingsはdashboard化せず、怖いDELETE表現を主操作にしない。390×844で状態別Evidenceを残す
 - stagingのみを操作し、production/default・HouseToDo・server Cron delete・auto-mergeを行っていない
 
+## PR #14 review correction
+
+- [x] ArchiveRecordへbatch boundaryを保持し、local Event / Money / Search projectionを`date < retentionBoundary`へ制限
+- [x] 同一stable occurrence identityはserver / D1を最終authorityとしてmerge
+- [x] active親snapshotのcurrent / future漏出、old/current title、Money planned amount、Search 5年projectionの回帰testを追加
+- [x] 未実装JSON Backup rowをSettingsから除去し、Evidenceを更新
+- [ ] staging再deploy / staging E2E：Cloudflare API 7403再発のため停止。再発時に同じtarget確認から再開する
+
 ---
 
 # Milestone 11 Tasks
