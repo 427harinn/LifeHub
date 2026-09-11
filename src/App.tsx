@@ -528,6 +528,15 @@ function MoneyChoiceSheet({ open, title, options, onClose, onSelect }: { open: b
 export type MoneyChartMode = "forecast" | "actual";
 type MoneyCategoryGroup = { amount: number; color: string; colorKey: string; name: string };
 
+export const moneyAverageDivisorFor = (year: number, currentMonth: string, mode: MoneyChartMode): number | null => {
+  if (mode === "forecast") return 12;
+  const currentYear = Number(currentMonth.slice(0, 4));
+  if (year < currentYear) return 12;
+  if (year > currentYear) return null;
+  const month = Number(currentMonth.slice(5, 7));
+  return Number.isInteger(month) && month >= 1 && month <= 12 ? month : 12;
+};
+
 export const moneyCategoryGroupsFor = (occurrences: MoneyItem[], mode: MoneyChartMode = "forecast"): MoneyCategoryGroup[] => Array.from(occurrences.filter((item) => item.type === "expense" && (mode === "forecast" || item.settlementStatus === "actual" || item.settlementStatus === "estimated_actual")).reduce((map, item) => {
     const key = item.category?.id ?? item.category?.name ?? "other";
     const current = map.get(key) ?? { amount: 0, color: moneyCategoryColor(item.category), colorKey: moneyCategoryColorKey(item.category), name: item.category?.name ?? "その他" };
@@ -636,7 +645,8 @@ function MoneyAnalysisPage({ year, data, onYearChange, onBack }: { year: number;
   const summary = data?.summary;
   const categoryGroups = (data ? mode === "forecast" ? data.categoryForecast : data.categoryActual : []).filter((group) => mode === "forecast" ? group.amountForecast > 0 : group.amountActual > 0).map((group) => ({ amount: mode === "forecast" ? group.amountForecast : group.amountActual, color: moneyCategoryColor(group.category), colorKey: moneyCategoryColorKey(group.category), name: group.category?.name ?? "その他" }));
   const selectedActualAvailable = selected?.expenseActual !== null && selected?.expenseActual !== undefined;
-  const monthlyAverage = mode === "forecast" ? (summary?.expenseForecast ?? 0) / 12 : (summary?.expenseActual ?? 0) / 12;
+  const monthlyAverageDivisor = data ? moneyAverageDivisorFor(year, data.currentMonth, mode) : null;
+  const monthlyAverage = monthlyAverageDivisor === null ? null : (mode === "forecast" ? (summary?.expenseForecast ?? 0) : (summary?.expenseActual ?? 0)) / monthlyAverageDivisor;
   const selectedHeading = selected ? `${selected.month.slice(0, 4)}年${Number(selected.month.slice(5))}月` : "選択した月";
   return <main className="screen-page money-analysis-page" onClickCapture={clickCapture} onPointerCancel={pointerCancel} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}>
     <header className="screen-header"><button aria-label="お金へ戻る" className="back-button" onClick={onBack} type="button">‹</button><h1>お金の分析</h1><span className="header-spacer" /></header>
@@ -645,7 +655,7 @@ function MoneyAnalysisPage({ year, data, onYearChange, onBack }: { year: number;
     </div>
     <MoneyModeToggle label="年間のお金の表示" mode={mode} onChange={setMode} />
     {!data ? <p className="empty-state">読み込み中</p> : <>
-      <section className="money-analysis-section money-analysis-summary"><h2>年間のまとめ</h2><div className="money-summary"><div><span>{mode === "forecast" ? "年間の支出見込み" : "年間の確定支出"}</span><strong className="money-summary__expense">{amountLabel(mode === "forecast" ? summary?.expenseForecast : summary?.expenseActual)}</strong></div><div><span>{mode === "forecast" ? "年間の収入見込み" : "年間の確定収入"}</span><strong className="money-summary__income">{amountLabel(mode === "forecast" ? summary?.incomeForecast : summary?.incomeActual)}</strong></div><div><span>{mode === "forecast" ? "年間の収支見込み" : "年間の確定収支"}</span><strong className={((mode === "forecast" ? summary?.remainingForecast : summary?.remainingActual) ?? 0) >= 0 ? "money-summary__income" : "money-summary__expense"}>{signedAmountLabel(mode === "forecast" ? summary?.remainingForecast : summary?.remainingActual)}</strong></div><div><span>月平均支出</span><strong>{amountLabel(Math.round(monthlyAverage))}</strong></div></div></section>
+      <section className="money-analysis-section money-analysis-summary"><h2>年間のまとめ</h2><div className="money-summary"><div><span>{mode === "forecast" ? "年間の支出見込み" : "年間の確定支出"}</span><strong className="money-summary__expense">{amountLabel(mode === "forecast" ? summary?.expenseForecast : summary?.expenseActual)}</strong></div><div><span>{mode === "forecast" ? "年間の収入見込み" : "年間の確定収入"}</span><strong className="money-summary__income">{amountLabel(mode === "forecast" ? summary?.incomeForecast : summary?.incomeActual)}</strong></div><div><span>{mode === "forecast" ? "年間の収支見込み" : "年間の確定収支"}</span><strong className={((mode === "forecast" ? summary?.remainingForecast : summary?.remainingActual) ?? 0) >= 0 ? "money-summary__income" : "money-summary__expense"}>{signedAmountLabel(mode === "forecast" ? summary?.remainingForecast : summary?.remainingActual)}</strong></div><div><span>月平均支出</span><strong>{monthlyAverage === null ? "—" : amountLabel(Math.round(monthlyAverage))}</strong></div></div></section>
       <section className="money-analysis-section"><h2>月ごとの支出</h2>{(mode === "forecast" ? data.summary.expenseForecast > 0 : data.months.some((month) => (month.expenseActual ?? 0) > 0)) ? <MoneyYearChart data={data} mode={mode} onSelect={setSelectedMonth} selectedMonth={selectedMonth} /> : <p className="empty-state">この年の支出はまだありません</p>}{mode === "actual" && data.months.some((month) => month.expenseActual === null) ? <p className="money-chart-note">未来の月は、確定した支出がある月だけ表示しています。</p> : null}</section>
       <section className="money-analysis-section money-analysis-detail"><h2>{selectedHeading}</h2><div className="money-summary"><div><span>{mode === "forecast" ? "支出見込み" : "確定支出"}</span><strong className="money-summary__expense">{amountLabel(mode === "forecast" ? selected?.expenseForecast : selected?.expenseActual)}</strong></div><div><span>{mode === "forecast" ? "確定支出" : "確定収入"}</span><strong className={mode === "forecast" ? "money-summary__expense" : "money-summary__income"}>{amountLabel(mode === "forecast" ? selected?.expenseActual : selected?.incomeActual)}</strong></div><div><span>{mode === "forecast" ? "収入見込み" : "確定収支"}</span><strong className={mode === "forecast" ? "money-summary__income" : (selected?.remainingActual ?? 0) >= 0 ? "money-summary__income" : "money-summary__expense"}>{amountLabel(mode === "forecast" ? selected?.incomeForecast : selected?.remainingActual)}</strong></div><div><span>{mode === "forecast" ? "残りそう" : "支出見込み"}</span><strong className={mode === "forecast" ? ((selected?.remainingForecast ?? 0) >= 0 ? "money-summary__income" : "money-summary__expense") : "money-summary__expense"}>{amountLabel(mode === "forecast" ? selected?.remainingForecast : selected?.expenseForecast)}</strong></div></div>{mode === "actual" && !selectedActualAvailable ? <p className="money-chart-note">この月はまだ確定した支出がありません。</p> : null}</section>
       <MoneyCategoryDonutVisual centerLabel={mode === "forecast" ? "年間の支出" : "確定した支出"} emptyMessage={mode === "forecast" ? "この年のカテゴリ別支出はありません" : "この年の確定したカテゴリ別支出はありません"} groups={categoryGroups} />
@@ -684,7 +694,7 @@ export function App() {
   const navigate = (nextScreen: Screen) => { window.history.pushState({}, "", screenPath[nextScreen]); setScreen(nextScreen); setSettingsDetail(null); setSelectedDate(null); setDateSheetOpen(false); setFormState(null); setDetailState(null); };
   const openMoneyAnalysis = () => { setMoneyYearProjection(null); setScreen("money-analysis"); window.history.pushState({}, "", screenPath["money-analysis"]); };
   const changeAnalysisYear = (nextYear: number) => { setMoneyYearProjection(null); setAnalysisYear(nextYear); };
-  const closeMoneyAnalysis = () => { setScreen("money"); window.history.pushState({}, "", screenPath.money); };
+  const closeMoneyAnalysis = () => { setScreen("money"); window.history.replaceState({}, "", screenPath.money); };
   const handleAuthenticated = (authenticatedUser: AuthUser) => { setUser(authenticatedUser); setAuthError(""); void getSettings().then(({ settings: nextSettings }) => setSettings(nextSettings)).catch(() => undefined); };
   const handleLogout = () => { void logout().finally(() => { setUser(null); setSettings(null); setEvents([]); setSettingsDetail(null); setScreen("calendar"); window.history.pushState({}, "", "/calendar"); }); };
   const returnContext = (): ReturnContext => screen === "daily" ? { screen: "daily", date: dailyDate, filter: dailyFilter } : { screen: "calendar", date: selectedDate ?? todayDateKey(), filter: calendarFilter };

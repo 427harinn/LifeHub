@@ -63,7 +63,7 @@ test("M10 Money analysis stays calm, readable, and connected to Money", async ({
   expect(yearPayload.months).toHaveLength(12);
   const january = await page.request.put(`/api/money/${recurringMoney.money.id}/occurrences/money:${recurringMoney.money.id}:${year}-01-01/actual`, { data: { amount: 68000 } });
   expect(january.ok()).toBeTruthy();
-  await page.getByRole("button", { name: "お金" }).click();
+  await page.getByRole("button", { name: "お金", exact: true }).click();
   await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-entry-with-analysis-icon-390x844.png") });
   await page.getByRole("button", { name: "お金の分析を見る" }).click();
@@ -73,7 +73,10 @@ test("M10 Money analysis stays calm, readable, and connected to Money", async ({
   await page.screenshot({ path: path.join(evidenceDir, "money-analysis-forecast-390x844.png") });
   await page.getByRole("button", { name: "実績" }).click();
   await expect(page.getByText("年間の確定支出")).toBeVisible();
+  const currentMonthNumber = new Date().getMonth() + 1;
+  await expect(page.locator(".money-analysis-summary .money-summary > div").nth(3).locator("strong")).toHaveText(`${Math.round(68000 / currentMonthNumber).toLocaleString("ja-JP")}円`);
   await page.screenshot({ path: path.join(evidenceDir, "money-analysis-actual-390x844.png") });
+  await page.screenshot({ path: path.join(evidenceDir, "money-analysis-current-year-actual-average-390x844.png") });
   await page.getByTestId("money-analysis-month-02").click();
   await expect(page.getByRole("heading", { name: `${year}年2月` })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-analysis-selected-month-390x844.png") });
@@ -85,6 +88,11 @@ test("M10 Money analysis stays calm, readable, and connected to Money", async ({
   await page.screenshot({ path: path.join(evidenceDir, "money-analysis-past-empty-390x844.png") });
   await page.getByRole("button", { name: "お金へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page).not.toHaveURL(/\/money\/analysis$/);
+  await expect(page.getByRole("heading", { name: "お金の分析", exact: true })).not.toBeVisible();
+  await page.getByRole("button", { name: "お金", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "お金の分析を見る" }).click();
   await expect(page.getByRole("heading", { name: "お金の分析" })).toBeVisible();
   await page.getByRole("button", { name: "翌年" }).click();
@@ -94,5 +102,8 @@ test("M10 Money analysis stays calm, readable, and connected to Money", async ({
   await page.screenshot({ path: path.join(evidenceDir, "money-analysis-category-bottom-390x844.png") });
   await expect(page.getByRole("button", { name: "お金", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("年間の支出", { exact: true })).toBeVisible();
+  await page.goto("/money/analysis");
+  await expect(page.getByRole("heading", { name: "お金の分析", exact: true })).toBeVisible();
+  await expect(page.getByText("年間のまとめ")).toBeVisible();
   expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });

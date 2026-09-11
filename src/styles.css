@@ -387,7 +387,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-category-editor select { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-input); background: var(--color-surface); }
 .delete-confirm .button--secondary { color: var(--color-error); border-color: #e6b6ae; }
 
-.money-analysis-page { align-content: start; gap: var(--space-5); }
+.money-analysis-page { align-content: start; gap: var(--space-4); }
 .money-year-selector { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; text-align: center; transform: translateX(var(--money-year-swipe-offset, 0)); transition: transform 180ms ease-out; touch-action: pan-y; }
 .money-year-selector.is-swipe-dragging { transition: none; }
 .money-year-selector h2 { margin: 0; font-size: 1rem; font-weight: 600; }

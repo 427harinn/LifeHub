@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, moneyAverageDivisorFor, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
 import type { Event, MoneyItem } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
@@ -179,6 +179,13 @@ describe("LifeHub M2 shell", () => {
 });
 
 describe("Money analysis", () => {
+  it("uses the natural month count for actual averages", () => {
+    expect(moneyAverageDivisorFor(2026, "2026-09", "forecast")).toBe(12);
+    expect(moneyAverageDivisorFor(2026, "2026-09", "actual")).toBe(9);
+    expect(moneyAverageDivisorFor(2025, "2026-09", "actual")).toBe(12);
+    expect(moneyAverageDivisorFor(2027, "2026-09", "actual")).toBeNull();
+  });
+
   it("opens as a Money sub screen, aggregates the year, changes month detail, and returns to Money", async () => {
     window.history.pushState({}, "", "/calendar");
     const category = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "orange", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
@@ -205,6 +212,7 @@ describe("Money analysis", () => {
     expect(screen.getByRole("heading", { name: "2026年2月" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "実績" }));
     expect(screen.getByText("年間の確定支出")).toBeInTheDocument();
+    expect(screen.getByText("8,000円")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "お金" })).toHaveAttribute("aria-current", "page");
     expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/api/money/year-summary?year=2026"))).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "お金へ戻る" }));
