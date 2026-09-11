@@ -80,9 +80,13 @@ test("keeps Money category colors distinct and stable across UI surfaces", async
   chart = await showMoneyChart(page);
   const afterReload = await chart.locator(".money-chart__legend-dot").evaluateAll((dots) => dots.map((dot) => dot.getAttribute("data-color-key")));
   expect(afterReload).toEqual(beforeReload);
+  const currentMonth = await page.locator(".money-month-nav h2").textContent();
   await page.getByRole("button", { name: "次の月" }).click();
+  await expect(page.locator(".money-month-nav h2")).not.toHaveText(currentMonth ?? "");
   await page.getByRole("button", { name: "前の月" }).click();
+  await expect(page.locator(".money-month-nav h2")).toHaveText(currentMonth ?? "");
   chart = await showMoneyChart(page);
+  await expect(chart.locator(".money-chart__legend-dot")).toHaveCount(3);
   const afterMonthMove = await chart.locator(".money-chart__legend-dot").evaluateAll((dots) => dots.map((dot) => dot.getAttribute("data-color-key")));
   expect(afterMonthMove).toEqual(beforeReload);
 });
