@@ -182,6 +182,37 @@ Moneyは既存EventのRecurrenceRuleを参照し、月projection・Calendar・Da
 
 を返す。
 
+### Money year summary（M10）
+
+```text
+GET /api/money/year-summary?year=2026
+```
+
+年単位のMoney分析画面が1年分を一度に取得するためのrange API。内部では既存`MoneyService.project()`を`YYYY-01-01`〜`YYYY-12-31`へ1回だけ適用し、occurrenceを12か月・年間summary・expense categoryへ集計する。occurrenceをDBへ事前生成しない。
+
+返却形式:
+
+```json
+{
+  "year": 2026,
+  "currentMonth": "2026-09",
+  "months": [{
+    "month": "2026-01",
+    "expenseForecast": 70000,
+    "incomeForecast": 210000,
+    "remainingForecast": 140000,
+    "expenseActual": 70000,
+    "incomeActual": 210000,
+    "remainingActual": 140000
+  }],
+  "summary": { "expenseForecast": 840000, "incomeForecast": 2520000, "remainingForecast": 1680000, "expenseActual": 550000, "incomeActual": 2100000, "remainingActual": 1550000 },
+  "categoryForecast": [],
+  "categoryActual": []
+}
+```
+
+`months`は常に12件。forecastはeffectiveAmount、actualはsettlementStatusが`actual`または`estimated_actual`のoccurrenceだけを集計する。現在月より未来のactual値は`null`とし、planned-onlyを実績0円として線でつながない。category配列はexpenseだけを対象にし、category objectの`colorKey`を通常Money donutと共有する。
+
 ---
 
 ## 7. Money actual（M9実装済み）

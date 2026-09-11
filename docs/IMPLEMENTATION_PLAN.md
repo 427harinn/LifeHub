@@ -456,31 +456,32 @@ stagingで月次ケースのfixtureを使って確認する。
 
 ## 目的
 
-Moneyを「ざっくり把握できる」画面として完成させる。
+通常のMoney画面へグラフを足さず、Money配下の独立した`お金の分析`画面で半年〜1年単位のお金の流れを俯瞰できるようにする。通常Moneyは今月の確認・登録・修正の役割を維持する。
 
 ## 主な内容
 
-- 今月
-  - 支出見込み
-  - 収入見込み
-  - 残りそう
-  - 確定済み / 予定
-- category donut chart
-- category list
-- 月ごとbar chart
-- 月詳細
-- actual / estimated_actualの控えめな表示
-- long-range集計の土台
+- Money headerから`/money/analysis`へ遷移するsub screen
+- 年selector（左右矢印・既存month selectorと同じ横swipe）
+- 画面全体へ効く見込み / 実績toggle
+- 年間summary（simple row、KPI cardなし）
+- 12か月の支出line chart、月point選択、選択月detail
+- 年間カテゴリ別支出donut（既存MoneyCategory.colorKeyを共有）
+- `/api/money/year-summary?year=YYYY`の1年range aggregation
+- future actualを0円線で描かない未確定表現、past settlementの保持
+
+AI分析、budget、saving goal、複雑な前年比・financial KPI、dashboard形式の複数グラフは実装しない。年aggregationは既存MoneyProjectionを唯一の正として利用し、occurrenceをDBへ事前生成しない。
 
 ## Evidence
 
-- 今月
-- 明細多い状態
-- donut
-- 月ごとbar
-- 月詳細
+- 通常Money + 分析入口
+- 分析初期表示、年間summary、forecast line chart
+- actual line chart、future monthの未確定表現
+- month point tap → detail変更
+- year swipe、過去年、empty year
+- annual category donut、既存Moneyとのcolor一致
+- long content bottom、Bottom Navigation、analysis → Money back
 
-390×844でグラフの可読性を重点確認する。
+390×844で、dashboard化・card増加・orange面積・chart装飾・余白過多・情報過密・44px hit area・片手操作をDESIGN.mdに照らして確認する。
 
 ---
 

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
+import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, moneyAverageDivisorFor, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
 import type { Event, MoneyItem } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
@@ -178,6 +178,49 @@ describe("LifeHub M2 shell", () => {
   });
 });
 
+describe("Money analysis", () => {
+  it("uses the natural month count for actual averages", () => {
+    expect(moneyAverageDivisorFor(2026, "2026-09", "forecast")).toBe(12);
+    expect(moneyAverageDivisorFor(2026, "2026-09", "actual")).toBe(9);
+    expect(moneyAverageDivisorFor(2025, "2026-09", "actual")).toBe(12);
+    expect(moneyAverageDivisorFor(2027, "2026-09", "actual")).toBeNull();
+  });
+
+  it("opens as a Money sub screen, aggregates the year, changes month detail, and returns to Money", async () => {
+    window.history.pushState({}, "", "/calendar");
+    const category = { id: "food", userId: "user-1", type: "expense" as const, name: "食費", colorKey: "orange", sortOrder: 0, active: true, createdAt: "", updatedAt: "" };
+    const months = Array.from({ length: 12 }, (_, index) => ({ month: `2026-${String(index + 1).padStart(2, "0")}`, expenseForecast: index === 1 ? 22000 : 10000, incomeForecast: 210000, remainingForecast: 200000, expenseActual: index < 8 ? 9000 : null, incomeActual: index < 8 ? 210000 : null, remainingActual: index < 8 ? 201000 : null }));
+    const year = { year: 2026, currentMonth: "2026-09", months, summary: { expenseForecast: 132000, incomeForecast: 2520000, remainingForecast: 2388000, expenseActual: 72000, incomeActual: 1680000, remainingActual: 1608000 }, categoryForecast: [{ category, amountForecast: 132000, amountActual: 72000 }], categoryActual: [{ category, amountForecast: 0, amountActual: 72000 }] };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const path = requestPath(input);
+      if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
+      if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      if (path.includes("/api/money/year-summary")) return Promise.resolve(response(year));
+      if (path.includes("/api/money/month")) return Promise.resolve(response({ occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] }));
+      return Promise.resolve(response({}));
+    });
+    render(<App />);
+    await screen.findByRole("heading", { name: "カレンダー" });
+    fireEvent.click(screen.getByRole("button", { name: "お金" }));
+    expect(await screen.findByRole("heading", { name: "お金" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "お金の分析を見る" }));
+    expect(await screen.findByRole("heading", { name: "お金の分析" })).toBeInTheDocument();
+    expect(await screen.findByText("年間のまとめ")).toBeInTheDocument();
+    expect(screen.getByText("年間の支出見込み")).toBeInTheDocument();
+    expect(screen.getByTestId("money-analysis-month-02")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("money-analysis-month-02"));
+    expect(screen.getByRole("heading", { name: "2026年2月" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "実績" }));
+    expect(screen.getByText("年間の確定支出")).toBeInTheDocument();
+    expect(screen.getByText("8,000円")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "お金" })).toHaveAttribute("aria-current", "page");
+    expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/api/money/year-summary?year=2026"))).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "お金へ戻る" }));
+    expect(await screen.findByRole("heading", { name: "お金" })).toBeInTheDocument();
+    window.history.pushState({}, "", "/calendar");
+  });
+});
+
 describe("EventForm timed start defaults", () => {
   it("uses direct date inputs and always-visible memo without duplicate headings", () => {
     renderEventForm();
@@ -263,8 +306,9 @@ describe("Calendar adaptive row allocation", () => {
     fireEvent.click(screen.getByRole("button", { name: "実施時期" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "実施時期" })).getByRole("button", { name: "日付範囲を指定" }));
     expect(screen.queryByRole("button", { name: /^期間/ })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("開始日")).toHaveValue("2026-09-10");
-    expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-10");
+    const expectedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+    expect(screen.getByLabelText("開始日")).toHaveValue(expectedDate);
+    expect(screen.getByLabelText("終了日")).toHaveValue(expectedDate);
     expect(screen.queryByRole("button", { name: /^繰り返し$/ })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "同日範囲" } });
     fireEvent.click(screen.getByRole("button", { name: "登録" }));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMoneyDate, moneyFollowingBoundary, moneyOccurrenceKey, moneySummaryFor, projectMoneyItems } from "./money-service";
+import { isMoneyDate, moneyFollowingBoundary, moneyOccurrenceKey, moneySummaryFor, moneyYearFromOccurrences, projectMoneyItems } from "./money-service";
 import { completedMoneyRange } from "./money-settlement-service";
 import { MoneyCategoryRepository } from "../repositories/money-category-repository";
 import { MoneyOccurrenceOverrideRepository } from "../repositories/money-occurrence-override-repository";
@@ -145,5 +145,33 @@ describe("Money validation and projection primitives", () => {
   it("uses the user's local month boundary for settlement", () => {
     expect(completedMoneyRange(new Date("2026-10-01T00:30:00.000Z"), "Asia/Tokyo")).toEqual({ startDate: "0001-01-01", endDate: "2026-09-30", currentMonth: "2026-10" });
     expect(completedMoneyRange(new Date("2026-09-30T14:59:00.000Z"), "Asia/Tokyo").endDate).toBe("2026-08-31");
+  });
+
+  it("returns twelve months with forecast and actual values while leaving future actual months undefined", () => {
+    const occurrences = projectMoneyItems([
+      { item: item({ id: "jan", date: "2026-01-15", plannedAmount: 10000 }), rule: null },
+      { item: item({ id: "feb", date: "2026-02-15", plannedAmount: 12000 }), rule: null },
+      { item: item({ id: "sep", date: "2026-09-15", plannedAmount: 9000 }), rule: null },
+      { item: item({ id: "oct", date: "2026-10-15", plannedAmount: 11000 }), rule: null },
+      { item: item({ id: "income", type: "income", date: "2026-02-01", plannedAmount: 210000, categoryId: "income-category" }), rule: null }
+    ], [category, { ...category, id: "income-category", type: "income", name: "給料", colorKey: "gold" }], "2026-01-01", "2026-12-31", 1, [], [
+      { id: "jan-settlement", userId: "user-1", moneyItemId: "jan", occurrenceKey: moneyOccurrenceKey("jan", "2026-01-15"), status: "estimated_actual", amount: 9500, finalizedAt: "", updatedAt: "", estimatedAmount: null },
+      { id: "feb-settlement", userId: "user-1", moneyItemId: "feb", occurrenceKey: moneyOccurrenceKey("feb", "2026-02-15"), status: "actual", amount: 13000, finalizedAt: "", updatedAt: "", estimatedAmount: null }
+    ], "2026-09");
+    const result = moneyYearFromOccurrences(2026, occurrences, "2026-09");
+    expect(result.months).toHaveLength(12);
+    expect(result.months[0]).toMatchObject({ month: "2026-01", expenseForecast: 9500, expenseActual: 9500 });
+    expect(result.months[1]).toMatchObject({ month: "2026-02", expenseForecast: 13000, expenseActual: 13000, incomeForecast: 210000, incomeActual: 0 });
+    expect(result.months[8]).toMatchObject({ month: "2026-09", expenseForecast: 9000, expenseActual: 0 });
+    expect(result.months[9]).toMatchObject({ month: "2026-10", expenseForecast: 11000, expenseActual: null, incomeActual: null });
+    expect(result.summary).toMatchObject({ expenseForecast: 42500, incomeForecast: 210000, remainingForecast: 167500, expenseActual: 22500, incomeActual: 0, remainingActual: -22500 });
+    expect(result.categoryForecast[0]).toMatchObject({ category: { id: "category-1" }, amountForecast: 42500 });
+    expect(result.categoryActual[0]).toMatchObject({ category: { id: "category-1" }, amountActual: 22500 });
+  });
+
+  it("keeps a recurring occurrence across the year boundary", () => {
+    const recurring = item({ id: "year-boundary", date: "2025-12-31", recurrenceRuleId: "year-boundary-rule" });
+    const entries = projectMoneyItems([{ item: recurring, rule: rule({ id: "year-boundary-rule", startsOn: "2025-12-31", dayOfMonth: 31 }) }], [category], "2025-12-01", "2026-01-31");
+    expect(entries.map((entry) => entry.date)).toEqual(["2025-12-31", "2026-01-31"]);
   });
 });

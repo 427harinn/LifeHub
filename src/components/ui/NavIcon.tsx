@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 
-export type NavIconName = "calendar" | "daily" | "add" | "money" | "settings" | "search";
+export type NavIconName = "calendar" | "daily" | "add" | "money" | "settings" | "search" | "trend";
 
 type NavIconProps = SVGProps<SVGSVGElement> & {
   name: NavIconName;
@@ -37,6 +37,12 @@ export function NavIcon({ name, ...props }: NavIconProps) {
       <>
         <circle cx="10.5" cy="10.5" r="5.5" />
         <path d="m15 15 4.5 4.5" />
+      </>
+    ),
+    trend: (
+      <>
+        <path d="M4 17 9 12l4 3 7-8" />
+        <path d="M16 7h4v4" />
       </>
     )
   };
