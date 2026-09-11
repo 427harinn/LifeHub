@@ -174,6 +174,36 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .search-result__body { display: grid; gap: 3px; min-width: 0; }
 .search-result__body strong { overflow: hidden; font-size: .875rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .search-result__body small { color: var(--color-text-secondary); font-size: .75rem; }
+.calendar-search-page { align-content: start; gap: var(--space-4); min-height: calc(100svh - 76px); }
+.calendar-search-page .screen-header { gap: var(--space-2); }
+.calendar-search-page .screen-header h1 { flex: 1; }
+.calendar-search-field { position: relative; display: block; }
+.calendar-search-field input { width: 100%; min-height: 48px; padding-right: 44px; font-size: 16px; }
+.calendar-search-field__clear, .reuse-search__clear { position: absolute; top: 4px; right: 4px; display: grid; width: 44px; min-height: 44px; place-items: center; border: 0; color: var(--color-text-secondary); background: transparent; font-size: 1.35rem; cursor: pointer; }
+.calendar-search-section { display: grid; gap: var(--space-3); }
+.calendar-search-section h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.search-hint { margin: 0; color: var(--color-text-secondary); font-size: .8125rem; }
+.calendar-search-results { display: grid; }
+.calendar-search-result { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 56px; align-items: center; gap: var(--space-3); padding: 10px 0; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
+.calendar-search-result:last-child { border-bottom: 0; }
+.calendar-search-result__title { min-width: 0; overflow: hidden; font-size: .9375rem; font-weight: 500; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-search-result__title--home { color: var(--color-primary-strong); }
+.calendar-search-result__title--work { color: #527c9c; }
+.calendar-search-result__datetime { display: inline-flex; min-width: max-content; align-items: baseline; gap: 6px; color: var(--color-text-secondary); font-size: .8125rem; line-height: 1.3; text-align: right; white-space: nowrap; }
+.calendar-search-result__context { grid-column: 1 / -1; overflow: hidden; color: var(--color-text-secondary); font-size: .75rem; line-height: 1.2; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.reuse-search__marker { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary-strong); }
+.reuse-search-sheet { max-height: min(88svh, 720px); }
+.reuse-search { display: grid; gap: var(--space-3); min-height: 0; }
+.reuse-search__field { position: relative; display: block; }
+.reuse-search__field input { width: 100%; min-height: 52px; padding: 10px 44px 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text); background: var(--color-bg); font-size: 16px; }
+.reuse-search__hint { margin: 0; color: var(--color-text-secondary); font-size: .8125rem; }
+.reuse-search__list { display: grid; max-height: min(58svh, 480px); overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--color-border); }
+.reuse-search__row { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: var(--space-3); width: 100%; min-height: 52px; align-items: center; padding: 8px 0; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
+.reuse-search__row strong, .reuse-search__row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reuse-search__row strong { font-size: .9375rem; font-weight: 500; }
+.reuse-search__row small { margin-top: 3px; color: var(--color-text-secondary); font-size: .75rem; }
+.reuse-search__marker--money-expense { background: #b65445; }
+.reuse-search__marker--money-income { background: #527c9c; }
 
 .form-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-2); min-height: 56px; align-items: center; padding: var(--space-2) 0; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; text-align: left; }
 .form-row__label { color: var(--color-text-secondary); font-size: .875rem; }

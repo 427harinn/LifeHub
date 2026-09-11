@@ -31,6 +31,8 @@ HouseToDoのフォーム思想を継承し、**入力に必要のない項目は
 
 基本は1画面で完結し、詳細設定はBottomSheetを使う。
 
+M11の「以前の項目から選ぶ」は共通ReuseSearchSheetを使う。未入力時は同じカテゴリの直近8件を表示し、2文字以上の入力時はtitle / place / memoをserver検索する。検索は250ms程度debounceし、1文字では問い合わせない。候補を選んだら既存のrecent copy semanticsを適用してsheetを閉じる。homeとworkは候補を跨がせない。
+
 ---
 
 ## 3. 基本フォーム順

@@ -75,8 +75,18 @@ export class EventRepository {
     return result.results.map(toEvent);
   }
 
-  async recentDefinitions(userId: string, limit: number): Promise<Event[]> {
-    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL ORDER BY updated_at DESC, created_at DESC LIMIT ?`).bind(userId, limit).all<EventRow>();
+  async recentDefinitions(userId: string, limit: number, category?: EventCategory): Promise<Event[]> {
+    const categoryClause = category ? " AND category = ?" : "";
+    const bindings = category ? [userId, category, limit] : [userId, limit];
+    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL${categoryClause} ORDER BY updated_at DESC, created_at DESC, id ASC LIMIT ?`).bind(...bindings).all<EventRow>();
+    return result.results.map(toEvent);
+  }
+
+  async searchDefinitions(userId: string, query: string, limit: number, category?: EventCategory): Promise<Event[]> {
+    const like = `%${query.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`;
+    const categoryClause = category ? " AND category = ?" : "";
+    const bindings = category ? [userId, category, like, like, like, like, limit] : [userId, like, like, like, like, limit];
+    const result = await this.db.prepare(`SELECT ${eventSelect} FROM events WHERE user_id = ? AND active = 1 AND deleted_at IS NULL${categoryClause} AND (LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(COALESCE(place, '')) LIKE ? ESCAPE '\\' OR LOWER(COALESCE(memo, '')) LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM event_occurrence_overrides WHERE event_occurrence_overrides.user_id = events.user_id AND event_occurrence_overrides.event_id = events.id AND LOWER(COALESCE(event_occurrence_overrides.patch_json, '')) LIKE ? ESCAPE '\\')) ORDER BY updated_at DESC, created_at DESC, id ASC LIMIT ?`).bind(...bindings).all<EventRow>();
     return result.results.map(toEvent);
   }
 

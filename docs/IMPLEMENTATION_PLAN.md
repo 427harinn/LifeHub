@@ -502,6 +502,14 @@ AI分析、budget、saving goal、複雑な前年比・financial KPI、dashboard
   - Date Sheetを開く
 - 将来のIndexedDB検索統合を想定したinterface
 
+## M11実装方針
+
+- Calendarの検索iconはBottomSheet placeholderから専用sub screenへ遷移し、Calendar selectedを維持する。
+- Calendar SearchはEventのみを対象に、2文字以上・trim・case-insensitive・250ms debounceで専用APIへ問い合わせる。結果はflat listで、tap時に該当month / selected date / Date Sheetへ戻る。
+- Search APIはEventProjectionServiceを通してpast / future occurrenceを解決し、periodはweek start / month start / custom periodStartDateを代表日として返す。cancelled occurrenceは除外し、modified overrideは結果へ反映する。
+- EventFormはhome / work category scope付きの共通ReuseSearchSheetを使い、未入力は直近8件、入力はserver search最大50件とする。MoneyFormも同じUI grammarでtitle / category name / memoを検索する。
+- 再利用時のcopy semantics（Eventのtitle / allDay / time / place / memo、Moneyのrecurrence / settlement mode / date / planned・actualルール）は変更しない。
+
 ## Evidence
 
 - 検索UI

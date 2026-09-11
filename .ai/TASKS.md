@@ -1,3 +1,28 @@
+# Milestone 11 Tasks
+
+## 小タスク
+
+- [x] T1: 最新origin/mainからcodex/m11-searchを作成し、DESIGN.md・既存Calendar / EventForm / MoneyForm / occurrence architectureとHouseToDo参照実装を確認
+- [x] T2: Calendar Search result interface、D1 search query、occurrence / period anchor resolution、ownership / limit / deterministic orderを実装
+- [x] T3: /api/events/search、Event reuse search、Money reuse searchとclient APIを実装
+- [x] T4: Calendar専用Search sub screen、debounce、0件、result tap → month / date / Date Sheet jumpを実装
+- [x] T5: 共通ReuseSearchSheetを追加し、home / work EventFormとMoneyFormへカテゴリscope付きで接続
+- [x] T6: click-through、1文字 no search、title / place / memo / category、copy / recurrence regression testを追加
+- [x] T7: 390×844 EvidenceとCalendar / Event reuse / Money reuse interaction videoを作成
+- [x] T8: docs更新、lint / typecheck / unit / build / E2E、staging deploy / health / smokeを実行する。7403発生時はSTOP
+- [ ] T9: self-review、commit、push、main向けPR作成。auto-mergeしない
+
+## M11セルフレビュー観点
+
+- Calendar検索と再利用検索を同じ画面へ混ぜていない
+- title / place / memo、category scope、user ownership、limit、trim、case-insensitive、2文字条件を満たす
+- recurrence / period / cancelled / overrideは既存projection / copy semanticsを壊していない
+- BottomSheetはportal、input 16px以上、safe-area、スクロール、backdrop、closeを維持している
+- flat list / divider / no card / no shadow / orange accentでDESIGN.mdに沿っている
+- production/default・HouseToDo未操作、auto-mergeなし
+
+---
+
 # Milestone 10 Tasks
 
 ## 小タスク

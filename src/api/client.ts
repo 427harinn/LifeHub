@@ -39,6 +39,12 @@ export type Event = {
   recurrence?: RecurrenceRule | null;
   notifications?: number[];
 };
+export type CalendarSearchResult = Event & {
+  source: "server";
+  eventId: string;
+  occurrenceDate: string;
+  matchContext: { fields: Array<"title" | "place" | "memo">; text?: string };
+};
 
 export type ScheduledEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime">;
 export type PeriodEventInput = Pick<Event, "category" | "title" | "place" | "memo" | "timingType" | "allDay" | "startDate" | "startTime" | "endDate" | "endTime" | "periodWindowType" | "periodAnchorDate" | "periodStartDate" | "periodEndDate" | "deadlineTime">;
@@ -91,7 +97,9 @@ export const getDaily = (date: string) => request<{ date: string; events: Event[
 export const upsertDailyNote = (date: string, content: string) => request<{ dailyNote: DailyNote | null }>(`/api/daily-notes/${encodeURIComponent(date)}`, { method: "PUT", body: JSON.stringify({ content }) });
 export const deleteDailyNote = (date: string) => request<{ dailyNote: null }>(`/api/daily-notes/${encodeURIComponent(date)}`, { method: "DELETE" });
 export const getEvent = (id: string) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`);
-export const getRecentEventDefinitions = (limit = 20) => request<{ events: Event[] }>(`/api/events/recent-definitions?limit=${limit}`);
+export const getRecentEventDefinitions = (limit = 20, signal?: AbortSignal) => request<{ events: Event[] }>(`/api/events/recent-definitions?limit=${limit}`, { signal });
+export const searchCalendarEvents = (query: string, limit = 50, signal?: AbortSignal) => request<{ events: CalendarSearchResult[] }>(`/api/events/search?q=${encodeURIComponent(query)}&limit=${limit}`, { signal });
+export const getEventReuseCandidates = (query: string, category: Event["category"], limit = 50, signal?: AbortSignal) => request<{ events: Event[] }>(`/api/events/reuse-search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}&limit=${limit}`, { signal });
 export const createEvent = (input: EventCommandInput) => request<{ event: Event }>("/api/events", { method: "POST", body: JSON.stringify(input) });
 export const updateEvent = (id: string, input: EventCommandInput) => request<{ event: Event }>(`/api/events/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
 export const deleteEvent = (id: string, scope: EventScope = "series", occurrenceKey?: string) => request<{ deleted: boolean }>(`/api/events/${encodeURIComponent(id)}?scope=${scope}${occurrenceKey ? `&occurrenceKey=${encodeURIComponent(occurrenceKey)}` : ""}`, { method: "DELETE" });
@@ -101,7 +109,8 @@ export const updateMoneyCategory = (id: string, input: { name?: string; colorKey
 export const deleteMoneyCategory = (id: string) => request<{ deleted: boolean }>(`/api/money-categories/${encodeURIComponent(id)}`, { method: "DELETE" });
 export const getMoneyMonth = (month: string) => request<{ month: string } & MoneyProjection>(`/api/money/month?month=${encodeURIComponent(month.slice(0, 7))}`);
 export const getMoneyYear = (year: number) => request<MoneyYearProjection>(`/api/money/year-summary?year=${encodeURIComponent(String(year))}`);
-export const getRecentMoneyDefinitions = (limit = 20) => request<{ definitions: MoneyItem[] }>(`/api/money/recent-definitions?limit=${limit}`);
+export const getRecentMoneyDefinitions = (limit = 20, signal?: AbortSignal) => request<{ definitions: MoneyItem[] }>(`/api/money/recent-definitions?limit=${limit}`, { signal });
+export const getMoneyReuseCandidates = (query: string, limit = 50, signal?: AbortSignal) => request<{ definitions: MoneyItem[] }>(`/api/money/reuse-search?q=${encodeURIComponent(query)}&limit=${limit}`, { signal });
 export const createMoney = (input: { type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; memo: string | null; recurrence: RecurrenceRuleInput | null }) => request<{ money: MoneyItem }>("/api/money", { method: "POST", body: JSON.stringify(input) });
 export const updateMoney = (id: string, input: Partial<{ type: MoneyType; title: string; plannedAmount: number; categoryId: string; date: string; memo: string | null; recurrence: RecurrenceRuleInput | null }> & { scope?: EventScope; occurrenceKey?: string }) => request<{ money: MoneyItem }>(`/api/money/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
 export const deleteMoney = (id: string, scope: EventScope = "series", occurrenceKey?: string) => request<{ deleted: boolean }>(`/api/money/${encodeURIComponent(id)}?scope=${scope}${occurrenceKey ? `&occurrenceKey=${encodeURIComponent(occurrenceKey)}` : ""}`, { method: "DELETE" });

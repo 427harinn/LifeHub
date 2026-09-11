@@ -1,12 +1,14 @@
 import { EventOccurrenceOverrideRepository } from "../repositories/event-occurrence-override-repository";
 import { EventRepository } from "../repositories/event-repository";
 import { RecurrenceRepository } from "../repositories/recurrence-repository";
+import { getLocalDate } from "../lib/date-time";
 import type { Event, EventOccurrenceOverride, RecurrenceRule } from "../types";
 import { dateDifference, dateFromKey, dateKey, monthDayClamped, shiftDate, startOfWeek, weekdayOf } from "./recurrence-service";
 export { isDateKey } from "./recurrence-service";
 
 export type DateRange = { startDate: string; endDate: string };
 export type ProjectedEvent = Event & { occurrenceKey: string | null; recurrence: RecurrenceRule | null };
+export type EventSearchResult = ProjectedEvent & { source: "server"; eventId: string; occurrenceDate: string; matchContext: { fields: Array<"title" | "place" | "memo">; text?: string } };
 type Definition = { event: Event; rule: RecurrenceRule | null; overrides: EventOccurrenceOverride[] };
 type PeriodRange = { startDate: string; endDate: string; occurrenceKey: string };
 
@@ -222,5 +224,32 @@ export class EventProjectionService {
     const events = await this.repository.listForRange(userId, range.startDate, range.endDate);
     const definitions = await Promise.all(events.map(async (event) => ({ event, rule: event.recurrenceRuleId ? await this.recurrenceRepository.getById(userId, event.recurrenceRuleId) : null, overrides: event.recurrenceRuleId ? await this.overrideRepository.listForEvent(userId, event.id) : [] })));
     return projectDefinitions(definitions, range, options.weekStartsOn ?? 1).sort((left, right) => `${left.startDate ?? "9999-12-31"}T${left.startTime ?? left.deadlineTime ?? "00:00"}`.localeCompare(`${right.startDate ?? "9999-12-31"}T${right.startTime ?? right.deadlineTime ?? "00:00"}`));
+  }
+
+  async search(userId: string, query: string, options: { timezone?: string; weekStartsOn?: number; limit?: number } = {}): Promise<EventSearchResult[]> {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (normalized.length < 2) return [];
+    const limit = Math.max(1, Math.min(50, options.limit ?? 50));
+    const today = getLocalDate(new Date(), options.timezone ?? "UTC");
+    const range = { startDate: shiftDate(today, -1825), endDate: shiftDate(today, 1825) };
+    const definitions = await this.repository.searchDefinitions(userId, normalized, 200);
+    const hydrated = await Promise.all(definitions.map(async (event) => ({ event, rule: event.recurrenceRuleId ? await this.recurrenceRepository.getById(userId, event.recurrenceRuleId) : null, overrides: event.recurrenceRuleId ? await this.overrideRepository.listForEvent(userId, event.id) : [] })));
+    const occurrenceByKey = new Map<string, ProjectedEvent>();
+    for (const event of projectDefinitions(hydrated, range, options.weekStartsOn ?? 1)) {
+      const fields = (["title", "place", "memo"] as const).filter((field) => Boolean(event[field]?.toLocaleLowerCase().includes(normalized)));
+      if (fields.length === 0) continue;
+      const key = event.occurrenceKey ?? `${event.id}:${event.startDate ?? event.periodStartDate ?? ""}`;
+      const current = occurrenceByKey.get(key);
+      if (!current || event.startDate === event.periodStartDate) occurrenceByKey.set(key, event);
+    }
+    return [...occurrenceByKey.values()].map((event) => {
+      const occurrenceDate = event.timingType === "period" ? event.periodStartDate ?? event.startDate ?? today : event.startDate ?? today;
+      const fields = (["title", "place", "memo"] as const).filter((field) => Boolean(event[field]?.toLocaleLowerCase().includes(normalized)));
+      const contextField = fields.find((field) => field !== "title");
+      return { ...event, source: "server" as const, eventId: event.id, occurrenceDate, matchContext: { fields, text: contextField ? event[contextField] ?? undefined : undefined } };
+    }).sort((left, right) => {
+      const distance = Math.abs(dateDifference(today, left.occurrenceDate)) - Math.abs(dateDifference(today, right.occurrenceDate));
+      return distance || `${left.occurrenceDate}T${left.startTime ?? left.deadlineTime ?? "00:00"}:${left.id}:${left.occurrenceKey ?? ""}`.localeCompare(`${right.occurrenceDate}T${right.startTime ?? right.deadlineTime ?? "00:00"}:${right.id}:${right.occurrenceKey ?? ""}`);
+    }).slice(0, limit);
   }
 }

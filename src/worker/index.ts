@@ -316,6 +316,16 @@ const listRecentMoneyDefinitions = requireAuth(async ({ request, env, user }) =>
   return json({ definitions: await moneyService(env).recentDefinitions(user.id, limit) });
 });
 
+const searchMoneyReuseCandidates = requireAuth(async ({ request, env, user }) => {
+  const url = new URL(request.url);
+  const query = stringValue(url.searchParams.get("q")).trim();
+  const parsedLimit = Number(url.searchParams.get("limit") ?? (query.length >= 2 ? "50" : "8"));
+  const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : query.length >= 2 ? 50 : 8;
+  await moneyService(env).ensureCategories(user.id, nowIso());
+  const definitions = query.length >= 2 ? await moneyService(env).searchDefinitions(user.id, query, limit) : query.length === 0 ? await moneyService(env).recentDefinitions(user.id, limit) : [];
+  return json({ definitions });
+});
+
 const createMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const money = await moneyService(env).create(user.id, await parseObject(request), nowIso()); return json({ money }, { status: 201 }); });
 const getMoney = requireAuth(async ({ request, env, user }) => { const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const item = await moneyService(env).get(user.id, id); if (!item) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); const category = await new MoneyCategoryRepository(env.DB).getById(user.id, item.categoryId); return json({ money: { ...item, category } }); });
 const updateMoney = requireAuth(async ({ request, env, user }) => { await requireWritableUserState({ request, env, user }); const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? ""); const money = await moneyService(env).update(user.id, id, await parseObject(request), nowIso()); if (!money) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。"); return json({ money }); });
@@ -349,6 +359,31 @@ const listRecentEventDefinitions = requireAuth(async ({ request, env, user }) =>
   const parsedLimit = Number(url.searchParams.get("limit") ?? "20");
   const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 20;
   const events = await new EventRepository(env.DB).recentDefinitions(user.id, limit);
+  const recurrenceRepository = new RecurrenceRepository(env.DB);
+  const notificationRepository = new NotificationRepository(env.DB);
+  const enrichedEvents = await Promise.all(events.map(async (event) => ({ ...event, recurrence: event.recurrenceRuleId ? await recurrenceRepository.getById(user.id, event.recurrenceRuleId) : null, notifications: (await notificationRepository.listEventNotificationsForEvent(user.id, event.id)).map((notification) => notification.offsetMinutes) })));
+  return json({ events: enrichedEvents });
+});
+
+const searchCalendarEvents = requireAuth(async ({ request, env, user }) => {
+  const url = new URL(request.url);
+  const query = stringValue(url.searchParams.get("q"));
+  const parsedLimit = Number(url.searchParams.get("limit") ?? "50");
+  const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : 50;
+  const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
+  const service = new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
+  return json({ events: await service.search(user.id, query, { limit, timezone: settings.timezone, weekStartsOn: settings.weekStartsOn }) });
+});
+
+const searchEventReuseCandidates = requireAuth(async ({ request, env, user }) => {
+  const url = new URL(request.url);
+  const query = stringValue(url.searchParams.get("q")).trim();
+  const category = stringValue(url.searchParams.get("category"));
+  if (category !== "home" && category !== "work") throw validationError({ category: "カテゴリを指定してください。" });
+  const parsedLimit = Number(url.searchParams.get("limit") ?? (query.length >= 2 ? "50" : "8"));
+  const limit = Number.isInteger(parsedLimit) ? Math.max(1, Math.min(50, parsedLimit)) : query.length >= 2 ? 50 : 8;
+  const repository = new EventRepository(env.DB);
+  const events = query.length >= 2 ? await repository.searchDefinitions(user.id, query, limit, category) : query.length === 0 ? await repository.recentDefinitions(user.id, limit, category) : [];
   const recurrenceRepository = new RecurrenceRepository(env.DB);
   const notificationRepository = new NotificationRepository(env.DB);
   const enrichedEvents = await Promise.all(events.map(async (event) => ({ ...event, recurrence: event.recurrenceRuleId ? await recurrenceRepository.getById(user.id, event.recurrenceRuleId) : null, notifications: (await notificationRepository.listEventNotificationsForEvent(user.id, event.id)).map((notification) => notification.offsetMinutes) })));
@@ -413,6 +448,7 @@ export default {
       if (url.pathname === "/api/money/year-summary" && request.method === "GET") return await getMoneyYear(context);
       if (url.pathname === "/api/money" && request.method === "POST") return await createMoney(context);
       if (url.pathname === "/api/money/recent-definitions" && request.method === "GET") return await listRecentMoneyDefinitions(context);
+      if (url.pathname === "/api/money/reuse-search" && request.method === "GET") return await searchMoneyReuseCandidates(context);
       const moneyActualPath = url.pathname.match(/^\/api\/money\/([^/]+)\/occurrences\/([^/]+)\/actual$/);
       if (moneyActualPath && request.method === "PUT") return await putMoneyActual(context);
       if (moneyActualPath && request.method === "DELETE") return await deleteMoneyActual(context);
@@ -426,6 +462,8 @@ export default {
       if (url.pathname === "/api/events" && request.method === "GET") return await listEvents(context);
       if (url.pathname === "/api/events" && request.method === "POST") return await createEvent(context);
       if (url.pathname === "/api/events/recent-definitions" && request.method === "GET") return await listRecentEventDefinitions(context);
+      if (url.pathname === "/api/events/search" && request.method === "GET") return await searchCalendarEvents(context);
+      if (url.pathname === "/api/events/reuse-search" && request.method === "GET") return await searchEventReuseCandidates(context);
       const eventIdPath = url.pathname.match(/^\/api\/events\/([^/]+)$/);
       if (eventIdPath && request.method === "GET") return await getEvent(context);
       if (eventIdPath && request.method === "PATCH") return await updateEvent(context);
