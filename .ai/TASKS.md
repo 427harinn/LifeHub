@@ -32,10 +32,10 @@
 ## PR #14 review correction
 
 - [x] ArchiveRecordへbatch boundaryを保持し、local Event / Money / Search projectionを`date < retentionBoundary`へ制限
-- [x] 同一stable occurrence identityはserver / D1を最終authorityとしてmerge
+- [x] archive期間（`date < retentionBoundary`）はlocalをauthority、boundary以降とboundary重複はserver / D1をauthorityとしてmerge
 - [x] active親snapshotのcurrent / future漏出、old/current title、Money planned amount、Search 5年projectionの回帰testを追加
 - [x] 未実装JSON Backup rowをSettingsから除去し、Evidenceを更新
-- [ ] staging再deploy / staging E2E：Cloudflare API 7403再発のため停止。再発時に同じtarget確認から再開する
+- [x] staging再deploy / staging E2E：Worker version `2e3bb591-4f54-48dc-a5f1-36918f4d14a8`、health HTTP 200、1件pass。7403再発なし
 
 ---
 

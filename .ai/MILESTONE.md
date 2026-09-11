@@ -3,7 +3,7 @@
 ## 現在のMilestone
 
 M12実装完了。`origin/main` の `88c28dae0d6674255b208b5a116c130aed06c50d` から `codex/m12-local-archive` を作成し、commit `c9f3a06`、PR #14を作成した。`docs/BACKUP_AND_RETENTION.md` を正本とし、user timezone基準で12か月より古い履歴をIndexedDBへ保存・検証した後にのみstaging D1から厳密な対象を削除する。activeなEvent / RecurrenceRule / MoneyItem / Money recurrenceは定義年齢だけでは削除しない。production/default・HouseToDoは操作せず、auto-mergeしない。
-PR #14 review correction: archive snapshotは`archiveBatchId` / `retentionBoundary`未満へclampし、同一stable occurrenceではD1を最終authorityとする。active親snapshotをcurrent / futureへprojectionせず、Searchの将来5年projectionを削除した。未実装JSON Backup rowも非表示にした。
+PR #14 review correction: archive snapshotは`archiveBatchId` / `retentionBoundary`未満へclampし、archive期間はlocalをauthority、retention boundary以降とboundaryでの重複はD1をauthorityとする。active親snapshotをcurrent / futureへprojectionせず、Searchの将来5年projectionを削除した。未実装JSON Backup rowも非表示にした。
 
 ## 完了条件
 
@@ -29,7 +29,9 @@ PR #14 review correction: archive snapshotは`archiveBatchId` / `retentionBounda
 
 - local: unit 119件、typecheck、build、lint（既存warning 13件のみ）、authority projection E2E 1件pass。
 - 回帰: active Event/Money snapshotはboundary未満だけを投影し、D1 current/future変更値が優先される。old Searchは旧snapshot、future Searchはserver結果を使う。
-- staging再deploy前のtarget確認でCloudflare API `7403`が再発したため、指示どおりstaging deploy / staging E2Eは停止。別DB・別環境workaroundなし。
+- staging target/authを再確認し、account `1ea7a50f1aef89d4159a26ca825386af`、Worker `lifehub-staging`、D1 `lifehub-staging` / `da75b9df-dcb6-4e80-991e-6310be3c1933`、migration `No migrations to apply!`を確認。
+- staging Worker version `2e3bb591-4f54-48dc-a5f1-36918f4d14a8`へ再deployし、health HTTP 200、M12 staging E2E 1件pass。candidate → IndexedDB read-back / checksum → confirm → eligible D1 delete、duplicate confirm idempotency、active Event / Money parent残存、Calendar / Daily / Money / Search authority回帰を確認した。
+- Cloudflare API `7403`は最終target確認・deploy・staging E2Eで再発なし。別DB・別環境workaround、production/default・HouseToDo操作なし。auto-mergeなし。
 
 ## 実装境界
 
