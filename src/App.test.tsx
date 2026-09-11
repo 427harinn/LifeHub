@@ -182,11 +182,12 @@ describe("LifeHub M2 shell", () => {
 describe("M11 search", () => {
   it("debounces trimmed calendar queries and jumps to the selected occurrence", async () => {
     const result = { ...timedEvent({ id: "search-event", title: "歯医者", place: "博多駅", memo: "保険証", startDate: "2026-09-18", endDate: "2026-09-18" }), source: "server" as const, occurrenceDate: "2026-09-18", matchContext: { fields: ["place", "memo"] as Array<"title" | "place" | "memo">, text: "博多駅" } };
+    const workResult = { ...result, id: "work-search-event", category: "work" as const, title: "週次レビュー", occurrenceDate: "2026-09-25", matchContext: { fields: ["title"] as Array<"title" | "place" | "memo"> } };
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const path = requestPath(input);
       if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
       if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
-      if (path.startsWith("/api/events/search")) return Promise.resolve(response({ events: [result] }));
+      if (path.startsWith("/api/events/search")) return Promise.resolve(response({ events: [result, workResult] }));
       if (path.startsWith("/api/calendar")) return Promise.resolve(response({ events: [result], money: { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] } }));
       return Promise.resolve(response({}));
     });
@@ -199,8 +200,18 @@ describe("M11 search", () => {
     expect(fetchMock.mock.calls.some(([input]) => requestPath(input).startsWith("/api/events/search"))).toBe(false);
     fireEvent.change(screen.getByRole("textbox", { name: "予定を検索" }), { target: { value: "  博多 " } });
     await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => requestPath(input) === "/api/events/search?q=%E5%8D%9A%E5%A4%9A&limit=50")).toBe(true));
-    expect(await screen.findByRole("button", { name: /歯医者/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /歯医者/ }));
+    const resultRow = await screen.findByRole("button", { name: /歯医者/ });
+    expect(resultRow).toBeInTheDocument();
+    expect([...resultRow.children].map((child) => child.tagName)).toEqual(["TIME", "SPAN"]);
+    expect(resultRow.querySelector("time")?.textContent).toContain("2026年9月18日");
+    expect(resultRow.querySelector("strong")).toHaveTextContent("歯医者");
+    expect(resultRow.querySelector("small")).toHaveTextContent("場所 博多駅");
+    expect(resultRow.querySelector(".calendar-search-result__marker")).not.toBeInTheDocument();
+    expect(resultRow.querySelector(".calendar-search-result__body")).toHaveClass("calendar-search-result__body--home");
+    const workRow = screen.getByRole("button", { name: /週次レビュー/ });
+    expect(workRow.querySelector(".calendar-search-result__body")).toHaveClass("calendar-search-result__body--work");
+    expect(workRow.querySelector(".calendar-search-result__marker")).not.toBeInTheDocument();
+    fireEvent.click(resultRow);
     expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(window.location.search).toContain("date=2026-09-18");
