@@ -65,11 +65,14 @@ test("M10 Money analysis stays calm, readable, and connected to Money", async ({
   expect(january.ok()).toBeTruthy();
   await page.getByRole("button", { name: "お金", exact: true }).click();
   await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
+  await expect(page.locator("main.money-page")).toBeVisible();
+  await expect(page.locator("main.money-page .money-chart-section")).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-entry-with-analysis-icon-390x844.png") });
   await page.getByRole("button", { name: "お金の分析を見る" }).click();
   await expect(page.getByRole("heading", { name: "お金の分析" })).toBeVisible();
   await expect(page.getByText("年間の支出見込み")).toBeVisible();
   await expect(page.getByTestId("money-year-chart")).toBeVisible();
+  await expect.poll(async () => page.locator("main.money-analysis-page > section, main.money-analysis-page > .money-chart-section").evaluateAll((sections) => sections.map((section) => section.querySelector("h2")?.textContent ?? ""))).toEqual(["年間のまとめ", "カテゴリ別の支出", "月ごとの支出", `${year}年${new Date().getMonth() + 1}月`]);
   await page.screenshot({ path: path.join(evidenceDir, "money-analysis-forecast-390x844.png") });
   await page.getByRole("button", { name: "実績" }).click();
   await expect(page.getByText("年間の確定支出")).toBeVisible();
