@@ -17,6 +17,8 @@
 - [x] T13: staging targetを再確認し、staging migration / deploy / health / smokeを実行。7403発生時はSTOP
 - [x] T14: staging専用userでold/new browser context destructive E2E、Calendar / Daily / Money / Search / archive一致を確認
 - [x] T15: docs同期、self-review、commit / push / PR作成。auto-mergeしない
+- [x] 最終修正1: `cleanupCompleted` をstatus APIから受け取り、cleanup後のcancel非表示と復旧案内を390×844で確認
+- [x] 最終修正2: staging large fixture（JSON 1,102,390 bytes、D1 restore 1,028 statements）でexport / validate / start / restore / verify / complete / read-backを確認
 
 ## M13セルフレビュー観点
 

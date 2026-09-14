@@ -89,7 +89,7 @@ export class MigrationService {
     for (const delivery of backup.cloud.notificationDeliveries) statements.push(this.db.prepare("INSERT INTO notification_deliveries (id, user_id, notification_type, event_id, occurrence_key, event_notification_id, scheduled_for, dedupe_key, sent_at, status, claimed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(delivery.id, userId, delivery.notificationType, delivery.eventId, delivery.occurrenceKey, delivery.eventNotificationId, delivery.scheduledFor, delivery.dedupeKey, delivery.sentAt, delivery.status, delivery.claimedAt, delivery.createdAt, delivery.updatedAt));
     statements.push(this.db.prepare("UPDATE user_migrations SET status = 'restoring', restored_at = NULL, last_error = NULL WHERE id = ? AND user_id = ?").bind(migrationId, userId));
     await this.db.batch(statements);
-    return { restored: true, migration: toPublic(await queryMigration(this.db, userId, migrationId)), cloudRecordCount: validated.manifest.cloudRecordCount };
+    return { restored: true, migration: toPublic(await queryMigration(this.db, userId, migrationId)), cloudRecordCount: validated.manifest.cloudRecordCount, restoreStatementCount: statements.length };
   }
 
   async verify(userId: string, migrationId: string, backupChecksumValue: string, archiveRecordCount: number) {

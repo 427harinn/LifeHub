@@ -2,7 +2,7 @@
 
 ## 現在のMilestone
 
-M13実装中。最新 `origin/main` は `beef7e8410715a53bac5177d2cdf815188f6e0aa`、branchは `codex/m13-backup-device-migration`。`docs/BACKUP_AND_RETENTION.md` を正本とし、通常バックアップと機種変更を分離する。JSONはD1 + M12 IndexedDB archiveを含む唯一の移行正本とし、通常バックアップでは状態を変更しない。保存済みJSONの再選択・再検証と最終確認を経た場合だけmigration lockとD1整理を開始する。production/default・HouseToDoには触れず、auto-mergeしない。
+M13最終修正確認済み（PR #15 review pending）。最新 `origin/main` は `beef7e8410715a53bac5177d2cdf815188f6e0aa`、branchは `codex/m13-backup-device-migration`。`docs/BACKUP_AND_RETENTION.md` を正本とし、通常バックアップと機種変更を分離する。JSONはD1 + M12 IndexedDB archiveを含む唯一の移行正本とし、通常バックアップでは状態を変更しない。保存済みJSONの再選択・再検証と最終確認を経た場合だけmigration lockとD1整理を開始する。production/default・HouseToDoには触れず、auto-mergeしない。
 
 ## 完了条件
 
@@ -38,11 +38,11 @@ M13実装中。最新 `origin/main` は `beef7e8410715a53bac5177d2cdf815188f6e0a
 
 ## M13検証記録（2026-09-14）
 
-- local: migration `0013_m13_backup_migration.sql`適用、unit 126件、typecheck、buildを通過。lintは既存warning 13件のみ。
+- local: migration `0013_m13_backup_migration.sql`適用、unit 128件、typecheck、buildを通過。lintは既存warning 13件のみ。cleanup前cancel可、cleanup後cancel非表示＋復旧案内のcomponent testを追加。
 - staging target: `lifehub-staging` Worker / D1 `lifehub-staging`（database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`）のみ。remote migration適用後のlistは`No migrations to apply!`、healthは`{"ok":true,"app":"LifeHub","environment":"staging"}`。
-- staging Worker version: `14fe988d-e85b-4d36-898d-56286bf13093`。
-- staging E2E: staging専用test user、old/newの2 browser context、390×844でmigration 1件 + normal backup read-only 1件がpass。cloud + M12 archive、saved-file reselect、lock、D1/IndexedDB restore、Calendar / Daily / Money / Search、unlockを確認。
-- Evidence: `artifacts/evidence/m13/01-backup-complete-390x844.png`、`02-old-device-locked-390x844.png`、`03-new-device-restored-390x844.png`、`04-normal-app-after-unlock-390x844.png`。動画は`artifacts/playwright/m13-backup-migration-staging-video3/test-results/`配下のmigration 2本（old/new各context）とnormal backup 1本。
+- staging Worker version: `e059b138-1e97-4d07-8756-aeb5eb2332e0`。
+- staging E2E: staging専用test user、old/newの2 browser context、390×844で通常migration、large migration、normal backup read-onlyの3件がpass。large fixtureはcurrent Event 200 + recurring 1、archived Event 200、DailyNote 200 + 200、MoneyItem 300 + 200、current settlement 300、recurring override 1を含む。archive recordは601件、cloud recordは1,013件、JSONは1,102,390 bytes、restoreはsingle transactional D1 batchの1,028 statementsを497msで完了。restore後のID / 件数、Calendar / Daily / Money / Search、IndexedDB archive read-back、verify、complete、unlockを確認。
+- Evidence: `artifacts/evidence/m13/01-backup-complete-390x844.png`、`02-old-device-locked-390x844.png`、`03-new-device-restored-390x844.png`、`04-normal-app-after-unlock-390x844.png`、`05-cleanup-complete-no-cancel-390x844.png`。動画は`normal-backup.webm`、`migration-old-device.webm`、`migration-new-device.webm`、`large-migration-context-1.webm`、`large-migration-context-2.webm`。
 - Cloudflare API `7403`は今回のstaging migration / deploy / E2Eで発生なし。production/default・HouseToDoは未操作。auto-mergeなし。
 
 ---
