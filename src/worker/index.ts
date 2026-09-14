@@ -25,6 +25,8 @@ import { MoneyOccurrenceOverrideRepository } from "./repositories/money-occurren
 import { MoneyOccurrenceSettlementRepository } from "./repositories/money-occurrence-settlement-repository";
 import { runMoneySettlement } from "./services/money-settlement-service";
 import { ArchiveService } from "./services/archive-service";
+import { BackupService } from "./services/backup-service";
+import { MigrationService } from "./services/migration-service";
 
 const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { "cache-control": "no-store", ...init.headers } });
 const nowIso = () => new Date().toISOString();
@@ -124,11 +126,44 @@ const getArchiveCandidates = requireAuth(async ({ env, user }) => {
 });
 
 const confirmArchive = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
   const body = await parseObject(request);
   const manifest = body.manifest;
   if (typeof body.archiveBatchId !== "string" || typeof body.checksum !== "string" || !Number.isInteger(body.recordCount) || !Number.isInteger(body.schemaVersion) || !Number.isInteger(body.manifestVersion) || !manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw validationError({ archive: "アーカイブ確認情報が不正です。" });
   const settings = await new SettingsRepository(env.DB).getOrCreate(user.id, nowIso(), DEFAULT_TIMEZONE);
   return json(await archiveService(env).confirm(user.id, settings.timezone, new Date(), { archiveBatchId: body.archiveBatchId, checksum: body.checksum, recordCount: Number(body.recordCount), schemaVersion: Number(body.schemaVersion), manifestVersion: Number(body.manifestVersion), manifest: manifest as never }));
+});
+
+const getBackupExport = requireAuth(async ({ env, user }) => json(await new BackupService(env.DB).exportCloud(user.id, new Date())));
+const getMigrationStatus = requireAuth(async ({ env, user }) => json(await new MigrationService(env.DB).status(user.id)));
+const startMigration = requireAuth(async ({ request, env, user }) => {
+  const length = Number(request.headers.get("content-length") ?? "0");
+  if (length > 10 * 1024 * 1024) throw new AppError("MIGRATION_PAYLOAD_TOO_LARGE", 413, "バックアップファイルが大きすぎます。");
+  const body = await parseObject(request);
+  if (!body.manifest || typeof body.manifest !== "object" || Array.isArray(body.manifest) || !body.backup) throw validationError({ manifest: "保存済みバックアップの再確認が必要です。" });
+  return json(await new MigrationService(env.DB).start(user.id, { migrationId: stringValue(body.migrationId), backupChecksum: stringValue(body.backupChecksum), schemaVersion: Number(body.schemaVersion), manifest: body.manifest as never, backup: body.backup }));
+});
+const restoreMigration = requireAuth(async ({ request, env, user }) => {
+  const length = Number(request.headers.get("content-length") ?? "0");
+  if (length > 10 * 1024 * 1024) throw new AppError("MIGRATION_PAYLOAD_TOO_LARGE", 413, "バックアップファイルが大きすぎます。");
+  const body = await parseObject(request);
+  if (!stringValue(body.migrationId) || !body.backup) throw validationError({ backup: "バックアップを選択してください。" });
+  return json(await new MigrationService(env.DB).restore(user.id, stringValue(body.migrationId), body.backup));
+});
+const verifyMigration = requireAuth(async ({ request, env, user }) => {
+  const body = await parseObject(request);
+  if (!stringValue(body.migrationId) || !stringValue(body.backupChecksum) || !Number.isInteger(body.archiveRecordCount)) throw validationError({ migration: "復元確認情報が不正です。" });
+  return json(await new MigrationService(env.DB).verify(user.id, stringValue(body.migrationId), stringValue(body.backupChecksum), Number(body.archiveRecordCount)));
+});
+const completeMigration = requireAuth(async ({ request, env, user }) => {
+  const body = await parseObject(request);
+  if (!stringValue(body.migrationId)) throw validationError({ migrationId: "機種変更IDが必要です。" });
+  return json(await new MigrationService(env.DB).complete(user.id, stringValue(body.migrationId)));
+});
+const cancelMigration = requireAuth(async ({ request, env, user }) => {
+  const body = await parseObject(request);
+  if (!stringValue(body.migrationId)) throw validationError({ migrationId: "機種変更IDが必要です。" });
+  return json(await new MigrationService(env.DB).cancel(user.id, stringValue(body.migrationId)));
 });
 
 const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
@@ -175,11 +210,13 @@ const getVapidPublicKey = requireAuth(({ env }) => {
   return Promise.resolve(json({ publicKey }));
 });
 const registerSubscription = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
   const input = await subscriptionBody(request);
   await new PushSubscriptionRepository(env.DB).upsert({ id: crypto.randomUUID(), user_id: user.id, endpoint: input.endpoint, endpoint_hash: await sha256Hex(input.endpoint), p256dh: input.p256dh, auth: input.auth, now: nowIso() });
   return json({ registered: true }, { status: 201 });
 });
 const unregisterSubscription = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
   const body = await parseObject(request);
   const endpoint = stringValue(body.endpoint);
   let parsed: URL;
@@ -190,6 +227,7 @@ const unregisterSubscription = requireAuth(async ({ request, env, user }) => {
 });
 const getNotificationTemplates = requireAuth(({ env, user }) => new NotificationRepository(env.DB).listTemplates(user.id).then((templates) => json({ templates })));
 const createNotificationTemplate = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
   const body = await parseObject(request);
   const name = stringValue(body.name);
   if (!name || name.length > 80) throw validationError({ name: "テンプレート名を入力してください。" });
@@ -200,6 +238,7 @@ const createNotificationTemplate = requireAuth(async ({ request, env, user }) =>
   return json({ template }, { status: 201 });
 });
 const updateNotificationTemplate = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
   const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
   const body = await parseObject(request);
   const input: { name?: string; targetCategory?: "home" | "work" | null; isDefault?: boolean; offsets?: number[] } = {};
@@ -212,6 +251,7 @@ const updateNotificationTemplate = requireAuth(async ({ request, env, user }) =>
   return json({ template });
 });
 const deleteNotificationTemplate = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
   const id = decodeURIComponent(new URL(request.url).pathname.split("/").pop() ?? "");
   if (!await new NotificationRepository(env.DB).deleteTemplate(user.id, id)) throw new AppError("NOT_FOUND", 404, "対象が見つかりません。");
   return json({ deleted: true });
@@ -457,6 +497,13 @@ export default {
       if (notificationTemplatePath && request.method === "PATCH") return await updateNotificationTemplate(context);
       if (notificationTemplatePath && request.method === "DELETE") return await deleteNotificationTemplate(context);
       if (url.pathname === "/api/user-state" && request.method === "GET") return await getUserState(context);
+      if (url.pathname === "/api/backup/export" && request.method === "GET") return await getBackupExport(context);
+      if (url.pathname === "/api/migration/status" && request.method === "GET") return await getMigrationStatus(context);
+      if (url.pathname === "/api/migration/start" && request.method === "POST") return await startMigration(context);
+      if (url.pathname === "/api/migration/restore" && request.method === "POST") return await restoreMigration(context);
+      if (url.pathname === "/api/migration/verify" && request.method === "POST") return await verifyMigration(context);
+      if (url.pathname === "/api/migration/complete" && request.method === "POST") return await completeMigration(context);
+      if (url.pathname === "/api/migration/cancel" && request.method === "POST") return await cancelMigration(context);
       if (url.pathname === "/api/archive/candidates" && request.method === "GET") return await getArchiveCandidates(context);
       if (url.pathname === "/api/archive/confirm" && request.method === "POST") return await confirmArchive(context);
       if (url.pathname === "/api/calendar" && request.method === "GET") return await getCalendar(context);

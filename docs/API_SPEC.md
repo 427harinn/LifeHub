@@ -458,3 +458,23 @@ server側deleteはmanifestに列挙したevent / override / notification / daily
 保存処理の順序はcandidate取得、IndexedDB transaction、read-back、ID / 件数 / canonical checksum検証、local metadata verified、confirm、server delete、local confirmed更新。JSON migration APIはM13の対象である。
 
 Archive dataはclient側でbatch boundaryをprojectionへ渡す。`date < retentionBoundary`がlocal authority範囲であり、boundary日以降はD1がauthorityとなる。同一stable occurrence identityのmergeではD1 resultを優先する。
+
+## 20. M13 Backup / Migration API
+
+```text
+GET  /api/backup/export
+GET  /api/migration/status
+POST /api/migration/start
+POST /api/migration/restore
+POST /api/migration/verify
+POST /api/migration/complete
+POST /api/migration/cancel
+```
+
+`GET /api/backup/export` は認証userのcloud payloadだけを返し、clientがM12 IndexedDB archiveと統合して最終JSON、manifest、payload checksum、final checksumを生成する。session、password、secret、VAPID private key、push subscriptionは返さない。
+
+`POST /api/migration/start` は保存済みJSONをclientで再選択・再検証した後にだけ呼ぶ。requestはmigrationId、backupChecksum、schemaVersion、manifest summary、再検証済みbackup JSONを持ち、serverもcurrent user・checksum/schema/manifestを再検証してからactive stateのlock + migration metadata + domain cleanupをD1 batchで実行する。users / sessions / user stateは保持する。
+
+`GET /api/migration/status` は`migration`の`cleanupCompleted`を返す。cleanup前（`locked`）だけcancel導線を表示し、cleanup後（`awaiting_restore`以降）はcancelを表示せず、保存済みbackupからの復旧案内を表示する。`POST /api/migration/restore` は`migration_locked`中のみ許可する。single JSON requestで、serverは全体validation後に既存IDを維持してcloud payloadをrelation順に復元する。same migrationId + checksumのretryはdomainを同userの復元対象へ置き換えて重複を作らない。restore後もlockは解除しない。restore responseの`restoreStatementCount`は実行したD1 statement数の検証用メタデータである。
+
+`POST /api/migration/verify` はD1件数 / manifest、clientが復元したarchive件数を確認して `restore_verified` にする。`POST /api/migration/complete` はこの状態だけを`migration_locked=false`へ戻す。restore / local archive / verify / completeのいずれかが失敗した場合、通常利用へ戻さずretryする。cleanup後のcancelはrecovery restoreなしにunlockしない。

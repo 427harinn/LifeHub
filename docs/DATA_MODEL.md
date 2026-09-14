@@ -641,4 +641,6 @@ ArchiveRecordは表示再構築用snapshotをbatch内に保持する。全store�
 
 M12ではJSON export / import、migration_locked、機種変更flowは持たない。
 
+M13のBackup JSON schemaVersionはM12 archive schemaVersionとは別で、cloud + archiveの全復元情報を含む。認証用users / sessions / credential、device-specific push subscriptionはバックアップ対象外とする。
+
 Projection authority: `ArchiveRecord.archiveBatchId` / `retentionBoundary`でbatchを識別し、local projectionはboundary未満だけに制限する。D1とlocalのstable occurrence identityが重複する場合はD1を採用する。親snapshotは過去表示用であり、current / future occurrenceの第二定義ソースではない。

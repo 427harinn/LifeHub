@@ -1,3 +1,41 @@
+# Milestone 13 Tasks
+
+## 小タスク
+
+- [x] T1: latest `origin/main` SHA確認、`codex/m13-backup-device-migration`作成、指定docsとM12実装を監査
+- [x] T2: M13 export format、secret exclusion、manifest、checksum、state machine、restore authorityを設計
+- [x] T3: shared backup types、canonical serialization、checksum、validation、archive conversionを実装
+- [x] T4: cloud export APIとdomain全件snapshot（push/session/credentialを除外）を実装
+- [x] T5: normal backup client service、JSON self-validation、download、read-only testを実装
+- [x] T6: `user_migrations` migration、start/status/restore/verify/complete/cancel APIを実装
+- [x] T7: migration start transaction、D1 cleanup、ID保持restore、idempotency、ownershipを実装
+- [x] T8: migration_locked server guard、notification scheduler exclusion、recovery stateを実装
+- [x] T9: Settings > データ / バックアップの通常backup・機種変更・Archive UIをDESIGN.md準拠で実装
+- [x] T10: new-device migration screen、file reselect validation、preview、restore、IndexedDB restore、unlock UIを実装
+- [x] T11: validation / failure / retry / route / repository / restore verification testsを追加
+- [x] T12: local migration、lint / typecheck / unit / build、390×844 Evidenceを実行
+- [x] T13: staging targetを再確認し、staging migration / deploy / health / smokeを実行。7403発生時はSTOP
+- [x] T14: staging専用userでold/new browser context destructive E2E、Calendar / Daily / Money / Search / archive一致を確認
+- [x] T15: docs同期、self-review、commit / push / PR作成。auto-mergeしない
+- [x] 最終修正1: `cleanupCompleted` をstatus APIから受け取り、cleanup後のcancel非表示と復旧案内を390×844で確認
+- [x] 最終修正2: staging large fixture（JSON 1,102,390 bytes、D1 restore 1,028 statements）でexport / validate / start / restore / verify / complete / read-backを確認
+
+## M13セルフレビュー観点
+
+- 通常backupと機種変更をUI・API・状態遷移で明確に分離し、通常backupは完全read-only
+- JSONはcloud + IndexedDB archiveの完全payloadで、CSV / arbitrary merge importを作っていない
+- checksumはM12 canonicalizationを再利用し、collection order・manifest count・byte sizeを検証できる
+- password/session/cookie/VAPID private key/secret/OAuth/API/PBKDF2/push subscriptionをexportしない
+- saved-file reselect後のvalidationなしにはstart APIを呼ばない。cross-user / unknown schema / duplicate / broken FKを拒否する
+- lock transaction成立前にD1 cleanupしない。users / sessions / user stateを残し、cleanup scopeをdomain dataに限定する
+- migration_locked中はEvent / Money / Daily / settings writeとnotification schedulerをserverで拒否・除外する
+- restoreはID保持・relation順・同一migration/checksum再送のidempotencyを守り、partial failure後もunlockしない
+- server restore、IndexedDB restore、server/client verification完了前にcompleteしない。D1削除後cancelはrestore recoveryなしでunlockしない
+- 390×844でcard乱用・大きなwarning面・dashboard化を避け、primaryはorange、final confirmationのみ慎重な表現にする
+- staging test userのみを破壊的に扱い、production/default・HouseToDo・auto-mergeは未操作
+
+---
+
 # Milestone 12 Tasks
 
 ## 小タスク

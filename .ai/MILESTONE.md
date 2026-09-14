@@ -1,3 +1,52 @@
+# Milestone 13: Backup / Device Migration
+
+## 現在のMilestone
+
+M13最終修正確認済み（PR #15 review pending）。最新 `origin/main` は `beef7e8410715a53bac5177d2cdf815188f6e0aa`、branchは `codex/m13-backup-device-migration`。`docs/BACKUP_AND_RETENTION.md` を正本とし、通常バックアップと機種変更を分離する。JSONはD1 + M12 IndexedDB archiveを含む唯一の移行正本とし、通常バックアップでは状態を変更しない。保存済みJSONの再選択・再検証と最終確認を経た場合だけmigration lockとD1整理を開始する。production/default・HouseToDoには触れず、auto-mergeしない。
+
+## 完了条件
+
+- [x] versioned full JSON export（cloud + IndexedDB archive）とcanonical checksumを実装
+- [x] manifest、counts、ID/FK、recurrence、Money、archive metadata、secret/device-specific data除外のvalidationを実装
+- [x] 通常バックアップのdownloadとread-only保証を実装
+- [x] 機種変更のexport → 保存済みJSON再選択 → 再validation → restore preview → 最終確認UIを実装
+- [x] `user_migrations` と `migration_locked` state machineを実装
+- [x] start後のD1 cleanup、server-side write block、notification scheduler除外を実装
+- [x] 新端末のD1 + IndexedDB restore、ID保持、idempotent retry、restore verification、unlockを実装
+- [x] import failure / local restore failure / verify failure / unlock failure時に通常利用へ戻さない
+- [x] migration cancel / recovery stateを明確化し、D1削除後の単純unlockを禁止
+- [x] unit / integration / failure / E2E、390×844 Evidence、staging destructive E2Eを完了
+- [x] docs、commit / push / PR作成まで完了。auto-mergeしない
+
+## M13設計固定事項
+
+- Backup `format=lifehub-backup`、`schemaVersion=1`。M12 archive `schemaVersion=1`とは別概念として扱う。
+- `cloud`にはUser identity（安全なuserIdのみ）、UserSettings、Event、RecurrenceRule、EventOccurrenceOverride、EventNotification、NotificationTemplate/offset、NotificationDelivery、DailyNote、MoneyCategory、MoneyItem、MoneyOccurrenceOverride、MoneyOccurrenceSettlementを含める。
+- `archive`にはM12のmetadataと全archive recordを含める。push subscription、session、password hash、cookie、VAPID private key、Cloudflare/Worker secret、OAuth/API token、PBKDF2 credential materialは含めない。
+- canonical serializationはM12方式（recursive object-key sort + collectionのstable ID sort）を共有する。top-level checksumとpayload checksumを分離して検証する。
+- 通常backupはD1 delete、archive移動、lock、notification停止、User state変更を行わない。
+- `/api/migration/start` は現在ユーザー、checksum、schema、manifestを検証してからlock + migration metadata + domain cleanupをD1 batchで行う。users/sessions/user stateは残し、device-specific push subscriptionはcleanup対象とする。
+- restoreはsingle-request JSON方式を採用する（初期の個人規模向け、client/Workerとも10 MiB sanity limit）。server restore → local archive restore → server verify → completeの順で、verify前にunlockしない。
+- D1はcloud payloadをrelation順に復元し、archiveはIndexedDBへM12 schema v1として復元する。既存IDを維持し、同一migrationId + checksumの再送を安全に再実行する。
+
+## STOP条件
+
+- checksum / manifest / relation / identity validation失敗時はmigrationを開始しない。
+- lock成立前にD1を削除しない。lock / cleanup / restore / local archive / verification / completeの各失敗で、データ欠損状態の通常利用へ戻さない。
+- Cloudflare API `7403` がstaging migrationで発生した場合は直ちに停止する。
+- staging専用test user以外の破壊的検証、production/default、HouseToDo、auto-mergeは行わない。
+
+## M13検証記録（2026-09-14）
+
+- local: migration `0013_m13_backup_migration.sql`適用、unit 128件、typecheck、buildを通過。lintは既存warning 13件のみ。cleanup前cancel可、cleanup後cancel非表示＋復旧案内のcomponent testを追加。
+- staging target: `lifehub-staging` Worker / D1 `lifehub-staging`（database ID `da75b9df-dcb6-4e80-991e-6310be3c1933`）のみ。remote migration適用後のlistは`No migrations to apply!`、healthは`{"ok":true,"app":"LifeHub","environment":"staging"}`。
+- staging Worker version: `e059b138-1e97-4d07-8756-aeb5eb2332e0`。
+- staging E2E: staging専用test user、old/newの2 browser context、390×844で通常migration、large migration、normal backup read-onlyの3件がpass。large fixtureはcurrent Event 200 + recurring 1、archived Event 200、DailyNote 200 + 200、MoneyItem 300 + 200、current settlement 300、recurring override 1を含む。archive recordは601件、cloud recordは1,013件、JSONは1,102,390 bytes、restoreはsingle transactional D1 batchの1,028 statementsを497msで完了。restore後のID / 件数、Calendar / Daily / Money / Search、IndexedDB archive read-back、verify、complete、unlockを確認。
+- Evidence: `artifacts/evidence/m13/01-backup-complete-390x844.png`、`02-old-device-locked-390x844.png`、`03-new-device-restored-390x844.png`、`04-normal-app-after-unlock-390x844.png`、`05-cleanup-complete-no-cancel-390x844.png`。動画は`normal-backup.webm`、`migration-old-device.webm`、`migration-new-device.webm`、`large-migration-context-1.webm`、`large-migration-context-2.webm`。
+- Cloudflare API `7403`は今回のstaging migration / deploy / E2Eで発生なし。production/default・HouseToDoは未操作。auto-mergeなし。
+
+---
+
 # Milestone 12: Local Archive
 
 ## 現在のMilestone

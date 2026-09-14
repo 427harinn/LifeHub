@@ -296,3 +296,17 @@ Calendar / Daily / Money / Searchはserver projectionとIndexedDB snapshotをsta
 Archive recordは`archiveBatchId`と`retentionBoundary`を保持する。local projectionは各batchについて`date < retentionBoundary`へrequest rangeをclampし、継続中の親snapshotからboundary日以降のoccurrenceを生成しない。D1 projectionとIndexedDB projectionが同じstable occurrence identityを返した場合は、Calendar Event / MoneyともD1を最終authorityとする。Searchもarchive batchの保持期間だけを対象とし、親snapshotを将来5年へ投影しない。
 
 SettingsのJSON Backup rowはM13まで表示しない。M12で表示するbackup関連UIはLocal Archiveの状態と手動確認導線だけである。
+
+---
+
+## 17. M13 Backup / Device Migration実装固定事項
+
+M13では通常バックアップと機種変更をUI・API・状態遷移で分離する。通常バックアップはD1 + IndexedDB archiveを読み取り、`lifehub-backup` schemaVersion 1 JSONを生成・自己検証して保存するだけであり、D1 delete、archive移動、`migration_locked`、通知停止、User state変更を行わない。
+
+機種変更は、同じ完全JSONを生成して保存した後、ユーザーが保存済みファイルを再選択し、parse / size / schema / checksum / manifest / ID / FK / current user / restore可能性を再検証する。最終確認の `このバックアップで機種変更を開始` 後だけ `/api/migration/start` を呼ぶ。exportしただけではD1を削除しない。
+
+serverは `user_migrations` にmigrationId、checksum、schema、manifest summary、status、cleanup / restore時刻を保存する。startはstate lock・migration metadata・移行対象domain cleanupをD1 batchで行う。users、sessions、lifehub_user_stateは残し、push subscriptionはdevice-specificのためbackupへ含めずcleanupする。cleanup後のcancelは単純unlockせず、backupからのrecovery restoreが必要である。
+
+restoreは初期個人規模のsingle JSON request（client / Workerの10 MiB sanity limit）とする。serverはcategories → recurrence rules → events → templates/offsets → event notifications/overrides → DailyNote → Money items → overrides → settlements → notification deliveriesの順で既存IDを保持して復元する。D1 restore後もlockを維持し、client IndexedDB archive restore、server/client verification、`/api/migration/complete`の順でのみunlockする。失敗・通信断・重複送信では通常利用へ戻さずretryできる。
+
+Backup JSON schemaの詳細は `docs/BACKUP_SCHEMA.md`、APIは `docs/API_SPEC.md`、stateは `docs/DATA_MODEL.md`を参照する。

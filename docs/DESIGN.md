@@ -511,3 +511,9 @@ Settings > データ / バックアップ内のArchiveは、管理ダッシュ�
 状態は「未確認 / 候補あり / 保存中 / 確認待ち / アーカイブ完了 / 確認できませんでした」とし、主操作は「アーカイブを確認」とする。「削除」を主ラベルにせず、IndexedDB保存と検証が先に完了する安心感を伝える。390×844でempty、candidate、saving、complete、confirm pending/error、archived rangeを確認する。大きなカード、shadow、gradient、KPI dashboard、常設の英語装飾は追加しない。
 
 JSON Backup rowはM13のJSON export実装まで表示しない。M12のSettings data detailはLocal Archive機能だけを表示する。
+
+## 22. Backup / Migration UI
+
+Settings > データ / バックアップでは、通常の「バックアップ」と「機種変更」を別sectionにする。各sectionは見出し・短い説明・actionのflat compositionとし、大きなcardを横並びにしない。Archive sectionは既存の状態・最終確認・「アーカイブを確認」を維持して下側に置く。
+
+機種変更は短いstep表示（作成 → 保存済みファイル確認 → 開始）とsimple rowsのrestore previewを使う。primary actionはorange、最終確認だけ慎重な文面にし、warning red面やdashboard/KPI化は避ける。migration_locked中はbottom navigationを隠し、専用画面でJSON選択・復元状態・retryを表示する。
