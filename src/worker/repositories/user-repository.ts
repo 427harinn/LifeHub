@@ -26,4 +26,8 @@ export class UserRepository {
     ).bind(input.id, input.email, input.passwordHash, input.displayName, input.now, input.now).run();
     return { id: input.id, email: input.email, passwordHash: input.passwordHash, displayName: input.displayName };
   }
+
+  async updatePassword(id: string, passwordHash: string, now: string) {
+    await this.db.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?").bind(passwordHash, now, id).run();
+  }
 }

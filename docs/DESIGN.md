@@ -517,3 +517,7 @@ JSON Backup rowはM13のJSON export実装まで表示しない。M12のSettings 
 Settings > データ / バックアップでは、通常の「バックアップ」と「機種変更」を別sectionにする。各sectionは見出し・短い説明・actionのflat compositionとし、大きなcardを横並びにしない。Archive sectionは既存の状態・最終確認・「アーカイブを確認」を維持して下側に置く。
 
 機種変更は短いstep表示（作成 → 保存済みファイル確認 → 開始）とsimple rowsのrestore previewを使う。primary actionはorange、最終確認だけ慎重な文面にし、warning red面やdashboard/KPI化は避ける。migration_locked中はbottom navigationを隠し、専用画面でJSON選択・復元状態・retryを表示する。
+
+## 23. M14 Settings interaction rules
+
+Settingsの画面遷移rowは共通FormRowのchevronを1個だけ使い、summary文字列へ`>`や`›`を重ねない。保存中は対象rowと関連actionをdisabledにし、失敗時は既存Form grammarの控えめなalertとretryを使う。選択式のMoney category colorは既存colorKey paletteのswatchと日本語labelを併記し、selected状態をcheckまたはborderでも示す。新規に追加する入力・操作は既存safe-areaとiPhone向け16px以上のinput grammarを維持する。

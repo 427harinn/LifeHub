@@ -183,6 +183,21 @@ const withEventNotifications = async (userId: string, events: Event[], db: D1Dat
   }));
 };
 
+const authChangePassword = requireAuth(async ({ request, env, user }) => {
+  await requireWritableUserState({ request, env, user });
+  const body = await parseObject(request);
+  const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+  const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+  const confirmation = typeof body.confirmation === "string" ? body.confirmation : "";
+  const details: Record<string, string> = {};
+  if (!currentPassword) details.currentPassword = "現在のパスワードを入力してください。";
+  if (newPassword.length < PASSWORD_MIN_LENGTH || newPassword.length > PASSWORD_MAX_LENGTH) details.newPassword = `パスワードは${PASSWORD_MIN_LENGTH}〜${PASSWORD_MAX_LENGTH}文字で入力してください。`;
+  if (newPassword !== confirmation) details.confirmation = "新しいパスワードが一致しません。";
+  if (Object.keys(details).length > 0) throw validationError(details);
+  await new AuthService(env.DB).changePassword(user.id, currentPassword, newPassword);
+  return json({ changed: true });
+});
+
 type PushBindings = { WEB_PUSH_VAPID_PUBLIC_KEY?: string; WEB_PUSH_VAPID_PRIVATE_KEY?: string; WEB_PUSH_SUBJECT?: string };
 const pushBindings = (env: Env) => env as Env & PushBindings;
 const notificationOffsets = (value: unknown): number[] => {
@@ -480,6 +495,7 @@ export default {
       if (url.pathname === "/api/auth/register" && request.method === "POST") return await authRegister(context);
       if (url.pathname === "/api/auth/login" && request.method === "POST") return await authLogin(context);
       if (url.pathname === "/api/auth/logout" && request.method === "POST") return await authLogout(context);
+      if (url.pathname === "/api/auth/password" && request.method === "POST") return await authChangePassword(context);
       if (url.pathname === "/api/auth/me" && request.method === "GET") return await authMe(context);
       if (url.pathname === "/api/settings" && request.method === "GET") return await getSettings(context);
       if (url.pathname === "/api/settings" && request.method === "PATCH") return await patchSettings(context);

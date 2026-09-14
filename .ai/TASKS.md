@@ -1,3 +1,49 @@
+# Milestone 14 Phase A+B Tasks
+
+## 開始記録
+
+- [x] T1: `origin/main`をfetchし、PR #15 merge済みmain（`482d73447d131e292799a561912579521b02a105`）を確認
+- [x] T2: `codex/m14-release-readiness-ab`を最新mainから作成
+- [x] T3: M14監査結果と指定docsを確認し、Phase A+Bの実装境界を固定
+
+## Phase A
+
+- [x] T4: `dailyFixture.period`等の本番描画とM4段階文言を除去し、Daily / Date Sheet emptyを実データのみへ変更
+- [x] T5: 新規アカウントEvent 0 / period 0 / Money 0のunit・component・390×844 E2Eを追加
+- [x] T6: Calendar / Daily / Money / Money Analysisのloading・empty・error・retry stateを共通方針で実装
+- [x] T7: API error時の表示、前回データ保持方針、再試行、Abort / request sequenceをテスト
+- [x] T8: delayed responseとlatest navigationのstale response E2Eを追加（rapid month/date/yearの操作全面は後続補強）
+- [x] T9: Search period（this_week / this_month / custom_range / occurrence / display anchor）仕様を確定し、実装またはfixtureを修正
+- [x] T10: Calendar Money allocation、planned / actual / estimated_actual、row orderの仕様とE2Eを整合
+- [x] T11: Migration status / restore failureのalert・retry・再選択・lock維持を実装
+- [x] T12: M13 normal backup / lock / cleanup後cancel不可 / restore retry / verify / complete回帰を実行
+
+## Phase B
+
+- [x] T13: Account password change UI、PBKDF2検証、validation、busy、success/error、session safetyを実装
+- [x] T14: password wrong / mismatch / valid update / old login fail / new login success / ownership testを追加
+- [x] T15: Notification Settings / Templateのchevron二重表示を監査し、共通rowへ統一
+- [x] T16: Notification / Template / Money Categoryのloading・retry・save/delete busy・double submit防止を実装
+- [x] T17: Calendar timezone / weekStartsOn selection UIとUserSettings保存を実装
+- [x] T18: weekStartsOn変更後のCalendar / period / recurrence / Daily / Date Sheet反映testを追加
+- [x] T19: Money Category colorKey swatch UI、selected indication、日本語label、保存状態を実装
+- [x] T20: custom category colorのSettings dot / donut / legend一致と既存category回帰を追加
+- [x] T21: MoneyFormのinput / status accessible nameを一意化しAccessibility Tree testを追加
+
+## 検証・Evidence・docs
+
+- [x] T22: Phase A+B関連test、lint、typecheck、buildを実行
+- [x] T23: 390×844 Evidenceを`artifacts/evidence/m14/phase-ab/`へ保存（必要なSheet / migration操作動画を含む）
+- [x] T24: staging target / Worker / D1 / migration必要性を確認し、必要な場合のみstaging smokeを実行。7403発生時はSTOP
+- [x] T25: `docs/IMPLEMENTATION_PLAN.md`、`docs/API_SPEC.md`、必要な仕様docs、`.ai/MILESTONE.md`、`.ai/TASKS.md`を同期
+- [ ] T26: self-review、commit、push、PR作成。auto-mergeしない
+
+## 今回の非対象（後半Phase）
+
+Bottom Navigation icon差し替え、icon-rainbow、PWA manifest/icon polish、BottomSheet全面accessibility、Swipe keyboard代替、44px全面調整、EventForm/MoneyForm overflow、Settings/Daily URL history、Service Worker二重登録、shadow cleanup、performance計測。
+
+---
+
 # Milestone 13 Tasks
 
 ## 小タスク

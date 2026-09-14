@@ -239,3 +239,6 @@ staging secretは`WEB_PUSH_VAPID_PUBLIC_KEY`、`WEB_PUSH_VAPID_PRIVATE_KEY`、`W
 `WEB_PUSH_VAPID_PRIVATE_KEY`のcanonical形式は、公式`web-push generate-vapid-keys`が出力するURL-safe base64のP-256 private scalarとする。Workerは既存環境との互換性のためJSON JWKも受理し、base64 private scalarはstagingのpublic keyからJWKの`x` / `y`を組み立ててimportする。LifeHub用`node scripts/generate-vapid-secrets.mjs <repo外出力先> <mailto-or-https-subject>`は値を表示せず、3 secretファイルをrepo外へ生成する。
 
 2026-09-09、stagingのiPhone PWAでpermission → subscription → direct Push → Event単体通知 → 夜summary → 朝summaryの受信を確認した。各通知のtapで設定または対象日のCalendarへ遷移し、朝summaryは9/9 Calendarを開いた。自動ChromiumおよびCodex In-app Browserのpermission deniedは実機確認とは分けて記録する。
+## 15. M14 settings readiness
+
+Notification settingsとNotificationTemplate settingsは、初期loading、load error + retry、saving / deleting busyを表示し、通信中の二重submitとtemplate重複作成を防ぐ。画面遷移rowのchevronは共通FormRowに任せ、時刻やtemplate summaryの文字列へ追加の`>` / `›`を含めない。

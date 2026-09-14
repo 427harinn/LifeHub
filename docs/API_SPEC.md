@@ -478,3 +478,15 @@ POST /api/migration/cancel
 `GET /api/migration/status` は`migration`の`cleanupCompleted`を返す。cleanup前（`locked`）だけcancel導線を表示し、cleanup後（`awaiting_restore`以降）はcancelを表示せず、保存済みbackupからの復旧案内を表示する。`POST /api/migration/restore` は`migration_locked`中のみ許可する。single JSON requestで、serverは全体validation後に既存IDを維持してcloud payloadをrelation順に復元する。same migrationId + checksumのretryはdomainを同userの復元対象へ置き換えて重複を作らない。restore後もlockは解除しない。restore responseの`restoreStatementCount`は実行したD1 statement数の検証用メタデータである。
 
 `POST /api/migration/verify` はD1件数 / manifest、clientが復元したarchive件数を確認して `restore_verified` にする。`POST /api/migration/complete` はこの状態だけを`migration_locked=false`へ戻す。restore / local archive / verify / completeのいずれかが失敗した場合、通常利用へ戻さずretryする。cleanup後のcancelはrecovery restoreなしにunlockしない。
+
+## 21. M14 Account password change
+
+```text
+POST /api/auth/password
+```
+
+認証済みuserだけが、`currentPassword`、`newPassword`、`confirmation`を送信できる。Workerは既存AuthServiceのPBKDF2検証・ハッシュ処理を再利用し、現在passwordを検証してから新しいhashを保存する。新passwordは12〜128文字、confirmation一致を要求する。現在のsessionは維持する。migration lock中は既存のwritable user state制御により変更を拒否する。
+
+## 22. M14 runtime data-state rule
+
+Daily、Calendar Date Sheet、Calendar、Money、Money Analysisの通常runtime payloadにtest fixtureを混在させない。イベント・period・Moneyが0件の場合は実データのempty stateを表示し、API失敗はemptyへfallbackせずerrorとretryを表示する。month/date/yearの競合リクエストは最新requestだけを画面へcommitし、abort済みrequestはerror扱いにしない。

@@ -716,3 +716,15 @@ M14 Polish / Release Readiness
 - 本Milestone分割
 
 したがって、本書作成後はPhase 0を完了し、**Milestone 1: Application Foundationから実装フェーズへ移行できる**。
+
+---
+
+# M14 Release Readiness Phase A+B 実装記録
+
+2026-09-14、`origin/main` の `482d73447d131e292799a561912579521b02a105`（PR #15 merge済み）をbaseとして、`codex/m14-release-readiness-ab` でPhase A+Bを開始した。
+
+Phase Aでは、Daily / Calendar Date Sheetのruntime fixture描画とM4開発文言を除去し、実データだけでloading / empty / error / successを判定するようにした。Calendar、Daily、Money、Money Analysisの取得はAbortControllerとactive guardで最新リクエストだけを反映し、abortを画面エラーにしない。Searchのcustom range表示とCalendar Money allocationは既存仕様を正としてE2E期待値を更新した。Migration status / restoreは失敗時にalertと再試行を表示し、復旧完了までlockを維持する。
+
+Phase Bでは、既存PBKDF2を使うパスワード変更、Notification settings / templateのloading・busy・retry、重複chevron除去、Calendarのtimezone / weekStartsOn編集、既存colorKey paletteのswatch選択、MoneyFormの一意なアクセシブル名を実装した。設定画面のエラー表示は既存のLifeHub Form grammarに合わせ、巨大なerror cardや新規の全面UI再設計は行わない。
+
+完了判定にはunit test、390×844 E2E、Evidence、typecheck、lint、build、staging確認を用いる。Bottom Navigation icon、PWA polish、BottomSheet全面accessibility、tap target全面調整、URL history、Service Worker整理、shadow整理、performance計測などはM14後半Phaseへ繰り越す。

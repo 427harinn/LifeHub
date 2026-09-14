@@ -1,3 +1,68 @@
+# Milestone 14: Release Readiness Phase A+B
+
+## 現在のMilestone
+
+M14 Phase A+B 実装中。開始時点で `origin/main=482d73447d131e292799a561912579521b02a105` をfetchし、PR #15（M13 Backup / Device Migration）merge済みmainであることを確認した。作業branchは `codex/m14-release-readiness-ab`。base SHAは `482d73447d131e292799a561912579521b02a105`。production/default・HouseToDoは操作せず、auto-mergeしない。
+
+今回の入力はM14 Release Readiness監査結果（P0/P1）と、`docs/DESIGN.md`、`DESIGN_SYSTEM.md`、`IMPLEMENTATION_PLAN.md`、`DEVELOPMENT_POLICY.md`、`API_SPEC.md`、`DATA_MODEL.md`、`BACKUP_AND_RETENTION.md`、`NOTIFICATION_SPEC.md`、`MONEY_SPEC.md`。
+
+## Phase A: 完了条件
+
+- [x] Daily / Calendar Date Sheetから本番fixtureとM4段階文言を除去し、実データ0件のemptyを確認
+- [x] Calendar / Daily / Money / Money Analysisでloading / empty / error / successを分離し、error時のretryを実装
+- [x] Calendar month、Daily date、Money month、Money Analysis yearのstale responseを防止（AbortController + active guard、遅延Calendar E2E）
+- [x] Search period date仕様をdocs・projection helper・UI・E2Eで確定し整合
+- [x] Calendar Money allocation / planned・actual表示の仕様とE2E fixture・期待値を整合
+- [x] Migration status / restore失敗時のalert、retry、JSON再選択、lock維持を実装
+- [x] M13 normal backup、migration lock、cleanup後cancel不可、restore retry、verify、complete、unlockを回帰確認
+
+## Phase B: 完了条件
+
+- [x] Settings > Accountに現在 / 新規 / 確認password変更を追加し、PBKDF2 authを再利用してvalidation・busy・success・errorを実装
+- [x] Notification Settingsのchevron二重表示を除去し、遷移rowのchevronを1個へ統一
+- [x] Notification / Template / Money Categoryへloading・error retry・saving/deleting busy・double submit防止を追加
+- [x] Settings > Calendarのtimezone / weekStartsOnを既存UserSettings APIで編集可能にし、Calendar / period / recurrenceへ反映
+- [x] Money CategoryのcolorKey選択を日本語label付きswatch UIへ改善し、donut / legend / Settings dotの色を共有
+- [x] MoneyFormのaccessible nameを一意化
+
+## 実装境界
+
+- 今回はPhase A+Bのみ。Bottom Navigation icons、icon-rainbow、manifest/icon polish、BottomSheet全面accessibility、Swipe keyboard代替、44px全面調整、EventForm/MoneyForm overflow、URL history、Service Worker重複、shadow cleanup、performance計測は後半Phaseへ延期。
+- 新規UIで明らかなaccessibility問題を作らない。既存の全面対応は延期する。
+- DB migrationは必要性を確認し、必要な場合のみ理由を報告してからstagingへ適用する。
+- stagingはLifeHub専用環境のみ。Cloudflare API `7403` 発生時はSTOP。
+
+## Evidence
+
+保存先: `artifacts/evidence/m14/phase-ab/`
+
+- 390×844（可能なら375幅も確認）
+- fixture除去後のempty Daily / Date Sheet
+- Calendar / Moneyのloading・error・retry
+- Password Change
+- Notification Settings / Template
+- Calendar Settings timezone / weekStartsOn
+- Money Category swatch / selected state / donut反映
+- Migration failure / retry / restore recovery
+
+## STOP条件
+
+- production/default・HouseToDoへ触れない。
+- staging migrationでCloudflare API `7403` が発生した場合は直ちに停止。
+- migration失敗時にlockを解除しない、D1削除前の検証順序を壊さない。
+- 仕様が確定できないSearch / Money allocationは、testに合わせるだけの変更をしない。
+
+## 検証記録（2026-09-14）
+
+- local unit: 23 files / 133 tests passed。
+- local quality: typecheck、lint（0 errors / existing warnings only）、build passed。
+- local E2E: M14 Phase A+B 7 tests、Calendar Money allocation、M2、M4、M11 Search passed。M13 destructive E2Eはstaging専用。
+- staging target: `lifehub-staging` only。Worker version `dc424a76-9a9b-4f1a-bf40-393235b24879`。M14 E2E 6 tests passed。M13 staging E2E 3 tests passed（large backup 1,028 statements / 571ms）。
+- schema migration: M14 Phase A+Bでは新規schema変更なし、staging migrationは未適用。
+- Evidence: `artifacts/evidence/m14/phase-ab/` に390×844のempty、error/retry、password、notification、Calendar settings、Money swatch / donutを保存。
+
+---
+
 # Milestone 13: Backup / Device Migration
 
 ## 現在のMilestone

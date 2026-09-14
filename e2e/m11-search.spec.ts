@@ -11,6 +11,11 @@ const dateKey = (offset = 0) => {
   date.setDate(date.getDate() + offset);
   return date.toISOString().slice(0, 10);
 };
+const dateLabel = (value: string) => {
+  const date = new Date(`${value}T00:00:00Z`);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日(${weekdays[date.getUTCDay()]})`;
+};
 
 async function register(page: import("@playwright/test").Page) {
   await page.goto("/");
@@ -44,7 +49,7 @@ async function createFixtures(page: import("@playwright/test").Page) {
   if (!expense) throw new Error("expense category is missing");
   const moneyResponse = await page.request.post("/api/money", { data: { type: "expense", title: "電気代", plannedAmount: 8500, categoryId: expense.id, date: dateKey(-20), memo: "毎月の請求", recurrence: { frequency: "monthly", interval: 1, weekdays: null, dayOfMonth: 10, startsOn: dateKey(-60), endsOn: null } } });
   expect(moneyResponse.status()).toBe(201);
-  return { start, periodStart, recurringId: createdIds[1] };
+  return { start, periodStart, periodEnd, recurringId: createdIds[1] };
 }
 
 async function openAddChoice(page: import("@playwright/test").Page, label: "家を追加" | "仕事を追加" | "お金を追加") {
@@ -54,7 +59,7 @@ async function openAddChoice(page: import("@playwright/test").Page, label: "家�
 
 test("M11 Calendar Search shows server results and jumps to the occurrence", async ({ page }) => {
   await mkdir(evidenceDir, { recursive: true });
-  const { start } = await (async () => { await register(page); return await createFixtures(page); })();
+  const { start, periodStart, periodEnd } = await (async () => { await register(page); return await createFixtures(page); })();
   await page.screenshot({ path: path.join(evidenceDir, "calendar-search-entry-390x844.png") });
   await page.getByRole("button", { name: "検索" }).click();
   await expect(page.getByRole("heading", { name: "検索", exact: true })).toBeVisible();
@@ -85,7 +90,7 @@ test("M11 Calendar Search shows server results and jumps to the occurrence", asy
   await input.fill("期間");
   const periodResult = page.getByRole("button", { name: /春の整理/ });
   await expect(periodResult).toBeVisible();
-  await expect(periodResult).toContainText("9月25日(金)〜9月27日(日)");
+  await expect(periodResult).toContainText(`${dateLabel(periodStart)}〜${dateLabel(periodEnd)}`);
   await expect(periodResult).not.toContainText("9月25日(金) 9月25日");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-search-period-390x844.png") });
   await input.fill("終日");

@@ -40,6 +40,12 @@ export class AuthService {
     return this.createSession(user);
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) throw unauthenticatedError();
+    await this.users.updatePassword(userId, await hashPassword(newPassword), nowIso());
+  }
+
   async logout(request: Request): Promise<void> {
     const token = readCookie(request, SESSION_COOKIE_NAME);
     if (token) await this.sessions.deleteByTokenHash(await sha256Hex(token));

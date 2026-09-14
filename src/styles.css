@@ -435,6 +435,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb
 .money-category-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: var(--color-primary-strong); }
 .money-category-editor { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; flex: 1; gap: 6px; align-items: center; }
 .money-category-editor select { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-input); background: var(--color-surface); }
+.money-category-editor { grid-template-columns: 1fr; }
+.money-category-color-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.money-category-color-option { display: grid; min-height: 52px; place-items: center; gap: 3px; padding: 5px 2px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text-secondary); background: var(--color-surface); font: inherit; font-size: .6875rem; cursor: pointer; }
+.money-category-color-option[aria-pressed="true"] { border-color: var(--color-primary-strong); color: var(--color-primary-strong); background: var(--color-primary-soft); }
+.money-category-color-swatch { width: 18px; height: 18px; border: 2px solid rgb(48 53 49 / 12%); border-radius: 50%; }
+.settings-password-form { display: grid; gap: var(--space-3); padding: var(--space-4) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.settings-password-form h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.data-error { display: grid; gap: var(--space-3); padding: var(--space-4) 0; }
+.data-error .form-error { margin: 0; }
+.settings-status { margin: 0; color: var(--color-text-secondary); font-size: .8125rem; }
 .delete-confirm .button--secondary { color: var(--color-error); border-color: #e6b6ae; }
 
 .money-analysis-page { align-content: start; gap: var(--space-4); }
