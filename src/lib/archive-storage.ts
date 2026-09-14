@@ -1,4 +1,5 @@
 import { ARCHIVE_DB_NAME, ARCHIVE_SCHEMA_VERSION, archiveChecksum, archiveRecordCount, archiveRecordsToRows, canonicalSerialize, type ArchiveBundle, type ArchiveMetadata, type ArchiveRecord, type ArchiveRecordType } from "./archive";
+import type { BackupArchivePayload } from "./backup";
 
 type StoredRow = ArchiveRecord & { rowKey: string; archiveBatchId: string; retentionBoundary: string; ordinal: number };
 type StoredBatch = ArchiveMetadata & { id: string };
@@ -125,6 +126,44 @@ export const getArchiveRows = async (userId: string) => {
     await transactionDone(transaction);
     return rows.sort((left, right) => left.ordinal - right.ordinal);
   } finally { db.close(); }
+};
+
+/** Restore M12 archive stores as one transaction; existing rows for this user are replaced. */
+export const restoreArchiveBackup = async (userId: string, archive: BackupArchivePayload) => {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openArchiveDatabase();
+    const transaction = db.transaction(["archiveBatches", "archiveRecords", "archivedSearchIndex"], "readwrite");
+    const batches = transaction.objectStore("archiveBatches");
+    const records = transaction.objectStore("archiveRecords");
+    const index = transaction.objectStore("archivedSearchIndex");
+    for (const store of [batches, records, index]) {
+      const rows = await requestResult(store.index("userId").getAll());
+      for (const row of rows as Array<{ userId?: string; id?: string; rowKey?: string }>) if (row.userId === userId) store.delete(row.rowKey ?? row.id ?? "");
+    }
+    const rowsByBatch = new Map<string, ArchiveRecord[]>();
+    archive.records.forEach((row) => { if (row.userId !== userId || !row.archiveBatchId) throw new ArchiveStorageError("バックアップのアーカイブ所有者が一致しません。"); rowsByBatch.set(row.archiveBatchId, [...(rowsByBatch.get(row.archiveBatchId) ?? []), row]); });
+    archive.batches.forEach((metadata) => {
+      if (metadata.userId !== userId) throw new ArchiveStorageError("バックアップのアーカイブ所有者が一致しません。");
+      batches.put({ ...metadata, id: metadata.archiveBatchId });
+      const rows = (rowsByBatch.get(metadata.archiveBatchId) ?? []).sort((left, right) => `${left.type}:${left.id}`.localeCompare(`${right.type}:${right.id}`));
+      rows.forEach((row, ordinal) => {
+        const stored: StoredRow = { ...row, rowKey: `${metadata.archiveBatchId}:${row.type}:${row.id}`, archiveBatchId: metadata.archiveBatchId, retentionBoundary: metadata.retentionBoundary, ordinal };
+        records.put(stored);
+        if (row.type === "event" || row.type === "daily_note" || row.type === "money_item") index.put({ id: stored.rowKey, userId, archiveBatchId: metadata.archiveBatchId, type: row.type, recordId: row.id, text: searchText(row.record) } satisfies StoredSearchIndex);
+      });
+    });
+    const storedRows = await requestResult(records.index("userId").getAll(userId)) as StoredRow[];
+    if (storedRows.length !== archive.records.length) {
+      transaction.abort();
+      throw new ArchiveStorageError("アーカイブ復元前の件数確認に失敗しました。");
+    }
+    await transactionDone(transaction);
+    return storedRows;
+  } catch (error) {
+    if (error instanceof ArchiveStorageError) throw error;
+    throw new ArchiveStorageError("アーカイブを復元できませんでした。", error);
+  } finally { db?.close(); }
 };
 
 export const updateArchiveStatus = async (userId: string, archiveBatchId: string, status: ArchiveMetadata["status"], confirmedAt?: string) => {

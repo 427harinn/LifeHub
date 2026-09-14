@@ -85,6 +85,22 @@ export type EventNotification = {
   createdAt: string;
 };
 
+export type NotificationDelivery = {
+  id: string;
+  userId: string;
+  notificationType: "event" | "morning_summary" | "evening_summary";
+  eventId: string | null;
+  occurrenceKey: string | null;
+  eventNotificationId: string | null;
+  scheduledFor: string;
+  dedupeKey: string;
+  sentAt: string | null;
+  status: "pending" | "sent" | "failed";
+  claimedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type NotificationTemplateOffset = {
   id: string;
   templateId: string;

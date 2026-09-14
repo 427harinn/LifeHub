@@ -1,4 +1,5 @@
 import type { ArchiveCandidateResponse, ArchiveManifest } from "../lib/archive";
+import type { BackupExportResponse, BackupManifest, LifeHubBackup } from "../lib/backup";
 
 export type AuthUser = { id: string; email: string; displayName: string };
 export type UserSettings = {
@@ -120,3 +121,11 @@ export const putMoneyActual = (id: string, occurrenceKey: string, amount: number
 export const deleteMoneyActual = (id: string, occurrenceKey: string) => request<{ deleted: boolean }>(`/api/money/${encodeURIComponent(id)}/occurrences/${encodeURIComponent(occurrenceKey)}/actual`, { method: "DELETE" });
 export const getArchiveCandidates = () => request<ArchiveCandidateResponse>("/api/archive/candidates");
 export const confirmArchive = (input: { archiveBatchId: string; checksum: string; recordCount: number; schemaVersion: number; manifestVersion: number; manifest: ArchiveManifest }) => request<{ confirmed: boolean; archiveBatchId: string; alreadyConfirmed: boolean; deletedRecordCount: number }>("/api/archive/confirm", { method: "POST", body: JSON.stringify(input) });
+export const getBackupExport = () => request<BackupExportResponse>("/api/backup/export");
+export const getUserState = () => request<{ state: { userId: string; migrationState: "active" | "migration_locked"; migrationStartedAt: string | null; migrationBackupChecksum: string | null; migrationBackupCreatedAt: string | null; createdAt: string; updatedAt: string } }>("/api/user-state");
+export const getMigrationStatus = () => request<{ state: { migrationState: "active" | "migration_locked" }; migration: { migrationId: string; status: string; backupChecksum: string; schemaVersion: number; startedAt: string; restoredAt: string | null; completedAt: string | null; lastError: string | null; cleanupCompleted: boolean } | null }>("/api/migration/status");
+export const startMigration = (input: { migrationId: string; backupChecksum: string; schemaVersion: number; manifest: BackupManifest; backup: LifeHubBackup }) => request<{ started: boolean; alreadyStarted: boolean; migration: { migrationId: string; status: string } | null }>("/api/migration/start", { method: "POST", body: JSON.stringify(input) });
+export const restoreMigration = (migrationId: string, backup: LifeHubBackup) => request<{ restored: boolean; migration: { migrationId: string; status: string } | null }>("/api/migration/restore", { method: "POST", body: JSON.stringify({ migrationId, backup }) });
+export const verifyMigration = (migrationId: string, backupChecksum: string, archiveRecordCount: number) => request<{ verified: boolean }>("/api/migration/verify", { method: "POST", body: JSON.stringify({ migrationId, backupChecksum, archiveRecordCount }) });
+export const completeMigration = (migrationId: string) => request<{ completed: boolean }>("/api/migration/complete", { method: "POST", body: JSON.stringify({ migrationId }) });
+export const cancelMigration = (migrationId: string) => request<{ cancelled: boolean }>("/api/migration/cancel", { method: "POST", body: JSON.stringify({ migrationId }) });

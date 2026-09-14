@@ -604,6 +604,8 @@ Calendar / Daily / Money / Searchはstable occurrence identityでD1とIndexedDB�
 
 stagingのみで検証し、productionデータでは行わない。
 
+M13 implementation note: Backup JSON v1はcloud全件とM12 IndexedDB archiveをclientで統合し、M12 canonicalization方針に沿ったpayload/final SHA-256とmanifestを生成する。通常backupはread-only。機種変更は保存済みJSONの再選択・再検証後だけ`user_migrations`のstart transaction（lock + domain cleanup）を実行し、users / sessions / stateを残す。restoreはsingle request（10 MiB sanity limit）でD1へrelation順・既存IDのまま復元し、IndexedDB read-backとserver count verificationの後だけunlockする。
+
 ---
 
 # Milestone 14: Settings / Polish / Release Readiness
