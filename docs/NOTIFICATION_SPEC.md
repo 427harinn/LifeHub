@@ -247,4 +247,4 @@ staging secretは`WEB_PUSH_VAPID_PUBLIC_KEY`、`WEB_PUSH_VAPID_PRIVATE_KEY`、`W
 2026-09-09、stagingのiPhone PWAでpermission → subscription → direct Push → Event単体通知 → 夜summary → 朝summaryの受信を確認した。各通知のtapで設定または対象日のCalendarへ遷移し、朝summaryは9/9 Calendarを開いた。自動ChromiumおよびCodex In-app Browserのpermission deniedは実機確認とは分けて記録する。
 ## 15. M14 settings readiness
 
-Notification settingsとNotificationTemplate settingsは、初期loading、load error + retry、saving / deleting busyを表示し、通信中の二重submitとtemplate重複作成を防ぐ。画面遷移rowのchevronは共通FormRowに任せ、時刻やtemplate summaryの文字列へ追加の`>` / `›`を含めない。
+Notification settingsとNotificationTemplate settingsは、初期loading、load error + retry、saving / deleting busyを表示し、通信中の二重submitとtemplate重複作成を防ぐ。画面遷移rowのchevronは共通FormRowに任せ、時刻やtemplate summaryの文字列へ追加の`>` / `›`を含めない。EventFormでは「なし・保存済みtemplate・custom offset」から選択し、保存時はtemplate参照ではなく既存どおりEventNotificationへoffset snapshotを保存するため、template後編集・削除は過去Eventへ波及しない。

@@ -63,6 +63,8 @@ production/defaultは明示的なリリース作業まで触れません。
 
 Phase A-Dまでの実装を基礎に、最終polish、PWA / Service Worker整理、performance計測、staging Release Candidate smokeと監査を完了しました。production Worker / D1 / secrets、default branch、HouseToDoは対象外です。iPhone実機の最終再確認はproduction release前の手動gateとして残しています。PR作成後は停止し、自動mergeは行いません。
 
+User review fixesでは、LifeHub Hub記号のapp icon再設計、Accountのパスワード変更sub page、通知設定のsection整理と通知テンプレートのEventForm接続、Money Categoryの15色固定paletteとBottomSheet選択UIを追加しました。過去Eventの通知はoffset snapshotを保持します。
+
 M1の完了記録を維持したまま、最新`main`からM1とは別のbranchでAuth / Session / UserSettings / navigation shellを実装しています。M2ではEvent登録やMoney本機能には着手しません。
 
 M3では、M2の個人用Cookie sessionと`userId` ownership基盤の上に、家 / 仕事のscheduled Eventの登録・表示・編集・soft delete、Calendar / Dailyへの反映、recent definitions、returnToを実装しました。M4では共通Event projection、adaptive Calendar row allocation、Calendar / Daily / Date Sheetの日付操作、DailyNote migration / API / UI、First Stagingを追加しました。M4時点の実データprojectionはscheduled EventとDailyNoteが中心で、period / recurrence / notification / Money / Searchの本実装は後続Milestoneです。M4 UIのperiod / Moneyの一部はfixture / placeholderを含みます。

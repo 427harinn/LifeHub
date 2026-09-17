@@ -23,6 +23,14 @@
 - [x] T13: README / implementation / design / policy / notification / backup docsとEvidenceを同期
 - [ ] T14: commit / push / PR作成後STOP、auto-mergeしない
 
+## PR #18 User review fixes
+
+- [x] R1: app icon 3候補を比較し、Candidate Bを採用。SVG / 192 / 512 / maskable / apple-touch-iconとmanifest / HTML参照を更新
+- [x] R2: Accountのパスワード変更を通常画面から分離し、Settings historyに沿うsub pageへ接続
+- [x] R3: 通知設定をsection化し、通知テンプレートをEventFormのoffset snapshot選択へ接続
+- [x] R4: Money Categoryを15色固定paletteへ拡張し、current color row + accessible BottomSheetへ変更
+- [x] R5: stagingでのレビューfix smokeを記録。iPhone実機gateは未実施manual gateとして残す
+
 ## 開始記録
 
 - [x] T1: 最新 `origin/main`（`45b7c62a6c86c8f29bb8a12625624ad770ae3d8c`）とPhase A+B merge済みmainを確認

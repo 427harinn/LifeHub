@@ -682,6 +682,8 @@ M13 Backup / Migration
 M14 Polish / Release Readiness
 ```
 
+M14 review fixes（PR #18追加）は、既存通知・Money・Settings基盤を再利用したUI接続とvisual polishに限定する。Account password sub page、通知templateのEventForm offset snapshot選択、15色fixed palette、LifeHub Hub app iconを対象とし、新しい通知systemやproduction変更は行わない。
+
 原則この順で進める。
 
 ただし、小さなUI改善や仕様修正は関連Milestone内で行ってよい。依存関係を崩す大きな先行実装は避ける。

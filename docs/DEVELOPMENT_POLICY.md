@@ -22,6 +22,7 @@ HouseToDoで有効だった開発フローを引き継ぎつつ、LifeHubでは�
 - stagingは`lifehub-staging`のみを対象とし、production Worker / D1 / secrets / default branchは操作しない。migrationはstatus確認に留め、destructive migrationは専用fixture user以外で実行しない。
 - 390×844のnav / PWA / Settings / Calendar / Money Evidenceと、performance JSON、staging Worker version、migration state、test countsをRC記録へ残す。
 - iPhone PWA install・Push受信 / tap・cold-start deep linkは自動ブラウザの結果と混同せず、実機Evidenceの有無を明記する。
+- review fixでも既存のPBKDF2 password flow、notification snapshot semantics、Money color resolverを再利用し、UI変更を理由にdomain modelやproduction設定を変更しない。PR #18へ追加commit後はmerge・auto-mergeせず停止する。
 
 ---
 

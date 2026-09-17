@@ -27,7 +27,22 @@ describe("notification settings UI", () => {
     expect(screen.getByRole("button", { name: "この端末の通知を変更" })).toHaveTextContent("OFF");
     expect(screen.getByRole("button", { name: "朝のまとめ通知を切り替え" })).toHaveTextContent("ON");
     expect(screen.getByRole("button", { name: "夜のまとめ通知を切り替え" })).toHaveTextContent("ON");
-    expect(screen.getByRole("button", { name: "通知テンプレートを開く" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "通知テンプレートを管理" })).toBeInTheDocument();
+    expect(screen.getAllByText("通知時刻")).toHaveLength(2);
+  });
+
+  it("hides summary time when its toggle is off", () => {
+    render(<NotificationSettingsSection onSettingsChange={vi.fn()} settings={{ ...settings, morningSummaryEnabled: false }} />);
+    expect(screen.getByRole("heading", { name: "朝のまとめ通知" }).parentElement).not.toHaveTextContent("09:00");
+  });
+
+  it("opens the usable template creation editor", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify({ templates: [] }), { status: 200, headers: { "content-type": "application/json" } }));
+    render(<TemplateManager onClose={vi.fn()} open />);
+    await screen.findByText("テンプレートはありません");
+    fireEvent.click(screen.getByRole("button", { name: "テンプレートを追加" }));
+    expect(screen.getByLabelText("名前")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "作成" })).toBeInTheDocument();
   });
 
   it("renders one shared chevron for template rows and offers retry on load failure", async () => {

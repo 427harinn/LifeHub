@@ -50,16 +50,16 @@ test("Bottom Navigation assets, PWA manifest, and one SW registration", async ({
   await nav.getByRole("button", { name: "設定" }).click();
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "10-final-settings-390x844.png"), fullPage: true });
-  await page.goto("/icons/app/lifehub.svg");
-  await page.locator("svg").screenshot({ path: path.join(evidenceDir, "06-pwa-home-icon-512.png") });
+  await page.goto("/icons/app/lifehub-512.png");
+  await page.screenshot({ path: path.join(evidenceDir, "06-pwa-home-icon-512.png") });
 
   const manifest = await page.request.get("/manifest.webmanifest");
   expect(manifest.ok()).toBeTruthy();
   const manifestBody = await manifest.json() as { id: string; start_url: string; display: string; icons: Array<{ sizes: string; purpose: string; src: string }> };
   expect(manifestBody).toMatchObject({ id: "/", start_url: "/calendar", display: "standalone" });
   expect(manifestBody.icons).toEqual(expect.arrayContaining([
-    expect.objectContaining({ sizes: "192x192", purpose: "any", src: "/icons/app/lifehub.svg" }),
-    expect.objectContaining({ sizes: "512x512", purpose: "maskable", src: "/icons/app/lifehub.svg" })
+    expect.objectContaining({ sizes: "192x192", purpose: "any", src: "/icons/app/lifehub-192.png" }),
+    expect.objectContaining({ sizes: "512x512", purpose: "maskable", src: "/icons/app/lifehub-512.png" })
   ]));
   const sw = await page.request.get("/sw.js");
   expect(sw.ok()).toBeTruthy();
