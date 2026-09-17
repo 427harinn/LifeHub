@@ -19,6 +19,8 @@ HouseToDoから変更しないもの:
 - Navigation asset iconは23pxを基本、中央Addのみ27pxとする。SVGは`currentColor`相当のmaskで描画し、selectedは`var(--color-primary-strong)`、unselectedはneutralを継承する。
 - PWA app iconは`public/icons/app/lifehub.svg`で管理し、navigation素材と混在させない。
 - Bottom Navigationはwhite surface、thin top border、no decorative shadow、icons-onlyを維持する。
+- Money Category paletteは既存7色の意味と値を維持した15色固定paletteとし、dot・row・donut・legend・analysisで共通resolverを使う。色選択は現在値row + 44px以上のaccessible BottomSheetとする。
+- Notification Settingsは「この端末」「朝」「夜」「テンプレート」「期間予定」のsection順とし、summary通知がOFFのとき時刻rowを表示しない。
 - 文字サイズの基本階層
 - ボタン高さ
 - フォーム行の密度

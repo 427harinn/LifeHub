@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AccountSettings } from "./AccountSettings";
+import { AccountSettings, PasswordChangeSettings } from "./AccountSettings";
 
 const changePassword = vi.hoisted(() => vi.fn());
 vi.mock("../api/client", () => ({ changePassword }));
@@ -9,8 +9,14 @@ vi.mock("../api/client", () => ({ changePassword }));
 const user = { id: "user-1", email: "user@example.com", displayName: "Test User" };
 
 describe("Account password settings", () => {
+  it("hides password inputs until the password row is opened", () => {
+    render(<AccountSettings onChangePassword={vi.fn()} onLogout={vi.fn()} user={user} />);
+    expect(screen.queryByLabelText("現在のパスワード")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "パスワードを変更" })).toBeInTheDocument();
+  });
+
   it("validates confirmation before sending", async () => {
-    render(<AccountSettings onLogout={vi.fn()} user={user} />);
+    render(<PasswordChangeSettings />);
     fireEvent.change(screen.getByLabelText("現在のパスワード"), { target: { value: "old-password" } });
     fireEvent.change(screen.getByLabelText("新しいパスワード"), { target: { value: "new-password-123" } });
     fireEvent.change(screen.getByLabelText("新しいパスワード（確認）"), { target: { value: "different-password" } });
@@ -22,7 +28,7 @@ describe("Account password settings", () => {
   it("shows busy and success feedback for a valid update", async () => {
     let resolve: (() => void) | undefined;
     changePassword.mockImplementationOnce(() => new Promise<void>((done) => { resolve = done; }));
-    render(<AccountSettings onLogout={vi.fn()} user={user} />);
+    render(<PasswordChangeSettings />);
     fireEvent.change(screen.getByLabelText("現在のパスワード"), { target: { value: "old-password" } });
     fireEvent.change(screen.getByLabelText("新しいパスワード"), { target: { value: "new-password-123" } });
     fireEvent.change(screen.getByLabelText("新しいパスワード（確認）"), { target: { value: "new-password-123" } });

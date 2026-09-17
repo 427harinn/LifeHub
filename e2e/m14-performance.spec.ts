@@ -61,9 +61,9 @@ test("M14 staging candidate performance route sample", async ({ page }) => {
     environment: process.env.PLAYWRIGHT_BASE_URL ?? "local",
     viewport: { width: 390, height: 844 },
     bundle: {
-      worker: "221.30 kB raw / 43.29 kB gzip",
-      clientJs: "351.04 kB raw / 102.00 kB gzip",
-      clientCss: "45.83 kB raw / 7.72 kB gzip"
+      worker: "221.37 kB raw / 43.32 kB gzip",
+      clientJs: "354.39 kB raw / 102.77 kB gzip",
+      clientCss: "46.97 kB raw / 7.85 kB gzip"
     },
     routes,
     notes: { inp: "not available in this automated sample", tbt: "recorded from production build output when available", highDensity: "no fixture mutation in this smoke sample" }

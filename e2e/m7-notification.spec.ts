@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
 
-test.use({ viewport: { width: 390, height: 844 }, video: "on", launchOptions: { headless: false } });
+test.use({ viewport: process.env.REVIEW_VIEWPORT === "375" ? { width: 375, height: 812 } : { width: 390, height: 844 }, video: "on", launchOptions: { headless: false } });
 const evidenceDir = path.resolve(process.env.M7_EVIDENCE_DIR ?? "artifacts/evidence/m7");
 const password = "correct-horse-battery";
 const uniqueEmail = () => `m7-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
@@ -31,15 +31,20 @@ test("staging notification Settings, Template, EventForm and API smoke", async (
 
   await page.getByRole("button", { name: "設定" }).click();
   await page.getByRole("button", { name: "通知を開く" }).click();
-  await expect(page.getByRole("heading", { name: "通知" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "通知", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "この端末の通知を変更" })).toContainText("OFF");
   await expect(page.getByRole("button", { name: "朝のまとめ通知を切り替え" })).toContainText("ON");
   await expect(page.getByRole("button", { name: "夜のまとめ通知を切り替え" })).toContainText("ON");
   await page.screenshot({ path: path.join(evidenceDir, "settings-notification-off-390x844.png"), fullPage: true });
+  if (process.env.REVIEW_VIEWPORT === "375") await page.screenshot({ path: path.join(evidenceDir, "notification-settings-375x812.png"), fullPage: true });
 
-  await page.getByRole("button", { name: "通知テンプレートを開く" }).click();
+  await page.getByRole("button", { name: "通知テンプレートを管理" }).click();
   await expect(page.getByRole("dialog", { name: "通知テンプレート" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "notification-template-list-390x844.png"), fullPage: true });
+  await page.getByRole("dialog", { name: "通知テンプレート" }).getByRole("button", { name: "テンプレートを追加" }).click();
+  await page.getByRole("dialog", { name: "通知テンプレート" }).getByLabel("名前").fill("UI確認テンプレート");
+  await page.screenshot({ path: path.join(evidenceDir, "notification-template-add-390x844.png"), fullPage: true });
+  await page.getByRole("dialog", { name: "通知テンプレート" }).getByRole("button", { name: "戻る" }).click();
   await page.getByRole("dialog", { name: "通知テンプレート" }).getByRole("button", { name: "閉じる" }).click();
 
   const createdTemplateResponse = await page.request.post("/api/notification-templates", { data: { name: "M7標準", offsets: [1440, 30], isDefault: true } });
@@ -48,7 +53,7 @@ test("staging notification Settings, Template, EventForm and API smoke", async (
   const updatedTemplateResponse = await page.request.patch(`/api/notification-templates/${createdTemplate.template.id}`, { data: { name: "M7標準変更", offsets: [60, 30] } });
   expect(updatedTemplateResponse.status()).toBe(200);
 
-  await page.getByRole("button", { name: "通知テンプレートを開く" }).click();
+  await page.getByRole("button", { name: "通知テンプレートを管理" }).click();
   await expect(page.getByRole("button", { name: /M7標準変更/ })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "notification-template-edited-390x844.png"), fullPage: true });
   await page.getByRole("dialog", { name: "通知テンプレート" }).getByRole("button", { name: "閉じる" }).click();

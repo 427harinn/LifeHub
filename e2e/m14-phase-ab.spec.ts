@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
 
-test.use({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", video: "on" });
+test.use({ viewport: process.env.REVIEW_VIEWPORT === "375" ? { width: 375, height: 812 } : { width: 390, height: 844 }, serviceWorkers: "block", video: "on" });
 
 const evidenceDir = path.resolve(process.env.M14_EVIDENCE_DIR ?? "artifacts/evidence/m14/phase-ab");
 const initialPassword = "correct-horse-battery";
@@ -97,6 +97,10 @@ test("password change validates, gives success feedback, and preserves session",
   await mkdir(evidenceDir, { recursive: true });
   const email = await register(page);
   await openSettings(page, "アカウントを開く");
+  await expect(page.getByRole("button", { name: "パスワードを変更" })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "account-default-390x844.png"), fullPage: true });
+  await page.getByRole("button", { name: "パスワードを変更" }).click();
+  await expect(page).toHaveURL(/\/settings\/password$/);
   await page.getByLabel("現在のパスワード").fill(initialPassword);
   await page.getByLabel("新しいパスワード", { exact: true }).fill(changedPassword);
   await page.getByLabel("新しいパスワード（確認）").fill(changedPassword);
@@ -122,6 +126,8 @@ test("Notification rows use one shared chevron and expose template retry state",
     await expect(row.locator(".form-row__chevron")).toHaveCount(1);
     expect((await row.innerText()).match(/[›>]/g)?.length ?? 0).toBeLessThanOrEqual(1);
   }
+  await expect(page.locator(".notification-toggle-row")).toHaveCount(3);
+  for (const row of await page.locator(".notification-toggle-row").all()) await expect(row.locator(".form-row__chevron")).toHaveCount(0);
   await page.screenshot({ path: path.join(evidenceDir, "notification-chevron-390x844.png"), fullPage: true });
 });
 
@@ -145,12 +151,14 @@ test("Money category color swatch saves colorKey and appears in the donut legend
   await openSettings(page, "お金を開く");
   await page.getByRole("button", { name: "カテゴリを追加" }).click();
   await page.getByRole("textbox", { name: "新しいカテゴリ名" }).fill("M14確認色");
-  await expect(page.getByRole("radiogroup", { name: "新しいカテゴリ色" })).toBeVisible();
-  const blue = page.getByRole("button", { name: "ブルー" });
+  await page.getByRole("button", { name: "色を変更" }).click();
+  await expect(page.getByRole("dialog").getByRole("radiogroup", { name: "カテゴリ色" })).toBeVisible();
+  if (process.env.REVIEW_VIEWPORT === "375") await page.screenshot({ path: path.join(evidenceDir, "money-category-color-sheet-375x812.png"), fullPage: true });
+  const blue = page.getByRole("button", { name: "ブルー", exact: true });
   await blue.click();
-  await expect(blue).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "色を変更" })).toContainText("ブルー");
   await page.screenshot({ path: path.join(evidenceDir, "money-category-swatch-390x844.png"), fullPage: true });
-  await page.getByRole("button", { name: "保存" }).click();
+  await page.getByRole("button", { name: "作成" }).click();
   await expect(page.getByText("M14確認色", { exact: true })).toBeVisible();
 
   const categoriesResponse = await page.request.get("/api/money-categories?includeInactive=false");
