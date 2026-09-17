@@ -21,7 +21,7 @@
 - [ ] T11: iPhone PWA install、Push receive / tap、deep linkの実機Evidenceを確認
 - [x] T12: offline / degraded network、P0 / P1 / P2、release blocker 0を最終監査（offline / degradedは既存error / retry unit・M14 A+B E2Eで回帰）
 - [x] T13: README / implementation / design / policy / notification / backup docsとEvidenceを同期
-- [ ] T14: commit / push / PR作成後STOP、auto-mergeしない
+- [x] T14: review-fix commit / push / PR #18更新後STOP、auto-mergeしない
 
 ## PR #18 User review fixes
 
