@@ -26,7 +26,7 @@
 - [x] T13: unit / component、typecheck、lint、build、local E2Eを実行
 - [x] T14: `artifacts/evidence/m14/phase-cd/` に最低限の画像とinteraction videoを保存
 - [x] T15: staging target / Worker / migrationを確認し、必要な場合のみstaging deploy・smoke・E2Eを実行。7403時STOP
-- [ ] T16: docs、self-review、commit、push、PR作成。auto-mergeしない
+- [x] T16: docs、self-review、commit、push、PR作成。auto-mergeしない
 
 ## 今回の非対象
 

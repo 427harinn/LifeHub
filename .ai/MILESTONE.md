@@ -37,6 +37,8 @@ Phase C+Dとして、モバイル幅の横overflow、BottomSheet accessibility�
 - staging health: HTTP 200。migration: `No migrations to apply!`（schema変更なし）
 - Cloudflare API `7403`: 未発生
 - Evidence: `artifacts/evidence/m14/phase-cd/`（画像、BottomSheet・Settings・Daily履歴動画、Swipe代替動画）
+- commit: `ee14f2614d75521c4059571dda33f4291639f295`
+- PR: #17 `fix: LifeHub M14 release readiness phase C+D`（auto-mergeなし）
 
 ## STOP条件
 
