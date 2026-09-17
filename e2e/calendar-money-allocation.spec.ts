@@ -88,8 +88,8 @@ test("Calendar All and Money allocation stays inside the cell across mobile view
   const hiddenCategoryLabels = dateSheet.locator(".money-sheet-row small");
   await expect(hiddenCategoryLabels).toHaveCount(2);
   for (const label of await hiddenCategoryLabels.all()) await expect(label).toBeHidden();
-  await expect(dateSheet.locator(".money-sheet-row").first().locator(".money-status-icon")).toHaveAttribute("aria-label", "確定");
-  await expect(dateSheet.locator(".money-sheet-row").nth(1).locator(".money-status-icon")).toHaveAttribute("aria-label", "予定");
+  await expect(dateSheet.locator(".money-sheet-row").filter({ hasText: "電気代" }).locator(".money-status-icon")).toHaveAttribute("aria-label", "確定");
+  await expect(dateSheet.locator(".money-sheet-row").filter({ hasText: "水道代" }).locator(".money-status-icon")).toHaveAttribute("aria-label", "予定");
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-normal-390x844.png") });
   await dateSheet.locator(".money-sheet-row").first().click();
   const detail = dateSheet.locator(".money-inline-detail");

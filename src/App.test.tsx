@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { App, EventForm, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon } from "./App";
+import { App, CalendarShell, EventForm, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon } from "./App";
 import { allocateCalendarCellRows, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, moneyAverageDivisorFor, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./lib/app-view-helpers";
 import type { Event, MoneyItem, MoneyProjection } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
@@ -484,6 +484,44 @@ describe("Calendar adaptive row allocation", () => {
     const moneyTab = allocateCalendarCellRows([], 0, money, 3);
     expect(moneyTab.visibleMoney.map((item) => item.label)).toEqual(["電気代", "交通費", "収支"]);
     expect(moneyTab.hiddenCount).toBe(0);
+  });
+});
+
+describe("Calendar cold-start measurement", () => {
+  it("measures after loading mounts the grid and keeps the money summary inside the measured capacity", () => {
+    const observers: Array<{ callback: ResizeObserverCallback; observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }> = [];
+    vi.stubGlobal("ResizeObserver", class {
+      callback: ResizeObserverCallback;
+      observe = vi.fn();
+      disconnect = vi.fn();
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+        observers.push(this);
+      }
+    });
+    let gridHeight = 366;
+    const bounds = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ height: gridHeight } as DOMRect);
+    const eventProps = { startDate: "2026-09-01", endDate: "2026-09-01", allDay: true, startTime: null, endTime: null };
+    const events = [timedEvent({ id: "event-a", title: "予定A", ...eventProps }), timedEvent({ id: "event-b", title: "予定B", ...eventProps }), timedEvent({ id: "event-c", title: "予定C", ...eventProps })];
+    const money: MoneyProjection = { occurrences: [moneyItem({ date: "2026-09-01", plannedAmount: 5200, signedAmount: -5200 })], summary: { expenseForecast: 5200, incomeForecast: 0, remaining: -5200 }, days: [] };
+    const props = { events, money, filter: "all" as const, month: "2026-09-01", onRetry: vi.fn(), onDateSelect: vi.fn(), onFilterChange: vi.fn(), onMonthChange: vi.fn(), onSearch: vi.fn() };
+    const { rerender } = render(<CalendarShell {...props} loadState="loading" />);
+
+    expect(screen.queryByRole("button", { name: /^1日$/ })).not.toBeInTheDocument();
+
+    rerender(<CalendarShell {...props} loadState="success" />);
+    const dayCell = screen.getByRole("button", { name: /^1日$/ });
+    expect(dayCell.querySelectorAll(".calendar-event")).toHaveLength(1);
+    expect(dayCell.querySelector(".calendar-cell__count")).toHaveTextContent("2");
+    expect(dayCell.querySelector(".calendar-cell__money--summary")).toHaveTextContent("-5,200");
+    expect(observers).toHaveLength(1);
+    expect(observers[0].observe).toHaveBeenCalledWith(document.querySelector(".calendar-grid"));
+
+    gridHeight = 456;
+    bounds.mockReturnValue({ height: gridHeight } as DOMRect);
+    act(() => observers[0].callback([], observers[0] as unknown as ResizeObserver));
+    expect(dayCell.querySelectorAll(".calendar-event")).toHaveLength(2);
+    expect(dayCell.querySelector(".calendar-cell__count")).toHaveTextContent("1");
   });
 });
 
