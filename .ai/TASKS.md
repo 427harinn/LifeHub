@@ -1,3 +1,39 @@
+# Milestone 14 Phase C+D Tasks
+
+## 開始記録
+
+- [x] T1: 最新 `origin/main`（`45b7c62a6c86c8f29bb8a12625624ad770ae3d8c`）とPhase A+B merge済みmainを確認
+- [x] T2: `codex/m14-release-readiness-cd` を最新mainから新規作成
+- [x] T3: `.ai/MILESTONE.md` / `.ai/TASKS.md` にbase SHA・実装境界・STOP条件を記録
+
+## Phase C: mobile / accessibility
+
+- [x] T4: 共通Input / FormRow / form layoutでEventForm、MoneyForm、password、Settings、date/time/number/textarea、2カラムrowのoverflowを解消
+- [x] T5: 375×812 / 390×844 / 393×852のoverflow・16px input・Event time rowをassert
+- [x] T6: BottomSheetのinitial focus、focus trap、Shift+Tab、Escape、focus restore、background inertを実装・テスト
+- [x] T7: reuse / recurrence / notification / category / timezone / weekStartsOn / scope / delete / date sheetのkeyboard・mobile状態を回帰
+- [x] T8: 44px tap targetを追加し、Calendar密度・availableRows・Money reserved rowを壊さないことを確認
+
+## Phase D: alternatives / navigation
+
+- [x] T9: Daily / Money / Date SheetのSwipe編集を残し、inline detail内にkeyboard到達可能な編集代替を追加
+- [x] T10: Settings detailを `/settings/:detail` とhistoryに同期し、back / forward / reloadを回帰
+- [x] T11: Daily dateを `?date=YYYY-MM-DD` とhistoryに同期し、direct URL / reload / back / forwardを回帰
+- [x] T12: Calendar selected date、Search jump、Event/Money add-edit-saveのreturnToとBottom Nav hide/showを回帰
+
+## 検証・Evidence・staging
+
+- [x] T13: unit / component、typecheck、lint、build、local E2Eを実行
+- [x] T14: `artifacts/evidence/m14/phase-cd/` に最低限の画像とinteraction videoを保存
+- [x] T15: staging target / Worker / migrationを確認し、必要な場合のみstaging deploy・smoke・E2Eを実行。7403時STOP
+- [x] T16: docs、self-review、commit、push、PR作成。auto-mergeしない
+
+## 今回の非対象
+
+icon-rainbow、Bottom Navigation icon差し替え、manifest/PWA icon、Service Worker二重登録、shadow cleanup、performance計測、Push最終実機、Release final audit、production/default・HouseToDo。
+
+---
+
 # Milestone 14 Phase A+B Tasks
 
 ## 開始記録

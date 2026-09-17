@@ -1,3 +1,53 @@
+# Milestone 14: Release Readiness Phase C+D
+
+## 開始記録（2026-09-17）
+
+- `origin/main` を fetch し、Phase A+B merge済み PR #16 の main を確認した。
+- HEAD / `origin/main` / base SHA: `45b7c62a6c86c8f29bb8a12625624ad770ae3d8c`
+- 新規branch: `codex/m14-release-readiness-cd`
+- production/default・HouseToDoは操作せず、auto-mergeしない。
+
+## 目的
+
+Phase C+Dとして、モバイル幅の横overflow、BottomSheet accessibility、44px操作領域、Swipeのキーボード代替、Settings / Daily / CalendarのURL・history同期を完成させる。
+
+## 実装境界
+
+- 共通 `Input` / form layout / `BottomSheet` を正本として修正し、個別inputの場当たり的width調整を避ける。
+- `input` font-sizeは16px以上、date/time/number/textareaを375 / 390 / 393pxで確認する。
+- BottomSheetはportalを維持し、initial focus、focus trap、focus restore、background inert、closable Escape、dynamic viewport / safe-areaを保証する。
+- Swipeは残し、row detail内の「編集」をキーボード到達可能な代替導線とする。
+- Settings detail、Daily date、Calendar selected dateをhistoryと同期し、reload / back / forward / returnToを回帰する。
+- schema migrationは原則なし。Cloudflare API `7403` 発生時はSTOP。stagingはLifeHub専用環境のみ。
+
+## Evidence
+
+保存先: `artifacts/evidence/m14/phase-cd/`
+
+- EventForm 375 / 390、MoneyForm 375、time row、BottomSheet keyboard focus / search、Settings detail、Daily URL date、Swipe alternative edit
+- interaction video: BottomSheet keyboard、Settings back/forward、Daily date history、swipe + alternative edit
+
+## 検証記録（2026-09-17）
+
+- unit/component: 23 files / 135 tests passed（targeted BottomSheet / Swipe / App: 45 tests passed）
+- typecheck / lint / build: passed。lintは既存warningのみ、errorなし。
+- local E2E: `e2e/m14-phase-cd.spec.ts` 3/3 passed（375 / 390 / 393 overflow、sheet、history、swipe keyboard alternative）
+- staging E2E: 3/3 passed。対象Worker: `lifehub-staging` / `https://lifehub-staging.427harinn.workers.dev`
+- staging deploy version: `f0e3ec01-3e5e-4064-9aff-8f2ab64a484f`
+- staging health: HTTP 200。migration: `No migrations to apply!`（schema変更なし）
+- Cloudflare API `7403`: 未発生
+- Evidence: `artifacts/evidence/m14/phase-cd/`（画像、BottomSheet・Settings・Daily履歴動画、Swipe代替動画）
+- commit: `ee14f2614d75521c4059571dda33f4291639f295`
+- PR: #17 `fix: LifeHub M14 release readiness phase C+D`（auto-mergeなし）
+
+## STOP条件
+
+- production/default・HouseToDoへ触れない。
+- staging migration / deploy / smokeで Cloudflare API `7403` が発生した場合は直ちに停止する。
+- auto-mergeしない。PR作成後にSTOPし、手動レビューへ渡す。
+
+---
+
 # Milestone 14: Release Readiness Phase A+B
 
 ## 現在のMilestone

@@ -7,36 +7,102 @@ type BottomSheetProps = {
   open: boolean;
   title: string;
   onClose: () => void;
+  closable?: boolean;
+  /** CSS selector inside the sheet for the element that should receive initial focus. */
+  initialFocus?: string;
   children: ReactNode;
 };
 
-export function BottomSheet({ className, headerActions, open, title, onClose, children }: BottomSheetProps) {
+const focusableSelector = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex=\"-1\"])",
+].join(",");
+
+export function BottomSheet({ className, headerActions, open, title, onClose, closable = true, initialFocus, children }: BottomSheetProps) {
   const titleId = useId();
+  const layerRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const dragStart = useRef<{ x: number; y: number; axis: "pending" | "vertical" } | null>(null);
   const dragOffsetRef = useRef(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      dragStart.current = null;
-      dragOffsetRef.current = 0;
+    if (!open) return undefined;
+    dragStart.current = null;
+    dragOffsetRef.current = 0;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const layer = layerRef.current;
+    const backgroundState = new Map<HTMLElement, boolean>();
+    if (layer) {
+      for (const child of Array.from(document.body.children)) {
+        if (!(child instanceof HTMLElement) || child === layer) continue;
+        backgroundState.set(child, child.inert);
+        child.inert = true;
+      }
     }
-  }, [open]);
+    const focusInitialElement = () => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      let target: Element | null = null;
+      if (initialFocus) {
+        try { target = dialog.querySelector(initialFocus); } catch { target = null; }
+      }
+      target ??= contentRef.current?.querySelector(focusableSelector) ?? dialog.querySelector(focusableSelector);
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+      else dialog.focus({ preventScroll: true });
+    };
+    const focusTimer = window.setTimeout(focusInitialElement, 0);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      backgroundState.forEach((inert, element) => { element.inert = inert; });
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [initialFocus, open]);
 
   useEffect(() => {
     if (!open) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (layerRef.current !== document.body.lastElementChild) return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      if (event.key === "Escape") {
+        if (closable) { event.preventDefault(); onClose(); }
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusable.length === 0) { event.preventDefault(); dialog.focus(); return; }
+      const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+      const nextIndex = event.shiftKey
+        ? currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1
+        : currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+      event.preventDefault();
+      focusable[nextIndex]?.focus();
     };
-    window.addEventListener("keydown", handleKeyDown);
+    const handleFocusIn = (event: FocusEvent) => {
+      if (layerRef.current !== document.body.lastElementChild) return;
+      if (!(event.target instanceof Node) || !dialogRef.current?.contains(event.target)) {
+        const first = dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
+        (first ?? dialogRef.current)?.focus({ preventScroll: true });
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("focusin", handleFocusIn);
     return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", handleFocusIn);
     };
-  }, [onClose, open]);
+  }, [closable, onClose, open]);
 
   if (!open) return null;
 
@@ -85,8 +151,8 @@ export function BottomSheet({ className, headerActions, open, title, onClose, ch
   };
 
   return createPortal((
-    <div className="bottom-sheet-layer" onClick={(event) => event.stopPropagation()}>
-      <button aria-label="背景を閉じる" className="bottom-sheet__backdrop" onClick={onClose} type="button" />
+    <div className="bottom-sheet-layer" onClick={(event) => event.stopPropagation()} ref={layerRef}>
+      <button aria-label="背景を閉じる" className="bottom-sheet__backdrop" onClick={closable ? onClose : undefined} tabIndex={-1} type="button" />
       <section
         aria-labelledby={titleId}
         aria-modal="true"
@@ -96,15 +162,17 @@ export function BottomSheet({ className, headerActions, open, title, onClose, ch
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         role="dialog"
+        ref={dialogRef}
+        tabIndex={-1}
         style={{ "--sheet-drag-offset": `${dragOffset}px` } as CSSProperties}
       >
         <div aria-hidden="true" className="bottom-sheet__handle" />
         <div className="bottom-sheet__header">
           <h2 id={titleId}>{title}</h2>
           {headerActions ? <div className="bottom-sheet__header-actions">{headerActions}</div> : null}
-          <button className="bottom-sheet__close" onClick={onClose} type="button">閉じる</button>
+          <button className="bottom-sheet__close" onClick={closable ? onClose : undefined} type="button">閉じる</button>
         </div>
-        <div className="bottom-sheet__content">{children}</div>
+        <div className="bottom-sheet__content" ref={contentRef}>{children}</div>
       </section>
     </div>
   ), document.body);
