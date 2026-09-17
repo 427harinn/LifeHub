@@ -1,0 +1,98 @@
+{
+  "measuredAt": "2026-09-17T04:17:29.530Z",
+  "environment": "https://lifehub-staging.427harinn.workers.dev",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "bundle": {
+    "worker": "221.37 kB raw / 43.32 kB gzip",
+    "clientJs": "354.39 kB raw / 102.77 kB gzip",
+    "clientCss": "46.97 kB raw / 7.85 kB gzip"
+  },
+  "routes": [
+    {
+      "route": "calendar",
+      "transitionMs": 0,
+      "vitals": {
+        "domContentLoaded": 168.69999999925494,
+        "loadEvent": 168.7999999988824,
+        "fcp": 200,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "daily",
+      "transitionMs": 36,
+      "vitals": {
+        "domContentLoaded": 168.69999999925494,
+        "loadEvent": 168.7999999988824,
+        "fcp": 200,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "money",
+      "transitionMs": 30,
+      "vitals": {
+        "domContentLoaded": 168.69999999925494,
+        "loadEvent": 168.7999999988824,
+        "fcp": 200,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "money-analysis",
+      "transitionMs": 235,
+      "vitals": {
+        "domContentLoaded": 168.69999999925494,
+        "loadEvent": 168.7999999988824,
+        "fcp": 200,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "search",
+      "transitionMs": 113,
+      "vitals": {
+        "domContentLoaded": 168.69999999925494,
+        "loadEvent": 168.7999999988824,
+        "fcp": 200,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "settings",
+      "transitionMs": 102,
+      "vitals": {
+        "domContentLoaded": 168.69999999925494,
+        "loadEvent": 168.7999999988824,
+        "fcp": 200,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    }
+  ],
+  "notes": {
+    "inp": "not available in this automated sample",
+    "tbt": "recorded from production build output when available",
+    "highDensity": "no fixture mutation in this smoke sample"
+  }
+}

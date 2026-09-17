@@ -9,6 +9,12 @@ LifeHubの通知は以下の2系統に分ける。
 
 LifeHubはTodoではなく予定アプリであり、完了 / 未完了 / 対応済み等の状態は持たない。
 
+## M14 Phase E+F readiness
+
+Service Workerの登録入口は`src/lib/service-worker.ts`へ集約し、アプリ起動時に既存registrationの更新確認を行う。install / activate / push / notificationclick listenerとsame-origin deep linkを維持し、通知payloadにiconがない場合はLifeHub app iconを使用する。
+
+通知の実機再確認では、permission → subscribe → timed Event / summary → receive → tap → Calendarの日付または関連Event contextを確認する。自動ブラウザで実機結果を代替せず、未実施項目はRC auditに残す。
+
 ---
 
 ## 2. 朝・夜のまとめ通知
@@ -241,4 +247,4 @@ staging secretは`WEB_PUSH_VAPID_PUBLIC_KEY`、`WEB_PUSH_VAPID_PRIVATE_KEY`、`W
 2026-09-09、stagingのiPhone PWAでpermission → subscription → direct Push → Event単体通知 → 夜summary → 朝summaryの受信を確認した。各通知のtapで設定または対象日のCalendarへ遷移し、朝summaryは9/9 Calendarを開いた。自動ChromiumおよびCodex In-app Browserのpermission deniedは実機確認とは分けて記録する。
 ## 15. M14 settings readiness
 
-Notification settingsとNotificationTemplate settingsは、初期loading、load error + retry、saving / deleting busyを表示し、通信中の二重submitとtemplate重複作成を防ぐ。画面遷移rowのchevronは共通FormRowに任せ、時刻やtemplate summaryの文字列へ追加の`>` / `›`を含めない。
+Notification settingsとNotificationTemplate settingsは、初期loading、load error + retry、saving / deleting busyを表示し、通信中の二重submitとtemplate重複作成を防ぐ。画面遷移rowのchevronは共通FormRowに任せ、時刻やtemplate summaryの文字列へ追加の`>` / `›`を含めない。EventFormでは「なし・保存済みtemplate・custom offset」から選択し、保存時はtemplate参照ではなく既存どおりEventNotificationへoffset snapshotを保存するため、template後編集・削除は過去Eventへ波及しない。

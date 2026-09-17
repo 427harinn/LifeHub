@@ -1,4 +1,4 @@
-export const MONEY_CATEGORY_COLOR_KEYS = ["orange", "blue", "green", "purple", "red", "pink", "gold", "gray"] as const;
+export const MONEY_CATEGORY_COLOR_KEYS = ["orange", "blue", "green", "purple", "red", "pink", "gold", "gray", "yellow", "teal", "cyan", "indigo", "brown", "lime", "blue-gray"] as const;
 
 export type MoneyCategoryColorKey = typeof MONEY_CATEGORY_COLOR_KEYS[number];
 
@@ -10,7 +10,14 @@ export const MONEY_CATEGORY_COLORS: Record<MoneyCategoryColorKey, string> = {
   red: "#b65445",
   pink: "#ba7188",
   gold: "#b38a3d",
-  gray: "#858b86"
+  gray: "#858b86",
+  yellow: "#a58b35",
+  teal: "#4f8b83",
+  cyan: "#4a8c9f",
+  indigo: "#5a659c",
+  brown: "#8f6e59",
+  lime: "#7e9853",
+  "blue-gray": "#607987"
 };
 
 const DEFAULT_CATEGORY_COLOR_KEYS: Record<string, MoneyCategoryColorKey> = {

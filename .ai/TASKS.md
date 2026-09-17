@@ -1,4 +1,35 @@
-# Milestone 14 Phase C+D Tasks
+# Milestone 14 Phase E+F Tasks
+
+## 開始記録
+
+- [x] T1: Phase C+D HEAD `6ba09c7fecac08d9c0fcf30de9529ae0fdf43912`を保持した`codex/m14-release-readiness-ef`を作成
+- [x] T2: local `origin/main` `45b7c62a6c86c8f29bb8a12625624ad770ae3d8c`、C+D base、production禁止条件を記録
+- [x] T3: icon-rainbow source / selected icon / local asset pathを記録
+
+## Phase E: visual / PWA / Service Worker
+
+- [x] T4: Bottom Navigation 5 iconをlocal SVG + CSS maskへ差し替え、label / FAB / orange circleを追加しない
+- [x] T5: LifeHub app icon、manifest、apple-touch-icon、maskable entryを整備
+- [x] T6: Service Worker registrationを一箇所へ集約し、update / install / activate / pushを回帰
+- [x] T7: decorative shadowをcleanupし、lint / typecheck / buildをwarning 0で確認
+
+## Phase F: measurement / RC audit
+
+- [x] T8: local performance route sampleとbuild bundle gzipを記録
+- [x] T9: staging health / migration state / Worker versionを記録
+- [x] T10: staging総合smokeを実行し、test countsを記録
+- [ ] T11: iPhone PWA install、Push receive / tap、deep linkの実機Evidenceを確認
+- [x] T12: offline / degraded network、P0 / P1 / P2、release blocker 0を最終監査（offline / degradedは既存error / retry unit・M14 A+B E2Eで回帰）
+- [x] T13: README / implementation / design / policy / notification / backup docsとEvidenceを同期
+- [x] T14: review-fix commit / push / PR #18更新後STOP、auto-mergeしない
+
+## PR #18 User review fixes
+
+- [x] R1: app icon 3候補を比較し、Candidate Bを採用。SVG / 192 / 512 / maskable / apple-touch-iconとmanifest / HTML参照を更新
+- [x] R2: Accountのパスワード変更を通常画面から分離し、Settings historyに沿うsub pageへ接続
+- [x] R3: 通知設定をsection化し、通知テンプレートをEventFormのoffset snapshot選択へ接続
+- [x] R4: Money Categoryを15色固定paletteへ拡張し、current color row + accessible BottomSheetへ変更
+- [x] R5: stagingでのレビューfix smokeを記録。iPhone実機gateは未実施manual gateとして残す
 
 ## 開始記録
 

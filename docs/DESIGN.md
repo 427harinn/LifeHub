@@ -10,6 +10,15 @@
 
 ## 0. Purpose
 
+### M14 Phase E+F final polish
+
+- Bottom NavigationはCalendar / Daily / Add / Money / Settingsの5つを、repo内のicon-rainbow SVGをCSS maskで表示する。ラベルは追加せず、selectedのみLifeHub orange、unselectedはneutralとする。
+- icon-rainbow素材はナビゲーション用途に限定し、アプリのhome iconはLifeHub専用visualとして別管理する。
+- Bottom Navigationは既存どおりicons-only、中央の`+`、背景なしを維持する。FAB化やorange circleは行わない。
+- Quick Add / popoverの装飾的shadowはborderとsurface contrastへ置き換え、役割のあるoverlay shadowだけを残す。
+- app iconはCandidate Bの中央Hub記号を採用し、orange background / off-white foreground / gradientなし / decorative shadowなしとする。icon-rainbow素材はnavigation assetに限定する。
+- Settingsの通知・Money Categoryは大きなcardを使わず、section heading・divider・BottomSheetを中心に構成する。toggle rowはchevronなし、sub page / time rowはchevronありとする。
+
 LifeHub は、予定・お金・日々の記録をひとつの時間軸で扱う完全個人用の生活管理アプリ。
 
 UI は「管理ダッシュボード」ではなく、**日々の暮らしを自然に見渡せる場所**に見えること。

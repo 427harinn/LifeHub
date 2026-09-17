@@ -5,14 +5,8 @@ import type { NotificationTemplate, UserSettings } from "../worker/types";
 import { BottomSheet, Button, FormRow, Input } from "./ui";
 import { getBrowserCapabilities } from "../lib/capabilities";
 import { urlBase64ToUint8Array } from "../lib/vapid";
-
-export const notificationOffsetLabel = (offset: number) => offset === 10 ? "10分前" : offset === 30 ? "30分前" : offset === 60 ? "1時間前" : offset === 1440 ? "1日前" : `${offset}分前`;
-export const notificationSummary = (offsets: number[]) => {
-  const values = [...new Set(offsets)].sort((left, right) => right - left);
-  if (values.length === 0) return "なし";
-  if (values.length > 2) return `${values.length}件`;
-  return values.map(notificationOffsetLabel).join("、");
-};
+import { notificationOffsetLabel, notificationSummary } from "../lib/notification-labels";
+import { getLifeHubServiceWorkerRegistration } from "../lib/service-worker";
 
 const presetOffsets = [10, 30, 60, 1440];
 export function NotificationOffsetPicker({ offsets, onChange }: { offsets: number[]; onChange: (next: number[]) => void }) {
@@ -29,6 +23,7 @@ function TimeSheet({ open, title, value, onClose, onSave }: { open: boolean; tit
 export function TemplateManager({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [editing, setEditing] = useState<NotificationTemplate | null>(null);
+  const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [offsets, setOffsets] = useState<number[]>([]);
   const [error, setError] = useState("");
@@ -37,11 +32,11 @@ export function TemplateManager({ open, onClose }: { open: boolean; onClose: () 
   const load = async () => { setLoading(true); setError(""); try { const result = await getNotificationTemplates(); setTemplates(result.templates ?? []); } catch { setError("テンプレートを読み込めませんでした。"); } finally { setLoading(false); } };
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (open) void load(); }, [open]);
-  const startCreate = () => { setEditing(null); setName(""); setOffsets([1440, 30]); setError(""); };
-  const startEdit = (template: NotificationTemplate) => { setEditing(template); setName(template.name); setOffsets(template.offsets.map((offset) => offset.offsetMinutes)); setError(""); };
-  const save = async () => { if (busy) return; if (!name.trim()) { setError("テンプレート名を入力してください。"); return; } setBusy(true); setError(""); try { if (editing) await updateNotificationTemplate(editing.id, { name: name.trim(), offsets }); else await createNotificationTemplate({ name: name.trim(), offsets, isDefault: templates.length === 0 }); await load(); setEditing(null); } catch { setError("テンプレートを保存できませんでした。"); } finally { setBusy(false); } };
-  const remove = async () => { if (!editing || busy) return; setBusy(true); setError(""); try { await deleteNotificationTemplate(editing.id); await load(); setEditing(null); } catch { setError("テンプレートを削除できませんでした。"); } finally { setBusy(false); } };
-  return <BottomSheet open={open} title="通知テンプレート" onClose={onClose}>{editing || name ? <div className="template-editor"><label className="input-field" htmlFor="template-name"><span>名前</span><Input disabled={busy} id="template-name" onChange={setName} value={name} /></label><NotificationOffsetPicker offsets={offsets} onChange={setOffsets} /><p className="notification-summary-preview">{notificationSummary(offsets)}</p>{error ? <p className="form-error" role="alert">{error}</p> : null}<Button disabled={busy} onClick={() => { void save(); }}>{busy ? "保存中…" : editing ? "変更を保存" : "作成"}</Button>{editing ? <Button disabled={busy} onClick={() => { void remove(); }} variant="secondary">{busy ? "処理中…" : "削除"}</Button> : null}<Button disabled={busy} onClick={() => setEditing(null)} variant="ghost">戻る</Button></div> : <div className="template-list">{loading ? <p className="empty-state" role="status">読み込み中…</p> : <div className="template-list__rows">{templates.map((template) => <FormRow key={template.id} label={template.name} onClick={() => startEdit(template)} summary={notificationSummary(template.offsets.map((offset) => offset.offsetMinutes))} />)}{templates.length === 0 ? <p className="empty-state">テンプレートはありません</p> : null}</div>}<Button disabled={loading || busy} onClick={startCreate}>テンプレートを追加</Button>{error ? <><p className="form-error" role="alert">{error}</p><Button disabled={busy} onClick={() => { void load(); }} variant="secondary">テンプレートを再試行</Button></> : null}</div>}</BottomSheet>;
+  const startCreate = () => { setEditing(null); setCreating(true); setName(""); setOffsets([1440, 30]); setError(""); };
+  const startEdit = (template: NotificationTemplate) => { setEditing(template); setCreating(false); setName(template.name); setOffsets(template.offsets.map((offset) => offset.offsetMinutes)); setError(""); };
+  const save = async () => { if (busy) return; if (!name.trim()) { setError("テンプレート名を入力してください。"); return; } setBusy(true); setError(""); try { if (editing) await updateNotificationTemplate(editing.id, { name: name.trim(), offsets }); else await createNotificationTemplate({ name: name.trim(), offsets, isDefault: templates.length === 0 }); await load(); setEditing(null); setCreating(false); } catch { setError("テンプレートを保存できませんでした。"); } finally { setBusy(false); } };
+  const remove = async () => { if (!editing || busy) return; setBusy(true); setError(""); try { await deleteNotificationTemplate(editing.id); await load(); setEditing(null); setCreating(false); } catch { setError("テンプレートを削除できませんでした。"); } finally { setBusy(false); } };
+  return <BottomSheet open={open} title="通知テンプレート" onClose={onClose}>{editing || creating ? <div className="template-editor"><label className="input-field" htmlFor="template-name"><span>名前</span><Input disabled={busy} id="template-name" onChange={setName} value={name} /></label><NotificationOffsetPicker offsets={offsets} onChange={setOffsets} /><p className="notification-summary-preview">{notificationSummary(offsets)}</p>{error ? <p className="form-error" role="alert">{error}</p> : null}<Button disabled={busy} onClick={() => { void save(); }}>{busy ? "保存中…" : editing ? "変更を保存" : "作成"}</Button>{editing ? <Button disabled={busy} onClick={() => { void remove(); }} variant="secondary">{busy ? "処理中…" : "削除"}</Button> : null}<Button disabled={busy} onClick={() => { setEditing(null); setCreating(false); }} variant="ghost">戻る</Button></div> : <div className="template-list">{loading ? <p className="empty-state" role="status">読み込み中…</p> : <div className="template-list__rows">{templates.map((template) => <FormRow key={template.id} label={template.name} onClick={() => startEdit(template)} summary={notificationSummary(template.offsets.map((offset) => offset.offsetMinutes))} />)}{templates.length === 0 ? <p className="empty-state">テンプレートはありません</p> : null}</div>}<Button disabled={loading || busy} onClick={startCreate}>テンプレートを追加</Button>{error ? <><p className="form-error" role="alert">{error}</p><Button disabled={busy} onClick={() => { void load(); }} variant="secondary">テンプレートを再試行</Button></> : null}</div>}</BottomSheet>;
 }
 
 async function ensurePushSubscription() {
@@ -50,10 +45,14 @@ async function ensurePushSubscription() {
   if (capabilities.homeScreenInstallRequired) throw new Error("iPhoneではLifeHubをホーム画面に追加したPWAで通知を有効にしてください。");
   const permission = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
   if (permission !== "granted") throw new Error("通知の許可が必要です。");
-  const registration = await navigator.serviceWorker.getRegistration("/") ?? await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  const registration = await getLifeHubServiceWorkerRegistration();
   const current = await registration.pushManager.getSubscription();
   const subscription = current ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array((await getVapidPublicKey()).publicKey).buffer as ArrayBuffer });
   await registerPushSubscription(subscription);
+}
+
+function NotificationToggleRow({ label, pressed, ariaLabel, disabled, onClick }: { label: string; pressed: boolean; ariaLabel: string; disabled: boolean; onClick: () => void }) {
+  return <button aria-label={ariaLabel} aria-pressed={pressed} className="notification-toggle-row" disabled={disabled} onClick={onClick} type="button"><span>{label}</span><span className="notification-toggle-row__value">{pressed ? "ON" : "OFF"}</span><span aria-hidden="true" className={`notification-switch${pressed ? " is-on" : ""}`}><span /></span></button>;
 }
 
 export function NotificationSettingsSection({ settings, onSettingsChange }: { settings: UserSettings | null; onSettingsChange: (settings: UserSettings) => void }) {
@@ -70,5 +69,30 @@ export function NotificationSettingsSection({ settings, onSettingsChange }: { se
   const timeTitle = timeTarget === "morning" ? "朝のまとめ通知" : timeTarget === "evening" ? "夜のまとめ通知" : "期間予定の期限時刻";
   const timeValue = timeTarget === "morning" ? defaults.morningSummaryTime : timeTarget === "evening" ? defaults.eveningSummaryTime : defaults.periodDefaultDeadlineTime;
   const saveTime = async (value: string) => { if (!timeTarget) return; if (await patchSettings(timeTarget === "morning" ? { morningSummaryTime: value } : timeTarget === "evening" ? { eveningSummaryTime: value } : { periodDefaultDeadlineTime: value })) setTimeTarget(null); };
-  return <section className="notification-settings"><FormRow ariaLabel="この端末の通知を変更" disabled={busy || deviceOn === null} label="この端末の通知" onClick={() => { if (!busy) void toggleDevice(); }} summary={deviceOn === null ? "確認中…" : deviceOn ? "ON" : "OFF"} /><FormRow ariaLabel="朝のまとめ通知を切り替え" disabled={settingsBusy} label="朝のまとめ通知" onClick={() => { if (!settingsBusy) void patchSettings({ morningSummaryEnabled: !defaults.morningSummaryEnabled }); }} summary={defaults.morningSummaryEnabled ? "ON" : "OFF"} /><FormRow ariaLabel="朝のまとめ通知時刻を変更" disabled={settingsBusy} label="朝のまとめ通知時刻" onClick={() => { if (!settingsBusy) setTimeTarget("morning"); }} summary={defaults.morningSummaryTime} /><FormRow ariaLabel="夜のまとめ通知を切り替え" disabled={settingsBusy} label="夜のまとめ通知" onClick={() => { if (!settingsBusy) void patchSettings({ eveningSummaryEnabled: !defaults.eveningSummaryEnabled }); }} summary={defaults.eveningSummaryEnabled ? "ON" : "OFF"} /><FormRow ariaLabel="夜のまとめ通知時刻を変更" disabled={settingsBusy} label="夜のまとめ通知時刻" onClick={() => { if (!settingsBusy) setTimeTarget("evening"); }} summary={defaults.eveningSummaryTime} /><FormRow ariaLabel="期間予定の期限時刻を変更" disabled={settingsBusy} label="期間予定の期限時刻" onClick={() => { if (!settingsBusy) setTimeTarget("deadline"); }} summary={defaults.periodDefaultDeadlineTime} /><FormRow ariaLabel="通知テンプレートを開く" disabled={settingsBusy} label="通知テンプレート" onClick={() => { if (!settingsBusy) setTemplatesOpen(true); }} summary="管理" />{settingsBusy ? <p className="settings-status" role="status">保存中…</p> : null}{error ? <p className="form-error" role="alert">{error}</p> : null}<TimeSheet key={timeTarget ?? "closed"} open={Boolean(timeTarget)} title={timeTitle} value={timeValue} onClose={() => setTimeTarget(null)} onSave={saveTime} /><TemplateManager onClose={() => setTemplatesOpen(false)} open={templatesOpen} /></section>;
+  return <section className="notification-settings">
+    <section className="notification-settings-section">
+      <h2>この端末の通知</h2>
+      <NotificationToggleRow ariaLabel="この端末の通知を変更" disabled={busy || deviceOn === null} label="この端末の通知" onClick={() => { void toggleDevice(); }} pressed={deviceOn === true} />
+      <p className="notification-settings-hint">通知を受け取るための端末設定</p>
+    </section>
+    <section className="notification-settings-section">
+      <h2>朝のまとめ通知</h2>
+      <NotificationToggleRow ariaLabel="朝のまとめ通知を切り替え" disabled={settingsBusy} label="朝のまとめ通知" onClick={() => { void patchSettings({ morningSummaryEnabled: !defaults.morningSummaryEnabled }); }} pressed={defaults.morningSummaryEnabled} />
+      {defaults.morningSummaryEnabled ? <FormRow ariaLabel="朝のまとめ通知時刻を変更" disabled={settingsBusy} label="通知時刻" onClick={() => setTimeTarget("morning")} summary={defaults.morningSummaryTime} /> : null}
+    </section>
+    <section className="notification-settings-section">
+      <h2>夜のまとめ通知</h2>
+      <NotificationToggleRow ariaLabel="夜のまとめ通知を切り替え" disabled={settingsBusy} label="夜のまとめ通知" onClick={() => { void patchSettings({ eveningSummaryEnabled: !defaults.eveningSummaryEnabled }); }} pressed={defaults.eveningSummaryEnabled} />
+      {defaults.eveningSummaryEnabled ? <FormRow ariaLabel="夜のまとめ通知時刻を変更" disabled={settingsBusy} label="通知時刻" onClick={() => setTimeTarget("evening")} summary={defaults.eveningSummaryTime} /> : null}
+    </section>
+    <section className="notification-settings-section">
+      <h2>通知テンプレート</h2>
+      <FormRow ariaLabel="通知テンプレートを管理" disabled={settingsBusy} label="通知テンプレートを管理" onClick={() => setTemplatesOpen(true)} summary="管理" />
+    </section>
+    <section className="notification-settings-section">
+      <h2>期間予定</h2>
+      <FormRow ariaLabel="期間予定の期限時刻を変更" disabled={settingsBusy} label="期限時刻" onClick={() => setTimeTarget("deadline")} summary={defaults.periodDefaultDeadlineTime} />
+    </section>
+    {settingsBusy ? <p className="settings-status" role="status">保存中…</p> : null}{error ? <p className="form-error" role="alert">{error}</p> : null}<TimeSheet key={timeTarget ?? "closed"} open={Boolean(timeTarget)} title={timeTitle} value={timeValue} onClose={() => setTimeTarget(null)} onSave={saveTime} /><TemplateManager onClose={() => setTemplatesOpen(false)} open={templatesOpen} />
+  </section>;
 }

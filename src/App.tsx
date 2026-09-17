@@ -5,8 +5,8 @@ import {
 } from "./api/client";
 import { BottomSheet, Button, DateInput, FormRow, Input, MobileShell, NavIcon } from "./components/ui";
 import { SwipeActionRow } from "./components/SwipeActionRow";
-import { AccountSettings } from "./components/AccountSettings";
-import { NotificationOffsetPicker, NotificationSettingsSection, notificationSummary } from "./components/NotificationSettings";
+import { AccountSettings, PasswordChangeSettings } from "./components/AccountSettings";
+import { NotificationOffsetPicker, NotificationSettingsSection } from "./components/NotificationSettings";
 import { getNotificationTemplates } from "./api/notifications";
 import type { NotificationTemplate } from "./worker/types";
 import { defaultEndTimeForStart } from "./lib/event-time";
@@ -17,11 +17,13 @@ import { ArchiveStorageError, getArchiveMetadata, getArchiveRows, saveArchiveBun
 import { runArchiveBatch } from "./lib/archive-runner";
 import { BackupSettings, MigrationScreen } from "./components/BackupSettings";
 import { getUserState } from "./api/client";
+import { allocateCalendarCellRows, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, moneyAverageDivisorFor, moneyCategoryGroupsFor, recurrenceAfterBaseDateChange, recurrenceSummary, type CalendarBandSegment, type CalendarMoneyItem, type CalendarProjectedEvent, type MoneyChartMode, type MoneyCategoryGroup } from "./lib/app-view-helpers";
+import { notificationSummary } from "./lib/notification-labels";
 
 type Screen = "calendar" | "calendar-search" | "daily" | "money" | "money-analysis" | "settings";
 type AddChoice = "家" | "仕事" | "お金";
 type CalendarFilter = "all" | "home" | "work" | "money";
-type SettingsDetail = "account" | "notifications" | "calendar" | "money" | "data";
+type SettingsDetail = "account" | "password" | "notifications" | "calendar" | "money" | "data";
 type ReturnContext = { screen: "calendar" | "daily"; date: string; filter: CalendarFilter };
 type MoneyReturnContext = ReturnContext | { screen: "money"; month: string };
 type DataLoadState = "loading" | "success" | "error";
@@ -31,14 +33,10 @@ function DataStateMessage({ state, onRetry }: { state: DataLoadState; onRetry: (
   return null;
 }
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
-type CalendarProjectedEvent = { band?: "start" | "middle" | "end"; category: Event["category"]; day: number; date: string; eventId: string; isMultiDay?: boolean; kind: "single"; label: string };
-type CalendarBandSegment = { category: Event["category"]; endColumn: number; isEnd: boolean; isStart: boolean; label: string; lane: number; row: number; startColumn: number };
-type CalendarMoneyItem = { amount: number; category: "expense" | "income"; isSummary?: boolean; label: string };
-type CalendarMoneySummary = { amount: number; category: "expense" | "income" };
 
 const settingsDetailFromPath = (): SettingsDetail | null => {
   const detail = window.location.pathname.match(/^\/settings\/([^/]+)$/)?.[1];
-  if (detail === "account" || detail === "notifications" || detail === "notification" || detail === "calendar" || detail === "money" || detail === "data") return detail === "notification" ? "notifications" : detail;
+  if (detail === "account" || detail === "password" || detail === "notifications" || detail === "notification" || detail === "calendar" || detail === "money" || detail === "data") return detail === "notification" ? "notifications" : detail;
   return null;
 };
 const screenFromPath = (): Screen => { const path = window.location.pathname; if (path === "/calendar/search") return "calendar-search"; if (path === "/daily") return "daily"; if (path === "/money/analysis") return "money-analysis"; if (path === "/money") return "money"; if (path === "/settings" || settingsDetailFromPath()) return "settings"; return "calendar"; };
@@ -55,39 +53,6 @@ const monthEnd = (value: string) => { const date = dateFromKey(value); return da
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"] as const;
 const eventIdentity = (event: Event) => event.occurrenceKey ?? event.id;
 const recurrenceWeekday = (date: string) => dateFromKey(date).getDay();
-const recurrenceFrequencyLabel = (frequency: RecurrenceRuleInput["frequency"]) => frequency === "daily" ? "日ごと" : frequency === "weekly" ? "週間ごと" : "か月ごと";
-const recurrenceWeekdayText = (weekdays: number[], startDate: string) => {
-  const selected = weekdays.length > 0 ? weekdays : [recurrenceWeekday(startDate)];
-  return selected.map((weekday) => weekdayLabels[weekday]).join("・");
-};
-const recurrenceEndText = (endsOn: string | null | undefined) => endsOn ? `（〜${formatDate(endsOn)}）` : "";
-export const recurrenceSummary = (recurrence: RecurrenceRuleInput | null | undefined, startDate = "2026-01-01", period = false) => {
-  if (!recurrence) return "なし";
-  const interval = recurrence.interval || 1;
-  const prefix = interval === 1
-    ? recurrence.frequency === "daily" ? "毎日" : recurrence.frequency === "weekly" ? "毎週" : "毎月"
-    : `${interval}${recurrenceFrequencyLabel(recurrence.frequency)}`;
-  if (period) return `${prefix}${recurrenceEndText(recurrence.endsOn)}`;
-  if (recurrence.frequency === "daily") return `${prefix}${recurrenceEndText(recurrence.endsOn)}`;
-  if (recurrence.frequency === "weekly") {
-    const weekdays = recurrenceWeekdayText(recurrence.weekdays ?? [], startDate);
-    const weekdaySuffix = (recurrence.weekdays ?? [recurrenceWeekday(startDate)]).length === 1 ? `${weekdays}曜` : ` ${weekdays}`;
-    return `${prefix}${weekdaySuffix}${recurrenceEndText(recurrence.endsOn)}`;
-  }
-  return `${prefix}${recurrence.dayOfMonth ?? Number(startDate.slice(-2))}日${recurrenceEndText(recurrence.endsOn)}`;
-};
-export const recurrenceAfterBaseDateChange = (recurrence: RecurrenceRuleInput | null, previousDate: string, nextDate: string): RecurrenceRuleInput | null => {
-  if (!recurrence || previousDate === nextDate) return recurrence;
-  const next = { ...recurrence, startsOn: nextDate };
-  if (recurrence.frequency === "monthly" && (recurrence.dayOfMonth === null || recurrence.dayOfMonth === undefined || recurrence.dayOfMonth === Number(previousDate.slice(-2)))) next.dayOfMonth = Number(nextDate.slice(-2));
-  if (recurrence.frequency === "weekly") {
-    const weekdays = recurrence.weekdays ?? [recurrenceWeekday(previousDate)];
-    if (weekdays.length === 1 && weekdays[0] === recurrenceWeekday(previousDate)) next.weekdays = [recurrenceWeekday(nextDate)];
-  }
-  return next;
-};
-export const formatDate = (value: string, includeYear = false) => { const date = dateFromKey(value); return `${includeYear ? `${date.getFullYear()}年` : ""}${date.getMonth() + 1}月${date.getDate()}日(${weekdayLabels[date.getDay()]})`; };
-export const formatDateRange = (startDate: string, endDate: string, includeYear = false) => startDate === endDate ? formatDate(startDate, includeYear) : `${formatDate(startDate, includeYear)}〜${formatDate(endDate, includeYear)}`;
 const formatMonth = (value: string) => { const date = dateFromKey(value); return `${date.getFullYear()}年${date.getMonth() + 1}月`; };
 const shiftMonth = (value: string, amount: number) => { const date = dateFromKey(value); date.setMonth(date.getMonth() + amount, 1); return dateKey(date); };
 const shiftDate = (value: string, amount: number) => { const date = dateFromKey(value); date.setDate(date.getDate() + amount); return dateKey(date); };
@@ -174,7 +139,6 @@ function useRecentEntryOpenGuard(suppressInitialOpen: boolean) {
   };
   return [open, setOpen] as const;
 }
-export const weekEnd = (value: string, weekStartsOn: number) => { const day = dateFromKey(value).getDay(); const normalizedStart = ((weekStartsOn % 7) + 7) % 7; return shiftDate(value, (normalizedStart + 6 - day + 7) % 7); };
 const eventMatchesFilter = (event: Event, filter: CalendarFilter) => filter === "all" || filter === event.category;
 const fixtureEventMatchesFilter = (event: CalendarProjectedEvent, filter: CalendarFilter) => filter !== "money" && (filter === "all" || filter === event.category);
 const eventOverlapsDate = (event: Event, date: string) => event.timingType === "period"
@@ -183,8 +147,6 @@ const eventOverlapsDate = (event: Event, date: string) => event.timingType === "
 const eventTimeLabel = (event: Event) => event.timingType === "period" ? "期間" : event.allDay ? "終日" : `${event.startTime}〜${event.endTime}`;
 const searchDateLabel = (value: string) => formatDate(value, dateFromKey(value).getFullYear() !== new Date().getFullYear());
 const moneyAmountLabel = (amount: number) => `${amount >= 0 ? "+" : "-"}${Math.abs(amount).toLocaleString("ja-JP")}`;
-export const calendarMoneyEntriesForDate = (date: string, _today: string, projection?: MoneyProjection): CalendarMoneyItem[] => projection ? projection.occurrences.filter((item) => item.date === date).map((item) => ({ amount: item.signedAmount ?? (item.type === "income" ? item.plannedAmount : -item.plannedAmount), category: item.type, label: item.title })) : [];
-export const calendarMoneySummaryForDate = (date: string, today: string, projection?: MoneyProjection): CalendarMoneySummary | null => { const entries = calendarMoneyEntriesForDate(date, today, projection); if (entries.length === 0) return null; const amount = entries.reduce((total, entry) => total + entry.amount, 0); return { amount, category: amount >= 0 ? "income" : "expense" }; };
 const calendarMoneyForCell = (date: string | null, filter: CalendarFilter, today: string, projection?: MoneyProjection): CalendarMoneyItem[] => {
   if (!date || filter === "home" || filter === "work") return [];
   const entries = calendarMoneyEntriesForDate(date, today, projection);
@@ -192,23 +154,6 @@ const calendarMoneyForCell = (date: string | null, filter: CalendarFilter, today
   if (filter === "money") return [...entries.map((entry) => ({ ...entry, isSummary: false })), ...(summary ? [{ ...summary, isSummary: true, label: "収支" }] : [])];
   return summary ? [{ ...summary, isSummary: true, label: "収支" }] : [];
 };
-
-export function allocateCalendarCellRows(events: CalendarProjectedEvent[], bandCount: number, money: CalendarMoneyItem[] | null, rowCapacity = 4, maxVisibleEvents = rowCapacity) {
-  const moneyItems = money ?? [];
-  const summary = moneyItems.find((item) => item.isSummary);
-  const details = moneyItems.filter((item) => !item.isSummary);
-  const reservedSummaryRows = summary ? 1 : 0;
-  const eventCapacity = Math.max(0, rowCapacity - reservedSummaryRows);
-  const visibleBandCount = Math.min(eventCapacity, bandCount);
-  const singleEventCapacity = Math.max(0, eventCapacity - visibleBandCount);
-  const visibleEvents = events.slice(0, Math.min(maxVisibleEvents, singleEventCapacity));
-  const detailCapacity = Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length - reservedSummaryRows);
-  const visibleMoney = [...details.slice(0, detailCapacity), ...(summary ? [summary] : [])];
-  const hiddenDetailCount = Math.max(0, details.length - visibleMoney.filter((item) => !item.isSummary).length);
-  const hiddenCount = Math.max(0, bandCount - visibleBandCount) + Math.max(0, events.length - visibleEvents.length) + hiddenDetailCount;
-  const contentRows = visibleEvents.length + visibleMoney.length;
-  return { contentRows, emptyRows: 0, hiddenCount, summaryRowIndex: summary ? contentRows : null, visibleBandCount, visibleEvents, visibleMoney };
-}
 
 function toCalendarFixtureEvents(events: Event[], month: string): CalendarProjectedEvent[] {
   const firstDate = monthStart(month);
@@ -294,7 +239,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
   const candidateValue = Number(new URLSearchParams(window.location.search).get("calendarMax"));
   const autoRowCapacity = calendarCellHeight > 0 ? Math.max(1, Math.min(4, Math.floor((calendarCellHeight - 33) / 14))) : 4;
   const rowCapacity = candidateValue === 2 || candidateValue === 3 || candidateValue === 4 ? Math.min(autoRowCapacity, candidateValue) : autoRowCapacity;
-  const bandFitsRowAllocation = (segment: CalendarBandSegment) => {
+  const renderedBands = useMemo(() => bands.filter((segment) => {
     if (filter !== "all") return segment.lane < rowCapacity;
     for (let column = segment.startColumn; column <= segment.endColumn; column += 1) {
       const cellIndex = segment.row * 7 + column - 1;
@@ -305,8 +250,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
       if (segment.lane >= rowCapacity - reservedRows) return false;
     }
     return true;
-  };
-  const renderedBands = useMemo(() => bands.filter(bandFitsRowAllocation), [bands, filter, rowCapacity, cells, monthIndex, year, today, money]);
+  }), [bands, filter, rowCapacity, cells, monthIndex, year, today, money]);
   const bandLaneCountByCell = useMemo(() => renderedBands.reduce<Record<string, number>>((counts, segment) => { for (let column = segment.startColumn; column <= segment.endColumn; column += 1) { const key = `${segment.row}:${column}`; counts[key] = Math.max(counts[key] ?? 0, segment.lane + 1); } return counts; }, {}), [renderedBands]);
   return <main className="screen-page calendar-page">
     <header className="screen-header"><h1>カレンダー</h1><button aria-label="検索" className="icon-button" onClick={onSearch} type="button"><NavIcon name="search" /></button></header>
@@ -514,7 +458,7 @@ function EventOptionSheet({ option, onClose, recurrence, startDate, timingType, 
       {endOptionOpen ? <div className="recurrence-end-options"><button className="event-option-sheet__option" onClick={() => { update({ endsOn: null }); setEndOptionOpen(false); }} type="button"><span>終了なし</span><span aria-hidden="true">{current.endsOn ? "" : "✓"}</span></button><button className="event-option-sheet__option" onClick={() => { update({ endsOn: current.endsOn ?? startDate }); setEndOptionOpen(false); }} type="button"><span>終了日を指定</span><span aria-hidden="true">{current.endsOn ? "✓" : ""}</span></button></div> : null}
       {current.endsOn ? <label className="input-field" htmlFor="recurrence-ends-on"><span>終了日</span><Input id="recurrence-ends-on" min={startDate} onChange={(value) => update({ endsOn: value })} type="date" value={current.endsOn} /></label> : null}<Button onClick={onClose}>この設定にする</Button>
     </div> : null}<button aria-label="繰り返しを閉じる" className="event-option-sheet__close" onClick={onClose} type="button">閉じる</button>
-  </> : <><div className="notification-template-options"><p>テンプレート</p>{templates.map((template) => <button className="event-option-sheet__option" key={template.id} onClick={() => { onNotificationsChange(template.offsets.map((offset) => offset.offsetMinutes)); onClose(); }} type="button"><span>{template.name}</span><span>{notificationSummary(template.offsets.map((offset) => offset.offsetMinutes))}</span></button>)}</div><NotificationOffsetPicker offsets={notifications} onChange={onNotificationsChange} /><p className="notification-summary-preview">{notificationSummary(notifications)}</p>{timingType === "period" && notifications.length > 0 ? <label className="input-field" htmlFor="event-deadline-time"><span>期限時刻</span><Input id="event-deadline-time" onChange={onDeadlineTimeChange} type="time" value={deadlineTime || "21:00"} /></label> : null}<Button onClick={onClose}>この設定にする</Button></>}</div></BottomSheet>;
+  </> : <><div className="notification-template-options"><p>保存済みテンプレート</p><button aria-pressed={notifications.length === 0} className="event-option-sheet__option" onClick={() => { onNotificationsChange([]); onClose(); }} type="button"><span>なし</span><span aria-hidden="true">{notifications.length === 0 ? "✓" : ""}</span></button>{templates.map((template) => <button aria-pressed={notifications.length > 0 && template.offsets.map((offset) => offset.offsetMinutes).every((offset) => notifications.includes(offset)) && notifications.length === template.offsets.length} className="event-option-sheet__option" key={template.id} onClick={() => { onNotificationsChange(template.offsets.map((offset) => offset.offsetMinutes)); onClose(); }} type="button"><span>{template.name}</span><span>{notificationSummary(template.offsets.map((offset) => offset.offsetMinutes))}</span></button>)}</div><div className="notification-template-options"><p>カスタム通知</p><NotificationOffsetPicker offsets={notifications} onChange={onNotificationsChange} /></div><p className="notification-summary-preview">{notificationSummary(notifications)}</p>{timingType === "period" && notifications.length > 0 ? <label className="input-field" htmlFor="event-deadline-time"><span>期限時刻</span><Input id="event-deadline-time" onChange={onDeadlineTimeChange} type="time" value={deadlineTime || "21:00"} /></label> : null}<Button onClick={onClose}>この設定にする</Button></>}</div></BottomSheet>;
 }
 
 function ScopeSheet({ open, action, subject = "予定", onClose, onSelect }: { open: boolean; action: "edit" | "delete"; subject?: "予定" | "項目"; onClose: () => void; onSelect: (scope: EventScope) => void }) { const title = action === "edit" ? "編集する範囲" : "削除する範囲"; const options: Array<{ scope: EventScope; label: string }> = [{ scope: "occurrence", label: `この${subject}のみ` }, { scope: "following", label: `この${subject}以降` }, { scope: "series", label: `すべての${subject}` }]; return <BottomSheet open={open} title={title} onClose={onClose}><div className="event-option-sheet">{options.map((option) => <button className="event-option-sheet__option" key={option.scope} onClick={() => onSelect(option.scope)} type="button"><span>{option.label}</span></button>)}</div></BottomSheet>; }
@@ -611,26 +555,6 @@ export function MoneyInlineDetail({ item, onActual, onEdit, id }: { item: MoneyI
 function MoneyChoiceSheet({ open, title, options, onClose, onSelect }: { open: boolean; title: string; options: Array<{ label: string; value: string }>; onClose: () => void; onSelect: (value: string) => void }) {
   return <BottomSheet open={open} title={title} onClose={onClose}><div className="event-option-sheet">{options.map((option) => <button className="event-option-sheet__option" key={option.value} onClick={() => onSelect(option.value)} type="button"><span>{option.label}</span></button>)}</div></BottomSheet>;
 }
-
-export type MoneyChartMode = "forecast" | "actual";
-type MoneyCategoryGroup = { amount: number; color: string; colorKey: string; name: string };
-
-export const moneyAverageDivisorFor = (year: number, currentMonth: string, mode: MoneyChartMode): number | null => {
-  if (mode === "forecast") return 12;
-  const currentYear = Number(currentMonth.slice(0, 4));
-  if (year < currentYear) return 12;
-  if (year > currentYear) return null;
-  const month = Number(currentMonth.slice(5, 7));
-  return Number.isInteger(month) && month >= 1 && month <= 12 ? month : 12;
-};
-
-export const moneyCategoryGroupsFor = (occurrences: MoneyItem[], mode: MoneyChartMode = "forecast"): MoneyCategoryGroup[] => Array.from(occurrences.filter((item) => item.type === "expense" && (mode === "forecast" || item.settlementStatus === "actual" || item.settlementStatus === "estimated_actual")).reduce((map, item) => {
-    const key = item.category?.id ?? item.category?.name ?? "other";
-    const current = map.get(key) ?? { amount: 0, color: moneyCategoryColor(item.category), colorKey: moneyCategoryColorKey(item.category), name: item.category?.name ?? "その他" };
-    current.amount += Math.abs(item.effectiveAmount ?? item.signedAmount ?? item.plannedAmount);
-    map.set(key, current);
-    return map;
-  }, new Map<string, MoneyCategoryGroup>()).values()).sort((left, right) => right.amount - left.amount);
 
 function MoneyModeToggle({ mode, onChange, label = "支出表示" }: { mode: MoneyChartMode; onChange: (mode: MoneyChartMode) => void; label?: string }) {
   return <div aria-label={label} className="money-chart-mode-switch" role="group"><button aria-pressed={mode === "forecast"} onClick={() => onChange("forecast")} type="button">見込み</button><button aria-pressed={mode === "actual"} onClick={() => onChange("actual")} type="button">実績</button></div>;
@@ -752,12 +676,15 @@ function MoneyAnalysisPage({ year, data, onYearChange, onBack }: { year: number;
 
 function MoneyDeleteConfirmSheet({ title, onClose, onConfirm, busy }: { title: string; onClose: () => void; onConfirm: () => void; busy: boolean }) { return <BottomSheet open title="お金を削除" onClose={onClose}><div className="delete-confirm"><p>「{title}」を削除しますか？</p><p className="delete-confirm__note">削除した記録は一覧から表示されなくなります。</p><Button disabled={busy} onClick={onConfirm} variant="secondary">{busy ? "削除中…" : "削除する"}</Button><Button disabled={busy} onClick={onClose} variant="ghost">キャンセル</Button></div></BottomSheet>; }
 
-const moneyCategoryColorLabels: Record<string, string> = { orange: "オレンジ", green: "グリーン", blue: "ブルー", purple: "パープル", red: "レッド", pink: "ピンク", gold: "ゴールド", gray: "グレー" };
-function MoneyCategoryColorPicker({ value, label, onChange }: { value: string; label: string; onChange: (value: string) => void }) {
-  return <div aria-label={label} className="money-category-color-picker" role="radiogroup">{MONEY_CATEGORY_COLOR_KEYS.map((key) => <button aria-label={moneyCategoryColorLabels[key] ?? key} aria-pressed={value === key} className="money-category-color-option" key={key} onClick={() => onChange(key)} type="button"><span aria-hidden="true" className="money-category-color-swatch" data-color-key={key} style={{ backgroundColor: moneyCategoryColor({ colorKey: key }) }} /><span>{moneyCategoryColorLabels[key] ?? key}</span>{value === key ? <span aria-hidden="true">✓</span> : null}</button>)}</div>;
+const moneyCategoryColorLabels: Record<string, string> = { orange: "オレンジ", green: "グリーン", blue: "ブルー", purple: "パープル", red: "レッド", pink: "ピンク", gold: "ゴールド", gray: "グレー", yellow: "イエロー", teal: "ティール", cyan: "シアン", indigo: "インディゴ", brown: "ブラウン", lime: "ライム", "blue-gray": "ブルーグレー" };
+function MoneyCategoryColorPicker({ open, value, onChange, onClose }: { open: boolean; value: string; onChange: (value: string) => void; onClose: () => void }) {
+  return <BottomSheet open={open} title="色を選択" onClose={onClose}><div aria-label="カテゴリ色" className="money-category-color-picker" role="radiogroup">{MONEY_CATEGORY_COLOR_KEYS.map((key) => <button aria-label={moneyCategoryColorLabels[key] ?? key} aria-pressed={value === key} className="money-category-color-option" key={key} onClick={() => { onChange(key); onClose(); }} type="button"><span aria-hidden="true" className="money-category-color-swatch" data-color-key={key} style={{ backgroundColor: moneyCategoryColor({ colorKey: key }) }} /><span>{moneyCategoryColorLabels[key] ?? key}</span>{value === key ? <span aria-hidden="true">✓</span> : null}</button>)}</div></BottomSheet>;
+}
+function MoneyCategoryColorField({ value, onClick }: { value: string; onClick: () => void }) {
+  return <FormRow ariaLabel="色を変更" label="色" onClick={onClick}><span className="money-category-color-summary"><span aria-hidden="true" className="money-category-color-swatch" style={{ backgroundColor: moneyCategoryColor({ colorKey: value }) }} />{moneyCategoryColorLabels[value] ?? value}</span></FormRow>;
 }
 export function MoneyCategorySettings() {
-  const [categories, setCategories] = useState<MoneyCategory[]>([]); const [type, setType] = useState<MoneyType>("expense"); const [editing, setEditing] = useState<string | null>(null); const [openRow, setOpenRow] = useState<string | null>(null); const [name, setName] = useState(""); const [colorKey, setColorKey] = useState<string>("orange"); const [error, setError] = useState(""); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
+  const [categories, setCategories] = useState<MoneyCategory[]>([]); const [type, setType] = useState<MoneyType>("expense"); const [editing, setEditing] = useState<string | null>(null); const [openRow, setOpenRow] = useState<string | null>(null); const [colorOpen, setColorOpen] = useState(false); const [name, setName] = useState(""); const [colorKey, setColorKey] = useState<string>("orange"); const [error, setError] = useState(""); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
   const load = async () => { setLoading(true); setError(""); try { const { categories: next } = await getMoneyCategories(undefined, true); setCategories(next ?? []); } catch (caught) { setError(caught instanceof Error ? caught.message : "カテゴリを読み込めませんでした。"); } finally { setLoading(false); } }; // This effect starts an external data load and intentionally enters its loading state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, []);
@@ -766,7 +693,7 @@ export function MoneyCategorySettings() {
   const deactivate = async (id: string) => { if (busy) return; setBusy(true); setError(""); try { await deleteMoneyCategory(id); setCategories((current) => current.map((category) => category.id === id ? { ...category, active: false } : category)); } catch (caught) { setError(caught instanceof Error ? caught.message : "変更できませんでした。"); } finally { setBusy(false); } };
   const filtered = categories.filter((category) => category.type === type);
   if (loading) return <section className="money-category-settings"><p className="empty-state" role="status">カテゴリを読み込み中…</p></section>;
-  return <section className="money-category-settings" onPointerDownCapture={(event) => { if (openRow && !(event.target instanceof Element && event.target.closest(".event-swipe-row"))) setOpenRow(null); }}><div className="money-type-switch" role="group" aria-label="カテゴリ種類"><button aria-pressed={type === "expense"} className={type === "expense" ? "is-selected" : ""} onClick={() => setType("expense")} type="button">支出カテゴリ</button><button aria-pressed={type === "income"} className={type === "income" ? "is-selected" : ""} onClick={() => setType("income")} type="button">収入カテゴリ</button></div>{filtered.map((category) => { const row = <div className={`money-category-row${category.active ? "" : " is-inactive"}`}><span className="money-category-dot" data-color-key={moneyCategoryColorKey(category)} style={{ backgroundColor: moneyCategoryColor(category) }} /><span>{category.name}{category.active ? "" : "（無効）"}</span></div>; return editing === category.id ? <div key={category.id} className="money-category-row"><div className="money-category-editor"><Input aria-label="カテゴリ名" onChange={setName} value={name} /><MoneyCategoryColorPicker label="カテゴリ色" onChange={setColorKey} value={colorKey} /><Button disabled={busy} onClick={() => { void save(); }}>{busy ? "保存中…" : "保存"}</Button></div></div> : <SwipeActionRow actions={[{ label: "編集", onClick: () => { setOpenRow(null); start(category); } }, ...(category.active ? [{ label: "無効化", onClick: () => { void deactivate(category.id); }, variant: "danger" as const }] : [])]} ariaLabel={category.name} key={category.id} onOpenChange={(open) => setOpenRow(open ? category.id : null)} onOtherRowTouch={() => setOpenRow(category.id)} open={openRow === category.id}>{row}</SwipeActionRow>; })}{editing === "new" ? <div className="money-category-editor"><Input aria-label="新しいカテゴリ名" onChange={setName} placeholder="カテゴリ名" value={name} /><MoneyCategoryColorPicker label="新しいカテゴリ色" onChange={setColorKey} value={colorKey} /><Button disabled={busy} onClick={() => { void save(); }}>{busy ? "保存中…" : "保存"}</Button></div> : <Button disabled={busy} onClick={() => start()} variant="secondary">カテゴリを追加</Button>}{error ? <div className="settings-error"><p className="form-error" role="alert">{error}</p><Button disabled={busy} onClick={() => { void load(); }} variant="ghost">再試行</Button></div> : null}</section>;
+  return <section className="money-category-settings" onPointerDownCapture={(event) => { if (openRow && !(event.target instanceof Element && event.target.closest(".event-swipe-row"))) setOpenRow(null); }}><div className="money-type-switch" role="group" aria-label="カテゴリ種類"><button aria-pressed={type === "expense"} className={type === "expense" ? "is-selected" : ""} onClick={() => setType("expense")} type="button">支出カテゴリ</button><button aria-pressed={type === "income"} className={type === "income" ? "is-selected" : ""} onClick={() => setType("income")} type="button">収入カテゴリ</button></div>{filtered.map((category) => { const row = <div className={`money-category-row${category.active ? "" : " is-inactive"}`}><span className="money-category-dot" data-color-key={moneyCategoryColorKey(category)} style={{ backgroundColor: moneyCategoryColor(category) }} /><span>{category.name}{category.active ? "" : "（無効）"}</span></div>; return editing === category.id ? <div key={category.id} className="money-category-row"><div className="money-category-editor"><Input aria-label="カテゴリ名" onChange={setName} value={name} /><MoneyCategoryColorField value={colorKey} onClick={() => setColorOpen(true)} /><Button disabled={busy} onClick={() => { void save(); }}>{busy ? "保存中…" : "保存"}</Button></div></div> : <SwipeActionRow actions={[{ label: "編集", onClick: () => { setOpenRow(null); start(category); } }, ...(category.active ? [{ label: "無効化", onClick: () => { void deactivate(category.id); }, variant: "danger" as const }] : [])]} ariaLabel={category.name} key={category.id} onOpenChange={(open) => setOpenRow(open ? category.id : null)} onOtherRowTouch={() => setOpenRow(category.id)} open={openRow === category.id}>{row}</SwipeActionRow>; })}{editing === "new" ? <div className="money-category-editor"><Input aria-label="新しいカテゴリ名" onChange={setName} value={name} /><MoneyCategoryColorField value={colorKey} onClick={() => setColorOpen(true)} /><Button disabled={busy} onClick={() => { void save(); }}>{busy ? "保存中…" : "作成"}</Button></div> : <Button disabled={busy} onClick={() => start()} variant="secondary">カテゴリを追加</Button>}{error ? <div className="settings-error"><p className="form-error" role="alert">{error}</p><Button disabled={busy} onClick={() => { void load(); }} variant="ghost">再試行</Button></div> : null}<MoneyCategoryColorPicker open={colorOpen} onChange={setColorKey} onClose={() => setColorOpen(false)} value={colorKey} /></section>;
 }
 
 const timezoneOptions = ["Asia/Tokyo", "UTC", "America/Los_Angeles", "America/New_York", "Europe/London"];
@@ -788,12 +715,21 @@ function ArchiveSettings({ metadata, state, candidate, error, onCheck }: { metad
   const candidateCount = candidate ? archiveRecordCount(candidate.records) : 0;
   return <section className="archive-settings" aria-label="ローカルアーカイブ"><div className="archive-status-row"><span>端末に保存済み</span><strong>{recordCount > 0 ? `${firstDate ? `${firstDate}から` : "履歴"}・${recordCount}件` : "まだありません"}</strong></div><div className="archive-status-row"><span>クラウドに保存</span><strong>直近12か月</strong></div><div className="archive-status-row"><span>状態</span><strong>{archiveStateLabel[state]}{state === "candidate" ? `（${candidateCount}件）` : ""}</strong></div><div className="archive-status-row"><span>最終確認</span><strong>{latest}</strong></div>{error ? <p className="form-error" role="alert">{error}</p> : null}<Button disabled={state === "saving"} onClick={onCheck} variant="secondary">{state === "saving" ? "保存中…" : "アーカイブを確認"}</Button><p className="archive-note">古い履歴を端末に保存してから、クラウドの整理を確認します。</p></section>;
 }
-function SettingsDetailPage({ detail, user, settings, archiveMetadata, archiveState, archiveCandidate, archiveError, onArchiveCheck, onBack, onLogout, onSettingsChange, onMigrationStarted }: { detail: SettingsDetail; user: AuthUser; settings: UserSettings | null; archiveMetadata: ArchiveMetadata[]; archiveState: ArchiveUiState; archiveCandidate: ArchiveCandidateResponse | null; archiveError: string; onArchiveCheck: () => void; onBack: () => void; onLogout: () => void; onSettingsChange: (settings: UserSettings) => void; onMigrationStarted: (migrationId: string) => void }) {
-  const titles: Record<SettingsDetail, string> = { account: "アカウント", notifications: "通知", calendar: "カレンダー", money: "お金", data: "データ / バックアップ" };
-  const body = detail === "account" ? <AccountSettings onLogout={onLogout} user={user} /> : detail === "notifications" ? <NotificationSettingsSection onSettingsChange={onSettingsChange} settings={settings} /> : detail === "calendar" ? <CalendarSettings onSettingsChange={onSettingsChange} settings={settings} /> : detail === "money" ? <MoneyCategorySettings /> : <><BackupSettings onMigrationStarted={onMigrationStarted} userId={user.id} /><ArchiveSettings candidate={archiveCandidate} error={archiveError} metadata={archiveMetadata} onCheck={onArchiveCheck} state={archiveState} /></>;
-  return <main className="screen-page settings-page"><header className="screen-header"><button aria-label="設定へ戻る" className="back-button" onClick={onBack} type="button">‹</button><h1>{titles[detail]}</h1><span className="header-spacer" /></header><section className="settings-detail-list">{body}</section></main>;
+function SettingsDetailPage({ accountFeedback, detail, user, settings, archiveMetadata, archiveState, archiveCandidate, archiveError, onArchiveCheck, onBack, onBackToAccount, onLogout, onSettingsChange, onMigrationStarted, onOpenPassword, onPasswordChanged }: { accountFeedback: string; detail: SettingsDetail; user: AuthUser; settings: UserSettings | null; archiveMetadata: ArchiveMetadata[]; archiveState: ArchiveUiState; archiveCandidate: ArchiveCandidateResponse | null; archiveError: string; onArchiveCheck: () => void; onBack: () => void; onBackToAccount: () => void; onLogout: () => void; onSettingsChange: (settings: UserSettings) => void; onMigrationStarted: (migrationId: string) => void; onOpenPassword: () => void; onPasswordChanged: () => void }) {
+  const titles: Record<SettingsDetail, string> = { account: "アカウント", password: "パスワードを変更", notifications: "通知", calendar: "カレンダー", money: "お金", data: "データ / バックアップ" };
+  const body = detail === "account" ? <AccountSettings onChangePassword={onOpenPassword} onLogout={onLogout} successMessage={accountFeedback} user={user} /> : detail === "password" ? <PasswordChangeSettings onCompleted={onPasswordChanged} /> : detail === "notifications" ? <NotificationSettingsSection onSettingsChange={onSettingsChange} settings={settings} /> : detail === "calendar" ? <CalendarSettings onSettingsChange={onSettingsChange} settings={settings} /> : detail === "money" ? <MoneyCategorySettings /> : <><BackupSettings onMigrationStarted={onMigrationStarted} userId={user.id} /><ArchiveSettings candidate={archiveCandidate} error={archiveError} metadata={archiveMetadata} onCheck={onArchiveCheck} state={archiveState} /></>;
+  const back = detail === "password" ? onBackToAccount : onBack;
+  return <main className="screen-page settings-page"><header className="screen-header"><button aria-label={detail === "password" ? "アカウントへ戻る" : "設定へ戻る"} className="back-button" onClick={back} type="button">‹</button><h1>{titles[detail]}</h1><span className="header-spacer" /></header><section className="settings-detail-list">{body}</section></main>;
 }
-function SettingsShell({ user, settings, settingsLoad, detail, archiveMetadata, archiveState, archiveCandidate, archiveError, onArchiveCheck, onRetrySettings, onOpenDetail, onBack, onLogout, onSettingsChange, onMigrationStarted }: { user: AuthUser; settings: UserSettings | null; settingsLoad: DataLoadState; detail: SettingsDetail | null; archiveMetadata: ArchiveMetadata[]; archiveState: ArchiveUiState; archiveCandidate: ArchiveCandidateResponse | null; archiveError: string; onArchiveCheck: () => void; onRetrySettings: () => void; onOpenDetail: (detail: SettingsDetail) => void; onBack: () => void; onLogout: () => void; onSettingsChange: (settings: UserSettings) => void; onMigrationStarted: (migrationId: string) => void }) { if (settingsLoad !== "success") return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><DataStateMessage onRetry={onRetrySettings} state={settingsLoad} /></main>; if (detail) return <SettingsDetailPage archiveCandidate={archiveCandidate} archiveError={archiveError} archiveMetadata={archiveMetadata} archiveState={archiveState} detail={detail} onArchiveCheck={onArchiveCheck} onBack={onBack} onLogout={onLogout} onMigrationStarted={onMigrationStarted} onSettingsChange={onSettingsChange} settings={settings} user={user} />; return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><section className="settings-root-list"><FormRow ariaLabel="アカウントを開く" label="アカウント" onClick={() => onOpenDetail("account")} /><FormRow ariaLabel="通知を開く" label="通知" onClick={() => onOpenDetail("notifications")} /><FormRow ariaLabel="カレンダーを開く" label="カレンダー" onClick={() => onOpenDetail("calendar")} /><FormRow ariaLabel="お金を開く" label="お金" onClick={() => onOpenDetail("money")} /><FormRow ariaLabel="データとバックアップを開く" label="データ / バックアップ" onClick={() => onOpenDetail("data")} /></section></main>; }
+function SettingsShell({ user, settings, settingsLoad, detail, archiveMetadata, archiveState, archiveCandidate, archiveError, onArchiveCheck, onRetrySettings, onOpenDetail, onBack, onLogout, onSettingsChange, onMigrationStarted }: { user: AuthUser; settings: UserSettings | null; settingsLoad: DataLoadState; detail: SettingsDetail | null; archiveMetadata: ArchiveMetadata[]; archiveState: ArchiveUiState; archiveCandidate: ArchiveCandidateResponse | null; archiveError: string; onArchiveCheck: () => void; onRetrySettings: () => void; onOpenDetail: (detail: SettingsDetail) => void; onBack: () => void; onLogout: () => void; onSettingsChange: (settings: UserSettings) => void; onMigrationStarted: (migrationId: string) => void }) {
+  const [accountFeedback, setAccountFeedback] = useState("");
+  const openPassword = () => { setAccountFeedback(""); onOpenDetail("password"); };
+  const backToAccount = () => { window.history.replaceState({}, "", "/settings/account"); window.dispatchEvent(new PopStateEvent("popstate")); };
+  const passwordChanged = () => { setAccountFeedback("パスワードを変更しました。"); backToAccount(); };
+  if (settingsLoad !== "success") return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><DataStateMessage onRetry={onRetrySettings} state={settingsLoad} /></main>;
+  if (detail) return <SettingsDetailPage accountFeedback={accountFeedback} archiveCandidate={archiveCandidate} archiveError={archiveError} archiveMetadata={archiveMetadata} archiveState={archiveState} detail={detail} onArchiveCheck={onArchiveCheck} onBack={onBack} onBackToAccount={backToAccount} onLogout={onLogout} onMigrationStarted={onMigrationStarted} onOpenPassword={openPassword} onPasswordChanged={passwordChanged} onSettingsChange={onSettingsChange} settings={settings} user={user} />;
+  return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><section className="settings-root-list"><FormRow ariaLabel="アカウントを開く" label="アカウント" onClick={() => onOpenDetail("account")} /><FormRow ariaLabel="通知を開く" label="通知" onClick={() => onOpenDetail("notifications")} /><FormRow ariaLabel="カレンダーを開く" label="カレンダー" onClick={() => onOpenDetail("calendar")} /><FormRow ariaLabel="お金を開く" label="お金" onClick={() => onOpenDetail("money")} /><FormRow ariaLabel="データとバックアップを開く" label="データ / バックアップ" onClick={() => onOpenDetail("data")} /></section></main>;
+}
 function AddChoiceSheet({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (choice: AddChoice) => void }) { return <BottomSheet open={open} onClose={onClose} title="追加"><div className="choice-list"><FormRow ariaLabel="家を追加" chevron={false} label="家" onClick={() => onSelect("家")} /><FormRow ariaLabel="仕事を追加" chevron={false} label="仕事" onClick={() => onSelect("仕事")} /><FormRow ariaLabel="お金を追加" chevron={false} label="お金" onClick={() => onSelect("お金")} /></div></BottomSheet>; }
 
 export function App() {

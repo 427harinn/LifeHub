@@ -16,6 +16,12 @@
 - GUI変更は390×844のScreenshot Evidenceを必須とする
 - 動きが重要な箇所は動画Evidenceも残す
 - スマートフォンで確認する価値が出た段階からstaging確認を行う
+
+## 11. Milestone 14 Phase E+F final gate
+
+Phase EはBottom Navigation icon、icon-rainbowのrepo内asset、PWA manifest / app icon、Service Worker登録整理、shadow / lint polishを対象とする。Phase Fはinitial load / screen transitionのperformance記録、iPhone PWA / Push / deep linkの実機確認、staging総合smoke、P0 / P1 / P2のRelease Readiness再監査を対象とする。
+
+このPhaseでは新機能追加を行わない。Release Candidateはstagingに固定し、RC commit SHA、Worker version、D1 migration state、Evidence、test countsを記録する。production deployは別作業とし、PR作成後に停止する。
 - production/defaultおよびHouseToDo環境には明示指示なしで触れない
 
 ---
@@ -675,6 +681,8 @@ M13 Backup / Migration
  ↓
 M14 Polish / Release Readiness
 ```
+
+M14 review fixes（PR #18追加）は、既存通知・Money・Settings基盤を再利用したUI接続とvisual polishに限定する。Account password sub page、通知templateのEventForm offset snapshot選択、15色fixed palette、LifeHub Hub app iconを対象とし、新しい通知systemやproduction変更は行わない。
 
 原則この順で進める。
 

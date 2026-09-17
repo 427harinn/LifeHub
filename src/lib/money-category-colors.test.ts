@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { MONEY_CATEGORY_COLOR_KEYS, moneyCategoryColorKey, nextMoneyCategoryColorKey } from "./money-category-colors";
 
 describe("money category colors", () => {
+  it("exposes the expanded fixed palette", () => {
+    expect(MONEY_CATEGORY_COLOR_KEYS).toHaveLength(15);
+    expect(MONEY_CATEGORY_COLOR_KEYS).toEqual(expect.arrayContaining(["yellow", "teal", "cyan", "indigo", "brown", "lime", "blue-gray"]));
+  });
+
   it("respects an explicit colorKey before any fallback", () => {
     expect(moneyCategoryColorKey({ id: "fixed", name: "固定費", colorKey: "pink" })).toBe("pink");
   });
@@ -20,5 +25,9 @@ describe("money category colors", () => {
     expect(moneyCategoryColorKey(category)).toBe(moneyCategoryColorKey({ ...category }));
     expect(MONEY_CATEGORY_COLOR_KEYS).toContain(moneyCategoryColorKey(category));
     expect(nextMoneyCategoryColorKey([{ id: "a", name: "A", colorKey: "orange" }])).not.toBe("orange");
+  });
+
+  it("keeps unknown legacy values backward compatible", () => {
+    expect(moneyCategoryColorKey({ id: "legacy", name: "旧カテゴリ", colorKey: "unknown" })).toBe("gray");
   });
 });
