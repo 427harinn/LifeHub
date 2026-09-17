@@ -238,8 +238,12 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .mobile-nav__button { display: grid; min-height: 48px; place-items: center; border: 0; color: var(--color-text-secondary); background: transparent; cursor: pointer; }
 .mobile-nav__button[aria-current="page"] { color: var(--color-primary-strong); }
 .mobile-nav__button--add { color: var(--color-text); background: transparent; }
-.mobile-nav__icon { width: 23px; height: 23px; }
-.mobile-nav__button--add .mobile-nav__icon { width: 27px; height: 27px; }
+.mobile-nav__asset-icon { display: block; width: 23px; height: 23px; background-color: currentColor; mask-position: center; mask-repeat: no-repeat; mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; -webkit-mask-size: contain; }
+.mobile-nav__asset-icon--calendar { mask-image: url("/icons/navigation/calendar.svg"); -webkit-mask-image: url("/icons/navigation/calendar.svg"); }
+.mobile-nav__asset-icon--daily { mask-image: url("/icons/navigation/daily.svg"); -webkit-mask-image: url("/icons/navigation/daily.svg"); }
+.mobile-nav__asset-icon--add { width: 27px; height: 27px; mask-image: url("/icons/navigation/add.svg"); -webkit-mask-image: url("/icons/navigation/add.svg"); }
+.mobile-nav__asset-icon--money { mask-image: url("/icons/navigation/money.svg"); -webkit-mask-image: url("/icons/navigation/money.svg"); }
+.mobile-nav__asset-icon--settings { mask-image: url("/icons/navigation/settings.svg"); -webkit-mask-image: url("/icons/navigation/settings.svg"); }
 
 .bottom-sheet-layer { position: fixed; inset: 0; z-index: 20; display: grid; align-items: end; }
 .bottom-sheet__backdrop { position: absolute; inset: 0; border: 0; background: rgb(48 53 49 / 32%); cursor: pointer; }
@@ -288,8 +292,7 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .calendar-date-sheet .money-inline-detail__list { border-top: 0; gap: 2px; }
 .calendar-date-sheet .money-inline-detail__list > div { min-height: 0; padding: 4px 0; border-bottom: 0; }
 .calendar-date-sheet__quick-add { position: relative; display: flex; flex: 0 0 44px; flex-direction: column; align-items: flex-end; gap: 8px; }
-.calendar-date-sheet__quick-add-toggle { box-shadow: 0 4px 14px rgb(38 51 49 / 22%); }
-.calendar-date-sheet__quick-add-menu { position: absolute; right: 0; bottom: 52px; display: grid; min-width: 128px; gap: 2px; padding: 5px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); box-shadow: var(--shadow-card); }
+.calendar-date-sheet__quick-add-menu { position: absolute; right: 0; bottom: 52px; display: grid; min-width: 128px; gap: 2px; padding: 5px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); }
 .calendar-date-sheet__quick-add-menu button { min-height: 40px; padding: 6px 10px; border: 0; border-radius: 7px; color: var(--color-text); background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .calendar-date-sheet__quick-add-menu button:hover { background: var(--color-primary-soft); }
 .calendar-date-sheet__day-nav button { min-width: 44px; min-height: 44px; border: 0; color: var(--color-primary-strong); background: transparent; font-size: 1.5rem; cursor: pointer; }

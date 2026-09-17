@@ -9,6 +9,12 @@ LifeHubの通知は以下の2系統に分ける。
 
 LifeHubはTodoではなく予定アプリであり、完了 / 未完了 / 対応済み等の状態は持たない。
 
+## M14 Phase E+F readiness
+
+Service Workerの登録入口は`src/lib/service-worker.ts`へ集約し、アプリ起動時に既存registrationの更新確認を行う。install / activate / push / notificationclick listenerとsame-origin deep linkを維持し、通知payloadにiconがない場合はLifeHub app iconを使用する。
+
+通知の実機再確認では、permission → subscribe → timed Event / summary → receive → tap → Calendarの日付または関連Event contextを確認する。自動ブラウザで実機結果を代替せず、未実施項目はRC auditに残す。
+
 ---
 
 ## 2. 朝・夜のまとめ通知

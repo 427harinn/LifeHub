@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { NavIcon } from "./NavIcon";
 
 const navigationItems = [
   { id: "calendar", label: "カレンダー", icon: "calendar" },
@@ -31,7 +30,7 @@ export function MobileShell({ children, activeNavigation = "calendar", onAdd, on
             onClick={item.id === "add" ? onAdd : () => onNavigate?.(item.id)}
             type="button"
           >
-            <NavIcon className="mobile-nav__icon" name={item.icon} />
+            <span aria-hidden="true" className={`mobile-nav__asset-icon mobile-nav__asset-icon--${item.icon}`} />
             <span className="sr-only">{item.label}</span>
           </button>
         ))}

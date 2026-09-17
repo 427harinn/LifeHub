@@ -16,6 +16,13 @@ HouseToDoで有効だった開発フローを引き継ぎつつ、LifeHubでは�
 
 この文書は実装フェーズの共通ルールとする。
 
+## M14 Phase E+F Release Candidate rules
+
+- 最終Phaseは既存機能のpolish・整理・計測・回帰確認に限定し、新機能や大規模refactorを追加しない。
+- stagingは`lifehub-staging`のみを対象とし、production Worker / D1 / secrets / default branchは操作しない。migrationはstatus確認に留め、destructive migrationは専用fixture user以外で実行しない。
+- 390×844のnav / PWA / Settings / Calendar / Money Evidenceと、performance JSON、staging Worker version、migration state、test countsをRC記録へ残す。
+- iPhone PWA install・Push受信 / tap・cold-start deep linkは自動ブラウザの結果と混同せず、実機Evidenceの有無を明記する。
+
 ---
 
 ## 2. 基本開発フロー

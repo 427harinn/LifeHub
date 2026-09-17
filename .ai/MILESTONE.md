@@ -1,4 +1,35 @@
-# Milestone 14: Release Readiness Phase C+D
+# Milestone 14: Release Readiness Phase E+F
+
+## 開始記録（2026-09-17）
+
+- Phase C+Dの実装HEAD `6ba09c7fecac08d9c0fcf30de9529ae0fdf43912`を実作業baseとして確認した。ローカル`origin/main`は`45b7c62a6c86c8f29bb8a12625624ad770ae3d8c`で、C+D merge状態を含まないため、C+Dを保持したHEADから新規branchを作成した。
+- 新規branch: `codex/m14-release-readiness-ef`
+- origin/main / C+D HEAD / EF base SHAは開始時点の監査記録として上記に固定する。fetchは`.git/FETCH_HEAD`権限エラーで更新できなかった。
+- production/default・HouseToDo・production secretsは操作しない。PR作成後に停止し、auto-mergeしない。
+
+## 目的
+
+Phase Eはvisual / PWA / icon / Service Worker / lint polish、Phase Fはperformance、iPhone / Push / deep link、staging総合smoke、最終release auditを対象とする。新機能追加は行わない。
+
+## 実装・検証記録
+
+- icon-rainbowのCalendar / checklist / plus / wallet / gearをSVGとして`public/icons/navigation/`へ取り込み、CSS maskでselected / unselectedを切り替える。
+- LifeHub専用app iconを`public/icons/app/lifehub.svg`として追加し、manifestとapple-touch-iconから参照する。
+- Service Worker登録を`src/lib/service-worker.ts`へ集約し、起動時update確認と既存Push listenerを維持する。
+- Quick Add / popoverのdecorative shadowを除去し、lint warning 0、typecheck、build、M14 Phase E+F local E2Eを確認済み。
+- local E2E evidence: `artifacts/evidence/m14/phase-ef/`。performance記録は`performance-local.json`。
+
+## RC audit record
+
+- staging target: `lifehub-staging` / `https://lifehub-staging.427harinn.workers.dev`のみ。
+- post-deploy health: HTTP 200、`{"ok":true,"app":"LifeHub","environment":"staging"}`。
+- D1 migration state: `No migrations to apply!`。Phase E+Fでmigrationは追加・適用していない。7403は今回発生していない。
+- Worker version: `8a6fccf5-245a-41cb-ad0c-866f5f8ce422`。
+- staging smoke: 3件 + 9件 + M8再実行1件 + M14 A+B 7件 = 20 pass。M14 C+D 3件、E+F 2件、performance 1件を含む。M8の既存selector / implicit planned状態を修正して再pass。
+- performance: staging initial DOMContentLoaded 154.8ms、FCP 188ms、CLS 0。route transitionはDaily 29ms、Money 35ms、Money Analysis 230ms、Search 115ms、Settings 84ms。client JS 351.04 kB raw / 102.00 kB gzip、client CSS 45.83 kB raw / 7.72 kB gzip、Worker 221.30 kB raw / 43.29 kB gzip。
+- automated release audit: P0 / P1 blockerなし、error / retry、auth、Calendar / Daily、Money / Analysis、Search、Notification API、Archive、PWA manifest / SWをpass。release blocker 0（自動 / staging scope）。
+- manual gate: この実行環境からiPhone Safari実機を操作できないため、今回のiPhone Add to Home Screen / standalone / safe-area / session、Event / summary Push受信、tap / cold-start deep linkは未再確認。M7の既存実機記録は保持するが、production release前の手動確認として残す。
+- RC commit SHAはPR直前に確定する。production/default・HouseToDoは操作していない。
 
 ## 開始記録（2026-09-17）
 

@@ -3,17 +3,12 @@ import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import "./styles.css";
 import { getBrowserCapabilities } from "./lib/capabilities";
+import { getLifeHubServiceWorkerRegistration } from "./lib/service-worker";
 
 if (import.meta.env.PROD && getBrowserCapabilities().serviceWorkerSupported) {
   window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/sw.js", { scope: "/" });
-  });
-}
-
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/sw.js");
-  });
+    void getLifeHubServiceWorkerRegistration().catch(() => undefined);
+  }, { once: true });
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

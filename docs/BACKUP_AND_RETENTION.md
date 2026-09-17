@@ -11,6 +11,10 @@ LifeHubは個人用の長期利用アプリであり、予定・お金・日メ�
 - 古い履歴: 端末IndexedDB
 - 機種変更・復元用: JSONバックアップ
 
+## M14 Phase E+F release boundary
+
+Release Candidateのbackup確認はJSON export、archive history、error / retryの回帰に限定する。Phase E+Fではschema migrationやdestructive full migrationを追加・実行せず、stagingのmigration status確認と専用fixture userによる既存回帰だけを許可する。通常のbackup exportは従来どおりD1 / archiveを読み取り、ユーザー状態を変更しない。
+
 ---
 
 ## 2. 基本方針
