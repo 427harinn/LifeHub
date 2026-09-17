@@ -6,7 +6,7 @@ import {
 import { BottomSheet, Button, DateInput, FormRow, Input, MobileShell, NavIcon } from "./components/ui";
 import { SwipeActionRow } from "./components/SwipeActionRow";
 import { AccountSettings } from "./components/AccountSettings";
-import { NotificationOffsetPicker, NotificationSettingsSection, notificationSummary } from "./components/NotificationSettings";
+import { NotificationOffsetPicker, NotificationSettingsSection } from "./components/NotificationSettings";
 import { getNotificationTemplates } from "./api/notifications";
 import type { NotificationTemplate } from "./worker/types";
 import { defaultEndTimeForStart } from "./lib/event-time";
@@ -17,6 +17,8 @@ import { ArchiveStorageError, getArchiveMetadata, getArchiveRows, saveArchiveBun
 import { runArchiveBatch } from "./lib/archive-runner";
 import { BackupSettings, MigrationScreen } from "./components/BackupSettings";
 import { getUserState } from "./api/client";
+import { allocateCalendarCellRows, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, moneyAverageDivisorFor, moneyCategoryGroupsFor, recurrenceAfterBaseDateChange, recurrenceSummary, type CalendarBandSegment, type CalendarMoneyItem, type CalendarProjectedEvent, type MoneyChartMode, type MoneyCategoryGroup } from "./lib/app-view-helpers";
+import { notificationSummary } from "./lib/notification-labels";
 
 type Screen = "calendar" | "calendar-search" | "daily" | "money" | "money-analysis" | "settings";
 type AddChoice = "家" | "仕事" | "お金";
@@ -31,10 +33,6 @@ function DataStateMessage({ state, onRetry }: { state: DataLoadState; onRetry: (
   return null;
 }
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
-type CalendarProjectedEvent = { band?: "start" | "middle" | "end"; category: Event["category"]; day: number; date: string; eventId: string; isMultiDay?: boolean; kind: "single"; label: string };
-type CalendarBandSegment = { category: Event["category"]; endColumn: number; isEnd: boolean; isStart: boolean; label: string; lane: number; row: number; startColumn: number };
-type CalendarMoneyItem = { amount: number; category: "expense" | "income"; isSummary?: boolean; label: string };
-type CalendarMoneySummary = { amount: number; category: "expense" | "income" };
 
 const settingsDetailFromPath = (): SettingsDetail | null => {
   const detail = window.location.pathname.match(/^\/settings\/([^/]+)$/)?.[1];
@@ -55,39 +53,6 @@ const monthEnd = (value: string) => { const date = dateFromKey(value); return da
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"] as const;
 const eventIdentity = (event: Event) => event.occurrenceKey ?? event.id;
 const recurrenceWeekday = (date: string) => dateFromKey(date).getDay();
-const recurrenceFrequencyLabel = (frequency: RecurrenceRuleInput["frequency"]) => frequency === "daily" ? "日ごと" : frequency === "weekly" ? "週間ごと" : "か月ごと";
-const recurrenceWeekdayText = (weekdays: number[], startDate: string) => {
-  const selected = weekdays.length > 0 ? weekdays : [recurrenceWeekday(startDate)];
-  return selected.map((weekday) => weekdayLabels[weekday]).join("・");
-};
-const recurrenceEndText = (endsOn: string | null | undefined) => endsOn ? `（〜${formatDate(endsOn)}）` : "";
-export const recurrenceSummary = (recurrence: RecurrenceRuleInput | null | undefined, startDate = "2026-01-01", period = false) => {
-  if (!recurrence) return "なし";
-  const interval = recurrence.interval || 1;
-  const prefix = interval === 1
-    ? recurrence.frequency === "daily" ? "毎日" : recurrence.frequency === "weekly" ? "毎週" : "毎月"
-    : `${interval}${recurrenceFrequencyLabel(recurrence.frequency)}`;
-  if (period) return `${prefix}${recurrenceEndText(recurrence.endsOn)}`;
-  if (recurrence.frequency === "daily") return `${prefix}${recurrenceEndText(recurrence.endsOn)}`;
-  if (recurrence.frequency === "weekly") {
-    const weekdays = recurrenceWeekdayText(recurrence.weekdays ?? [], startDate);
-    const weekdaySuffix = (recurrence.weekdays ?? [recurrenceWeekday(startDate)]).length === 1 ? `${weekdays}曜` : ` ${weekdays}`;
-    return `${prefix}${weekdaySuffix}${recurrenceEndText(recurrence.endsOn)}`;
-  }
-  return `${prefix}${recurrence.dayOfMonth ?? Number(startDate.slice(-2))}日${recurrenceEndText(recurrence.endsOn)}`;
-};
-export const recurrenceAfterBaseDateChange = (recurrence: RecurrenceRuleInput | null, previousDate: string, nextDate: string): RecurrenceRuleInput | null => {
-  if (!recurrence || previousDate === nextDate) return recurrence;
-  const next = { ...recurrence, startsOn: nextDate };
-  if (recurrence.frequency === "monthly" && (recurrence.dayOfMonth === null || recurrence.dayOfMonth === undefined || recurrence.dayOfMonth === Number(previousDate.slice(-2)))) next.dayOfMonth = Number(nextDate.slice(-2));
-  if (recurrence.frequency === "weekly") {
-    const weekdays = recurrence.weekdays ?? [recurrenceWeekday(previousDate)];
-    if (weekdays.length === 1 && weekdays[0] === recurrenceWeekday(previousDate)) next.weekdays = [recurrenceWeekday(nextDate)];
-  }
-  return next;
-};
-export const formatDate = (value: string, includeYear = false) => { const date = dateFromKey(value); return `${includeYear ? `${date.getFullYear()}年` : ""}${date.getMonth() + 1}月${date.getDate()}日(${weekdayLabels[date.getDay()]})`; };
-export const formatDateRange = (startDate: string, endDate: string, includeYear = false) => startDate === endDate ? formatDate(startDate, includeYear) : `${formatDate(startDate, includeYear)}〜${formatDate(endDate, includeYear)}`;
 const formatMonth = (value: string) => { const date = dateFromKey(value); return `${date.getFullYear()}年${date.getMonth() + 1}月`; };
 const shiftMonth = (value: string, amount: number) => { const date = dateFromKey(value); date.setMonth(date.getMonth() + amount, 1); return dateKey(date); };
 const shiftDate = (value: string, amount: number) => { const date = dateFromKey(value); date.setDate(date.getDate() + amount); return dateKey(date); };
@@ -174,7 +139,6 @@ function useRecentEntryOpenGuard(suppressInitialOpen: boolean) {
   };
   return [open, setOpen] as const;
 }
-export const weekEnd = (value: string, weekStartsOn: number) => { const day = dateFromKey(value).getDay(); const normalizedStart = ((weekStartsOn % 7) + 7) % 7; return shiftDate(value, (normalizedStart + 6 - day + 7) % 7); };
 const eventMatchesFilter = (event: Event, filter: CalendarFilter) => filter === "all" || filter === event.category;
 const fixtureEventMatchesFilter = (event: CalendarProjectedEvent, filter: CalendarFilter) => filter !== "money" && (filter === "all" || filter === event.category);
 const eventOverlapsDate = (event: Event, date: string) => event.timingType === "period"
@@ -183,8 +147,6 @@ const eventOverlapsDate = (event: Event, date: string) => event.timingType === "
 const eventTimeLabel = (event: Event) => event.timingType === "period" ? "期間" : event.allDay ? "終日" : `${event.startTime}〜${event.endTime}`;
 const searchDateLabel = (value: string) => formatDate(value, dateFromKey(value).getFullYear() !== new Date().getFullYear());
 const moneyAmountLabel = (amount: number) => `${amount >= 0 ? "+" : "-"}${Math.abs(amount).toLocaleString("ja-JP")}`;
-export const calendarMoneyEntriesForDate = (date: string, _today: string, projection?: MoneyProjection): CalendarMoneyItem[] => projection ? projection.occurrences.filter((item) => item.date === date).map((item) => ({ amount: item.signedAmount ?? (item.type === "income" ? item.plannedAmount : -item.plannedAmount), category: item.type, label: item.title })) : [];
-export const calendarMoneySummaryForDate = (date: string, today: string, projection?: MoneyProjection): CalendarMoneySummary | null => { const entries = calendarMoneyEntriesForDate(date, today, projection); if (entries.length === 0) return null; const amount = entries.reduce((total, entry) => total + entry.amount, 0); return { amount, category: amount >= 0 ? "income" : "expense" }; };
 const calendarMoneyForCell = (date: string | null, filter: CalendarFilter, today: string, projection?: MoneyProjection): CalendarMoneyItem[] => {
   if (!date || filter === "home" || filter === "work") return [];
   const entries = calendarMoneyEntriesForDate(date, today, projection);
@@ -192,23 +154,6 @@ const calendarMoneyForCell = (date: string | null, filter: CalendarFilter, today
   if (filter === "money") return [...entries.map((entry) => ({ ...entry, isSummary: false })), ...(summary ? [{ ...summary, isSummary: true, label: "収支" }] : [])];
   return summary ? [{ ...summary, isSummary: true, label: "収支" }] : [];
 };
-
-export function allocateCalendarCellRows(events: CalendarProjectedEvent[], bandCount: number, money: CalendarMoneyItem[] | null, rowCapacity = 4, maxVisibleEvents = rowCapacity) {
-  const moneyItems = money ?? [];
-  const summary = moneyItems.find((item) => item.isSummary);
-  const details = moneyItems.filter((item) => !item.isSummary);
-  const reservedSummaryRows = summary ? 1 : 0;
-  const eventCapacity = Math.max(0, rowCapacity - reservedSummaryRows);
-  const visibleBandCount = Math.min(eventCapacity, bandCount);
-  const singleEventCapacity = Math.max(0, eventCapacity - visibleBandCount);
-  const visibleEvents = events.slice(0, Math.min(maxVisibleEvents, singleEventCapacity));
-  const detailCapacity = Math.max(0, rowCapacity - visibleBandCount - visibleEvents.length - reservedSummaryRows);
-  const visibleMoney = [...details.slice(0, detailCapacity), ...(summary ? [summary] : [])];
-  const hiddenDetailCount = Math.max(0, details.length - visibleMoney.filter((item) => !item.isSummary).length);
-  const hiddenCount = Math.max(0, bandCount - visibleBandCount) + Math.max(0, events.length - visibleEvents.length) + hiddenDetailCount;
-  const contentRows = visibleEvents.length + visibleMoney.length;
-  return { contentRows, emptyRows: 0, hiddenCount, summaryRowIndex: summary ? contentRows : null, visibleBandCount, visibleEvents, visibleMoney };
-}
 
 function toCalendarFixtureEvents(events: Event[], month: string): CalendarProjectedEvent[] {
   const firstDate = monthStart(month);
@@ -294,7 +239,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
   const candidateValue = Number(new URLSearchParams(window.location.search).get("calendarMax"));
   const autoRowCapacity = calendarCellHeight > 0 ? Math.max(1, Math.min(4, Math.floor((calendarCellHeight - 33) / 14))) : 4;
   const rowCapacity = candidateValue === 2 || candidateValue === 3 || candidateValue === 4 ? Math.min(autoRowCapacity, candidateValue) : autoRowCapacity;
-  const bandFitsRowAllocation = (segment: CalendarBandSegment) => {
+  const renderedBands = useMemo(() => bands.filter((segment) => {
     if (filter !== "all") return segment.lane < rowCapacity;
     for (let column = segment.startColumn; column <= segment.endColumn; column += 1) {
       const cellIndex = segment.row * 7 + column - 1;
@@ -305,8 +250,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
       if (segment.lane >= rowCapacity - reservedRows) return false;
     }
     return true;
-  };
-  const renderedBands = useMemo(() => bands.filter(bandFitsRowAllocation), [bands, filter, rowCapacity, cells, monthIndex, year, today, money]);
+  }), [bands, filter, rowCapacity, cells, monthIndex, year, today, money]);
   const bandLaneCountByCell = useMemo(() => renderedBands.reduce<Record<string, number>>((counts, segment) => { for (let column = segment.startColumn; column <= segment.endColumn; column += 1) { const key = `${segment.row}:${column}`; counts[key] = Math.max(counts[key] ?? 0, segment.lane + 1); } return counts; }, {}), [renderedBands]);
   return <main className="screen-page calendar-page">
     <header className="screen-header"><h1>カレンダー</h1><button aria-label="検索" className="icon-button" onClick={onSearch} type="button"><NavIcon name="search" /></button></header>
@@ -611,26 +555,6 @@ export function MoneyInlineDetail({ item, onActual, onEdit, id }: { item: MoneyI
 function MoneyChoiceSheet({ open, title, options, onClose, onSelect }: { open: boolean; title: string; options: Array<{ label: string; value: string }>; onClose: () => void; onSelect: (value: string) => void }) {
   return <BottomSheet open={open} title={title} onClose={onClose}><div className="event-option-sheet">{options.map((option) => <button className="event-option-sheet__option" key={option.value} onClick={() => onSelect(option.value)} type="button"><span>{option.label}</span></button>)}</div></BottomSheet>;
 }
-
-export type MoneyChartMode = "forecast" | "actual";
-type MoneyCategoryGroup = { amount: number; color: string; colorKey: string; name: string };
-
-export const moneyAverageDivisorFor = (year: number, currentMonth: string, mode: MoneyChartMode): number | null => {
-  if (mode === "forecast") return 12;
-  const currentYear = Number(currentMonth.slice(0, 4));
-  if (year < currentYear) return 12;
-  if (year > currentYear) return null;
-  const month = Number(currentMonth.slice(5, 7));
-  return Number.isInteger(month) && month >= 1 && month <= 12 ? month : 12;
-};
-
-export const moneyCategoryGroupsFor = (occurrences: MoneyItem[], mode: MoneyChartMode = "forecast"): MoneyCategoryGroup[] => Array.from(occurrences.filter((item) => item.type === "expense" && (mode === "forecast" || item.settlementStatus === "actual" || item.settlementStatus === "estimated_actual")).reduce((map, item) => {
-    const key = item.category?.id ?? item.category?.name ?? "other";
-    const current = map.get(key) ?? { amount: 0, color: moneyCategoryColor(item.category), colorKey: moneyCategoryColorKey(item.category), name: item.category?.name ?? "その他" };
-    current.amount += Math.abs(item.effectiveAmount ?? item.signedAmount ?? item.plannedAmount);
-    map.set(key, current);
-    return map;
-  }, new Map<string, MoneyCategoryGroup>()).values()).sort((left, right) => right.amount - left.amount);
 
 function MoneyModeToggle({ mode, onChange, label = "支出表示" }: { mode: MoneyChartMode; onChange: (mode: MoneyChartMode) => void; label?: string }) {
   return <div aria-label={label} className="money-chart-mode-switch" role="group"><button aria-pressed={mode === "forecast"} onClick={() => onChange("forecast")} type="button">見込み</button><button aria-pressed={mode === "actual"} onClick={() => onChange("actual")} type="button">実績</button></div>;

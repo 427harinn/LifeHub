@@ -59,7 +59,9 @@ production/defaultは明示的なリリース作業まで触れません。
 
 ## 現在の段階
 
-**Milestone 4: Calendar + Daily MVP / First Stagingを実装完了（PR #4 review中）です。**
+**Milestone 14: Release Readiness Phase E+F の実装・staging RC監査を完了しました。**
+
+Phase A-Dまでの実装を基礎に、最終polish、PWA / Service Worker整理、performance計測、staging Release Candidate smokeと監査を完了しました。production Worker / D1 / secrets、default branch、HouseToDoは対象外です。iPhone実機の最終再確認はproduction release前の手動gateとして残しています。PR作成後は停止し、自動mergeは行いません。
 
 M1の完了記録を維持したまま、最新`main`からM1とは別のbranchでAuth / Session / UserSettings / navigation shellを実装しています。M2ではEvent登録やMoney本機能には着手しません。
 

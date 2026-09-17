@@ -24,8 +24,9 @@ async function chooseDate(page: import("@playwright/test").Page, date: string) {
 
 async function fillMoney(page: import("@playwright/test").Page, type: "expense" | "income", title: string, amount: string, date: string) {
   if (type === "income") { await page.getByRole("button", { name: "お金の種類" }).click(); await page.getByRole("dialog", { name: "種類" }).getByRole("button", { name: "収入" }).click(); }
+  if (type === "income") { await page.getByRole("button", { name: "金額の状態" }).click(); await page.getByRole("dialog", { name: "金額の状態" }).getByRole("button", { name: "予定" }).click(); }
   await page.getByLabel("項目名").fill(title);
-  await page.getByLabel("金額").fill(amount);
+  await page.getByLabel("金額", { exact: true }).fill(amount);
   await chooseDate(page, date);
 }
 

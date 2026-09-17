@@ -13,6 +13,12 @@ HouseToDoから変更しないもの:
 - 角丸
 - 余白
 - フォント
+
+### M14 Phase E+F tokens
+
+- Navigation asset iconは23pxを基本、中央Addのみ27pxとする。SVGは`currentColor`相当のmaskで描画し、selectedは`var(--color-primary-strong)`、unselectedはneutralを継承する。
+- PWA app iconは`public/icons/app/lifehub.svg`で管理し、navigation素材と混在させない。
+- Bottom Navigationはwhite surface、thin top border、no decorative shadow、icons-onlyを維持する。
 - 文字サイズの基本階層
 - ボタン高さ
 - フォーム行の密度

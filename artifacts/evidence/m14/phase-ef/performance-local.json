@@ -1,0 +1,93 @@
+{
+  "measuredAt": "2026-09-17T03:12:32.591Z",
+  "environment": "http://127.0.0.1:5173",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "routes": [
+    {
+      "route": "calendar",
+      "transitionMs": 0,
+      "vitals": {
+        "domContentLoaded": 77.80000000074506,
+        "loadEvent": 78,
+        "fcp": 116,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "daily",
+      "transitionMs": 39,
+      "vitals": {
+        "domContentLoaded": 77.80000000074506,
+        "loadEvent": 78,
+        "fcp": 116,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "money",
+      "transitionMs": 45,
+      "vitals": {
+        "domContentLoaded": 77.80000000074506,
+        "loadEvent": 78,
+        "fcp": 116,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "money-analysis",
+      "transitionMs": 141,
+      "vitals": {
+        "domContentLoaded": 77.80000000074506,
+        "loadEvent": 78,
+        "fcp": 116,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "search",
+      "transitionMs": 171,
+      "vitals": {
+        "domContentLoaded": 77.80000000074506,
+        "loadEvent": 78,
+        "fcp": 116,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    },
+    {
+      "route": "settings",
+      "transitionMs": 67,
+      "vitals": {
+        "domContentLoaded": 77.80000000074506,
+        "loadEvent": 78,
+        "fcp": 116,
+        "lcp": null,
+        "cls": 0,
+        "inp": null,
+        "tbt": null
+      }
+    }
+  ],
+  "notes": {
+    "inp": "not available in this automated sample",
+    "tbt": "recorded from production build output when available",
+    "highDensity": "no fixture mutation in this smoke sample"
+  }
+}

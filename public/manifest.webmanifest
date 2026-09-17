@@ -2,9 +2,24 @@
   "name": "LifeHub",
   "short_name": "LifeHub",
   "description": "生活の予定・お金・記録をひとつの時間軸で扱うアプリ",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/calendar",
   "display": "standalone",
   "background_color": "#fcfbf7",
   "theme_color": "#f2a766",
-  "lang": "ja"
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/icons/app/lifehub.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app/lifehub.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }

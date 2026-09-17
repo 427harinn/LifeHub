@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { NotificationOffsetPicker, NotificationSettingsSection, notificationSummary, TemplateManager } from "./NotificationSettings";
+import { NotificationOffsetPicker, NotificationSettingsSection, TemplateManager } from "./NotificationSettings";
+import { notificationSummary } from "../lib/notification-labels";
 
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "", updatedAt: "" };
 
