@@ -33,7 +33,7 @@ test("Bottom Navigation assets, PWA manifest, and one SW registration", async ({
   await page.screenshot({ path: path.join(evidenceDir, "03-selected-daily-390x844.png"), fullPage: true });
 
   await nav.getByRole("button", { name: "お金" }).click();
-  await expect(page.getByRole("heading", { name: "お金" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await expect(nav.getByRole("button", { name: "お金" })).toHaveAttribute("aria-current", "page");
   await page.screenshot({ path: path.join(evidenceDir, "04-selected-money-390x844.png"), fullPage: true });
 
@@ -45,7 +45,7 @@ test("Bottom Navigation assets, PWA manifest, and one SW registration", async ({
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "11-final-calendar-390x844.png"), fullPage: true });
   await nav.getByRole("button", { name: "お金" }).click();
-  await expect(page.getByRole("heading", { name: "お金" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "12-final-money-390x844.png"), fullPage: true });
   await nav.getByRole("button", { name: "設定" }).click();
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
