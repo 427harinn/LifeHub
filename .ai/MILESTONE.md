@@ -29,7 +29,7 @@ Phase Eはvisual / PWA / icon / Service Worker / lint polish、Phase Fはperform
 - performance: staging initial DOMContentLoaded 154.8ms、FCP 188ms、CLS 0。route transitionはDaily 29ms、Money 35ms、Money Analysis 230ms、Search 115ms、Settings 84ms。client JS 351.04 kB raw / 102.00 kB gzip、client CSS 45.83 kB raw / 7.72 kB gzip、Worker 221.30 kB raw / 43.29 kB gzip。
 - automated release audit: P0 / P1 blockerなし、error / retry、auth、Calendar / Daily、Money / Analysis、Search、Notification API、Archive、PWA manifest / SWをpass。release blocker 0（自動 / staging scope）。
 - manual gate: この実行環境からiPhone Safari実機を操作できないため、今回のiPhone Add to Home Screen / standalone / safe-area / session、Event / summary Push受信、tap / cold-start deep linkは未再確認。M7の既存実機記録は保持するが、production release前の手動確認として残す。
-- RC commit SHAはPR直前に確定する。production/default・HouseToDoは操作していない。
+- RC commit SHA: `5efc5e227989d3d9ab057ea54ae70547175a4f42`（PR #18 review-fix commit）。production/default・HouseToDoは操作していない。
 
 ## Review-fix RC update（2026-09-17）
 
