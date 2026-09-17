@@ -375,6 +375,62 @@ describe("EventForm timed start defaults", () => {
   });
 });
 
+describe("EventForm last-used notification defaults", () => {
+  it("uses a category preference for a new event and keeps none as an explicit value", () => {
+    renderEventForm({ lastUsedNotification: { mode: "custom", templateId: null, offsets: [30] } });
+    expect(screen.getByRole("button", { name: "通知" })).toHaveTextContent("30分前");
+
+    const { unmount } = renderEventForm({ lastUsedNotification: { mode: "none", templateId: null, offsets: [] } });
+    expect(screen.getAllByRole("button", { name: "通知" }).at(-1)).toHaveTextContent("なし");
+    unmount();
+  });
+
+  it("prefers an existing event notification over the category preference", () => {
+    renderEventForm({ event: timedEvent({ notifications: [60] }), lastUsedNotification: { mode: "custom", templateId: null, offsets: [30] } });
+    expect(screen.getByRole("button", { name: "通知" })).toHaveTextContent("1時間前");
+  });
+
+  it("restores the current template and falls back to its stored snapshot when deleted", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => Promise.resolve(response({ templates: [{ id: "template-1", userId: "user-1", name: "出勤用", offsets: [{ offsetMinutes: 60 }, { offsetMinutes: 30 }], isDefault: false, createdAt: "", updatedAt: "" }] })));
+    renderEventForm({ lastUsedNotification: { mode: "template", templateId: "template-1", offsets: [1440, 30] } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "通知" })).toHaveTextContent("1時間前、30分前"));
+    fireEvent.click(screen.getByRole("button", { name: "通知" }));
+    const templateDialog = await screen.findByRole("dialog", { name: "通知" });
+    await waitFor(() => expect(within(templateDialog).getByRole("button", { name: /出勤用/ })).toHaveAttribute("aria-pressed", "true"));
+    fireEvent.click(within(templateDialog).getByRole("button", { name: "閉じる" }));
+
+    vi.restoreAllMocks();
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => Promise.resolve(response({ templates: [] })));
+    const { unmount } = renderEventForm({ lastUsedNotification: { mode: "template", templateId: "deleted-template", offsets: [1440, 30] } });
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "通知" }).at(-1)).toHaveTextContent("1日前、30分前"));
+    fireEvent.click(screen.getAllByRole("button", { name: "通知" }).at(-1)!);
+    const dialog = await screen.findByRole("dialog", { name: "通知" });
+    expect(within(dialog).queryByRole("button", { name: /出勤用/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText("1日前")).toBeChecked();
+    expect(within(dialog).getByLabelText("30分前")).toBeChecked();
+    unmount();
+  });
+
+  it("updates last-used only after a successful new event save", async () => {
+    const saved = timedEvent({ title: "新しい予定", notifications: [30] });
+    const onPreferenceSaved = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ event: saved }));
+    renderEventForm({ lastUsedNotification: { mode: "custom", templateId: null, offsets: [30] }, onNotificationPreferenceSaved: onPreferenceSaved });
+    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "新しい予定" } });
+    fireEvent.click(screen.getByRole("button", { name: "登録" }));
+    await waitFor(() => expect(onPreferenceSaved).toHaveBeenCalledWith("home", { mode: "custom", templateId: null, offsets: [30] }));
+
+    vi.restoreAllMocks();
+    const failedPreferenceSaved = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ message: "failed" }, 500));
+    renderEventForm({ lastUsedNotification: { mode: "custom", templateId: null, offsets: [60] }, onNotificationPreferenceSaved: failedPreferenceSaved });
+    fireEvent.change(screen.getAllByLabelText("タイトル").at(-1)!, { target: { value: "失敗する予定" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "登録" }).at(-1)!);
+    await waitFor(() => expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("通信に失敗しました。"));
+    expect(failedPreferenceSaved).not.toHaveBeenCalled();
+  });
+});
+
 describe("Calendar adaptive row allocation", () => {
   it("shares rows across bands and single-day events", () => {
     expect(allocateCalendarCellRows([projectedEvent("a"), projectedEvent("b")], 2, null, 4)).toMatchObject({ hiddenCount: 0, visibleEvents: [{ eventId: "a" }, { eventId: "b" }], visibleMoney: [] });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BACKUP_FORMAT, BACKUP_SCHEMA_VERSION, backupChecksum, createBackupManifest, normalizeBackup, validateBackup, type BackupCloudPayload, type LifeHubBackup } from "./backup";
 
 const userId = "user-1";
-const settings = { userId, timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+const settings = { userId, timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", lastUsedNotificationHome: { mode: "none" as const, templateId: null, offsets: [] }, lastUsedNotificationWork: { mode: "none" as const, templateId: null, offsets: [] }, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
 const cloud = (): BackupCloudPayload => ({ settings, events: [], recurrenceRules: [], eventOverrides: [], eventNotifications: [], notificationTemplates: [], notificationDeliveries: [], dailyNotes: [], moneyCategories: [], moneyItems: [], moneyOverrides: [], moneySettlements: [] });
 
 const makeBackup = async (changes: Partial<BackupCloudPayload> = {}) => {

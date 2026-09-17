@@ -6,6 +6,7 @@ import {
   DEFAULT_WEEK_STARTS_ON
 } from "../lib/constants";
 import type { UserSettings } from "../types";
+import { notificationPreferenceFromStorage, notificationPreferenceToStorage } from "../../lib/notification-preferences";
 
 type SettingsRow = {
   user_id: string;
@@ -16,6 +17,8 @@ type SettingsRow = {
   evening_summary_enabled: number;
   evening_summary_time: string;
   period_default_deadline_time: string;
+  last_used_notification_home: string | null;
+  last_used_notification_work: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,11 +32,13 @@ const toSettings = (row: SettingsRow): UserSettings => ({
   eveningSummaryEnabled: row.evening_summary_enabled === 1,
   eveningSummaryTime: row.evening_summary_time,
   periodDefaultDeadlineTime: row.period_default_deadline_time,
+  lastUsedNotificationHome: notificationPreferenceFromStorage(row.last_used_notification_home),
+  lastUsedNotificationWork: notificationPreferenceFromStorage(row.last_used_notification_work),
   createdAt: row.created_at,
   updatedAt: row.updated_at
 });
 
-export const userSettingsSelect = "user_id, timezone, week_starts_on, morning_summary_enabled, morning_summary_time, evening_summary_enabled, evening_summary_time, period_default_deadline_time, created_at, updated_at";
+export const userSettingsSelect = "user_id, timezone, week_starts_on, morning_summary_enabled, morning_summary_time, evening_summary_enabled, evening_summary_time, period_default_deadline_time, last_used_notification_home, last_used_notification_work, created_at, updated_at";
 
 export class SettingsRepository {
   constructor(private readonly db: D1Database) {}
@@ -42,8 +47,8 @@ export class SettingsRepository {
     const existing = await this.db.prepare(`SELECT ${userSettingsSelect} FROM user_settings WHERE user_id = ?`).bind(userId).first<SettingsRow>();
     if (existing) return toSettings(existing);
     await this.db.prepare(
-      "INSERT INTO user_settings (user_id, timezone, week_starts_on, morning_summary_enabled, morning_summary_time, evening_summary_enabled, evening_summary_time, period_default_deadline_time, created_at, updated_at) VALUES (?, ?, ?, 1, ?, 1, ?, ?, ?, ?)"
-    ).bind(userId, timezone, DEFAULT_WEEK_STARTS_ON, DEFAULT_MORNING_SUMMARY_TIME, DEFAULT_EVENING_SUMMARY_TIME, DEFAULT_PERIOD_DEADLINE_TIME, now, now).run();
+      "INSERT INTO user_settings (user_id, timezone, week_starts_on, morning_summary_enabled, morning_summary_time, evening_summary_enabled, evening_summary_time, period_default_deadline_time, last_used_notification_home, last_used_notification_work, created_at, updated_at) VALUES (?, ?, ?, 1, ?, 1, ?, ?, ?, ?, ?, ?)"
+    ).bind(userId, timezone, DEFAULT_WEEK_STARTS_ON, DEFAULT_MORNING_SUMMARY_TIME, DEFAULT_EVENING_SUMMARY_TIME, DEFAULT_PERIOD_DEADLINE_TIME, notificationPreferenceToStorage({ mode: "none", templateId: null, offsets: [] }), notificationPreferenceToStorage({ mode: "none", templateId: null, offsets: [] }), now, now).run();
     const created = await this.db.prepare(`SELECT ${userSettingsSelect} FROM user_settings WHERE user_id = ?`).bind(userId).first<SettingsRow>();
     if (!created) throw new Error("UserSettings could not be created");
     return toSettings(created);
@@ -58,11 +63,13 @@ export class SettingsRepository {
       morningSummaryTime: input.morningSummaryTime ?? current.morningSummaryTime,
       eveningSummaryEnabled: input.eveningSummaryEnabled ?? current.eveningSummaryEnabled,
       eveningSummaryTime: input.eveningSummaryTime ?? current.eveningSummaryTime,
-      periodDefaultDeadlineTime: input.periodDefaultDeadlineTime ?? current.periodDefaultDeadlineTime
+      periodDefaultDeadlineTime: input.periodDefaultDeadlineTime ?? current.periodDefaultDeadlineTime,
+      lastUsedNotificationHome: input.lastUsedNotificationHome ?? current.lastUsedNotificationHome,
+      lastUsedNotificationWork: input.lastUsedNotificationWork ?? current.lastUsedNotificationWork
     };
     await this.db.prepare(
-      "UPDATE user_settings SET timezone = ?, week_starts_on = ?, morning_summary_enabled = ?, morning_summary_time = ?, evening_summary_enabled = ?, evening_summary_time = ?, period_default_deadline_time = ?, updated_at = ? WHERE user_id = ?"
-    ).bind(next.timezone, next.weekStartsOn, next.morningSummaryEnabled ? 1 : 0, next.morningSummaryTime, next.eveningSummaryEnabled ? 1 : 0, next.eveningSummaryTime, next.periodDefaultDeadlineTime, now, userId).run();
+      "UPDATE user_settings SET timezone = ?, week_starts_on = ?, morning_summary_enabled = ?, morning_summary_time = ?, evening_summary_enabled = ?, evening_summary_time = ?, period_default_deadline_time = ?, last_used_notification_home = ?, last_used_notification_work = ?, updated_at = ? WHERE user_id = ?"
+    ).bind(next.timezone, next.weekStartsOn, next.morningSummaryEnabled ? 1 : 0, next.morningSummaryTime, next.eveningSummaryEnabled ? 1 : 0, next.eveningSummaryTime, next.periodDefaultDeadlineTime, notificationPreferenceToStorage(next.lastUsedNotificationHome), notificationPreferenceToStorage(next.lastUsedNotificationWork), now, userId).run();
     return this.getOrCreate(userId, now);
   }
 
