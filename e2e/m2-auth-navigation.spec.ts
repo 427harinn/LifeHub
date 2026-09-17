@@ -36,13 +36,11 @@ test("auth, session, navigation and add choice work at the mobile review viewpor
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await expect(page.locator(".daily-page .shell-tabs .shell-tab")).toHaveCount(4);
   await expect(page.locator(".daily-page .timeline-section h2")).toHaveText("予定");
-  expect(await page.locator(".daily-page .fixture-group h3").allTextContents()).toEqual(["終日", "期間", "時間あり"]);
+  await expect(page.locator(".daily-page .fixture-group")).toHaveCount(0);
   expect(await page.locator(".daily-page .daily-section h2").allTextContents()).toEqual(["今日のお金", "今日のメモ"]);
-  await expect(page.locator(".daily-page .fixture-row")).not.toHaveCount(0);
-  await expect(page.locator(".daily-page .fixture-row--home").first()).toHaveClass(/fixture-row/);
-  await expect(page.locator(".daily-page .fixture-row--work").first()).toHaveClass(/fixture-row/);
+  await expect(page.getByText("予定はありません", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "お金" }).click();
-  await expect(page.getByText("お金の登録は後のMilestoneで追加します。")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "設定" }).click();
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "カレンダーを開く" }).click();

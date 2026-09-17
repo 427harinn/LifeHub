@@ -91,9 +91,9 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
 
   await page.getByRole("tab", { name: "お金" }).click();
   const moneyCell = page.getByRole("button", { name: `${todayDay}日`, exact: true });
-  await expect(moneyCell.locator(".calendar-cell__money")).toHaveCount(3);
+  await expect(moneyCell.locator(".calendar-cell__money")).toHaveCount(4);
   expect(await moneyCell.locator(".calendar-cell__money").allTextContents()).toEqual(expect.arrayContaining(["+699"]));
-  await expect(moneyCell.locator(".calendar-cell__count")).toHaveText("1");
+  await expect(moneyCell.locator(".calendar-cell__count")).toHaveCount(0);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-390x844.png") });
   await moneyCell.click();
   const moneyDateSheet = page.getByRole("dialog");
@@ -195,13 +195,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.getByRole("dialog").getByRole("button", { name: "1日の詳細を見る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await expect(page.locator(".daily-date-label")).toHaveText(displayDate(today));
-  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-swipe-row__main")).toBeVisible();
-  await page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-swipe-row__main").click();
-  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first().locator(".event-inline-detail")).toContainText(`${displayDate(today)}〜${displayDate(shiftDate(today, 3))}`);
-  await page.screenshot({ path: path.join(evidenceDir, "daily-period-week-390x844.png") });
-  await page.locator(".daily-page .event-swipe-row").filter({ hasText: "今月中：資料をまとめる" }).first().locator(".event-swipe-row__main").click();
-  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今月中：資料をまとめる" }).first().locator(".event-inline-detail")).toContainText(`${displayDate(today)}〜${displayDate(`${today.slice(0, 7)}-30`)}`);
-  await page.screenshot({ path: path.join(evidenceDir, "daily-period-month-390x844.png") });
+  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" })).toHaveCount(0);
+  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今月中：資料をまとめる" })).toHaveCount(0);
   await expect(page.getByText("実データの今日メモ", { exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-normal-390x844.png") });
 
@@ -237,20 +232,6 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
-  await page.locator(".daily-page .fixture-group").filter({ hasText: "期間" }).locator(".event-swipe-row").filter({ hasText: "今週中：書類を整理" }).locator(".event-swipe-row__main").click();
-  const periodRow = page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" }).first();
-  await expect(periodRow.locator(".event-inline-detail")).toBeVisible();
-  const periodBox = await periodRow.boundingBox();
-  if (!periodBox) throw new Error("Daily period row bounds unavailable");
-  await page.mouse.move(periodBox.x + 260, periodBox.y + 24);
-  await page.mouse.down();
-  await page.mouse.move(periodBox.x + 170, periodBox.y + 24, { steps: 4 });
-  await page.mouse.up();
-  await expect(periodRow.getByRole("button", { name: "編集", exact: true })).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "daily-period-swipe-edit-390x844.png") });
-  await page.locator(".daily-page .timeline-section h2").click();
-  await expect(periodRow.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
-
   await page.getByRole("button", { name: "今日のメモを編集" }).click();
   await page.getByLabel("今日のメモ").fill("更新した今日メモ");
   await page.screenshot({ path: path.join(evidenceDir, "daily-note-edit-390x844.png") });

@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { allocateCalendarCellRows, App, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, EventForm, formatDate, formatDateRange, moneyAverageDivisorFor, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./App";
-import type { Event, MoneyItem } from "./api/client";
+import type { Event, MoneyItem, MoneyProjection } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
 
 const user = { id: "user-1", email: "me@example.com", displayName: "自分" };
@@ -23,6 +23,11 @@ const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) =
 const moneyItem = (overrides: Partial<MoneyItem> = {}): MoneyItem => ({
   id: "money-1", userId: "user-1", type: "expense", title: "支出", categoryId: "category-1", plannedAmount: 1000, date: "2026-09-01", time: null,
   recurrenceRuleId: null, memo: null, active: true, deletedAt: null, createdAt: "", updatedAt: "", ...overrides
+});
+
+beforeEach(() => {
+  window.history.pushState({}, "", "/calendar");
+  vi.restoreAllMocks();
 });
 
 describe("Money category donut colors", () => {
@@ -147,11 +152,12 @@ describe("LifeHub M2 shell", () => {
       const path = requestPath(input);
       if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
       if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      if (path.includes("/api/calendar")) return Promise.resolve(response({ range: { startDate: "2026-09-01", endDate: "2026-10-12" }, events: [], money: { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] } }));
       return Promise.resolve(response({}));
     });
     render(<App />);
     expect(await screen.findByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: /\d+日$/ })[0]);
+    fireEvent.click((await screen.findAllByRole("button", { name: /\d+日$/ }))[0]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "当日に追加" }));
     expect(screen.getByRole("menu", { name: "この日に追加" })).toBeInTheDocument();
@@ -281,16 +287,17 @@ describe("Money analysis", () => {
       const path = requestPath(input);
       if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
       if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      if (path.includes("/api/calendar")) return Promise.resolve(response({ range: { startDate: "2026-09-01", endDate: "2026-10-12" }, events: [], money: { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] } }));
       if (path.includes("/api/money/year-summary")) return Promise.resolve(response(year));
       if (path.includes("/api/money/month")) return Promise.resolve(response({ occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] }));
       return Promise.resolve(response({}));
     });
     render(<App />);
     await screen.findByRole("heading", { name: "カレンダー" });
-    fireEvent.click(screen.getByRole("button", { name: "お金" }));
-    expect(await screen.findByRole("heading", { name: "お金" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "お金の分析を見る" }));
-    expect(await screen.findByRole("heading", { name: "お金の分析" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("navigation", { name: "主要画面" })).getByRole("button", { name: "お金" }));
+    expect(screen.getByRole("heading", { name: "お金" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "お金の分析を見る" }));
+    expect(screen.getByRole("heading", { name: "お金の分析" })).toBeInTheDocument();
     expect(await screen.findByText("年間のまとめ")).toBeInTheDocument();
     expect(screen.getByText("年間の支出見込み")).toBeInTheDocument();
     expect(screen.getByTestId("money-analysis-month-02")).toBeInTheDocument();
@@ -302,7 +309,7 @@ describe("Money analysis", () => {
     expect(screen.getByRole("button", { name: "お金" })).toHaveAttribute("aria-current", "page");
     expect(fetchMock.mock.calls.some(([input]) => requestPath(input).includes("/api/money/year-summary?year=2026"))).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "お金へ戻る" }));
-    expect(await screen.findByRole("heading", { name: "お金" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "お金" })).toBeInTheDocument();
     window.history.pushState({}, "", "/calendar");
   });
 });
@@ -378,6 +385,7 @@ describe("Calendar adaptive row allocation", () => {
       const path = requestPath(input);
       if (path.endsWith("/api/auth/me")) return Promise.resolve(response({ user }));
       if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
+      if (path.includes("/api/calendar")) return Promise.resolve(response({ range: { startDate: "2026-09-01", endDate: "2026-10-12" }, events: [], money: { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] } }));
       return Promise.resolve(response({ events: [] }));
     });
     render(<App />);
@@ -489,10 +497,15 @@ describe("Calendar date and money projections", () => {
   });
 
   it("projects money details and the daily total separately", () => {
-    const entries = calendarMoneyEntriesForDate("2026-09-10", "2026-09-10");
+    const projection: MoneyProjection = { occurrences: [
+      moneyItem({ id: "expense-1", title: "食費", date: "2026-09-10", plannedAmount: 1500, signedAmount: -1500 }),
+      moneyItem({ id: "income-1", type: "income", title: "副収入", date: "2026-09-10", plannedAmount: 2999, signedAmount: 2999 }),
+      moneyItem({ id: "expense-2", title: "交通費", date: "2026-09-10", plannedAmount: 800, signedAmount: -800 })
+    ], summary: { expenseForecast: 2300, incomeForecast: 2999, remaining: 699 }, days: [] };
+    const entries = calendarMoneyEntriesForDate("2026-09-10", "2026-09-10", projection);
     expect(entries.map((entry) => entry.amount)).toEqual([-1500, 2999, -800]);
-    expect(calendarMoneySummaryForDate("2026-09-10", "2026-09-10")).toMatchObject({ amount: 699, category: "income" });
-    expect(calendarMoneySummaryForDate("2026-09-11", "2026-09-10")).toBeNull();
+    expect(calendarMoneySummaryForDate("2026-09-10", "2026-09-10", projection)).toMatchObject({ amount: 699, category: "income" });
+    expect(calendarMoneySummaryForDate("2026-09-11", "2026-09-10", projection)).toBeNull();
   });
 });
 

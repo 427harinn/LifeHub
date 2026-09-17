@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { NotificationOffsetPicker, NotificationSettingsSection, notificationSummary } from "./NotificationSettings";
+import { NotificationOffsetPicker, NotificationSettingsSection, notificationSummary, TemplateManager } from "./NotificationSettings";
 
 const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "", updatedAt: "" };
 
@@ -27,5 +27,18 @@ describe("notification settings UI", () => {
     expect(screen.getByRole("button", { name: "朝のまとめ通知を切り替え" })).toHaveTextContent("ON");
     expect(screen.getByRole("button", { name: "夜のまとめ通知を切り替え" })).toHaveTextContent("ON");
     expect(screen.getByRole("button", { name: "通知テンプレートを開く" })).toBeInTheDocument();
+  });
+
+  it("renders one shared chevron for template rows and offers retry on load failure", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ templates: [{ id: "template-1", name: "朝の予定", offsets: [{ id: "offset-1", templateId: "template-1", offsetMinutes: 30 }] }] }), { status: 200, headers: { "content-type": "application/json" } }));
+    render(<TemplateManager onClose={vi.fn()} open />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("テンプレートを読み込めませんでした。");
+    fireEvent.click(screen.getByRole("button", { name: "テンプレートを再試行" }));
+    const row = await screen.findByRole("button", { name: /朝の予定/ });
+    expect(row.querySelectorAll(".form-row__chevron")).toHaveLength(1);
+    expect((row.textContent?.match(/›/g) ?? []).length).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -8,9 +8,10 @@ type FormRowProps = {
   className?: string;
   ariaLabel?: string;
   chevron?: boolean;
+  disabled?: boolean;
 };
 
-export function FormRow({ label, summary, children, onClick, className = "", ariaLabel, chevron = Boolean(onClick) }: FormRowProps) {
+export function FormRow({ label, summary, children, onClick, className = "", ariaLabel, chevron = Boolean(onClick), disabled = false }: FormRowProps) {
   const content = (
     <>
       <span className="form-row__label">{label}</span>
@@ -21,7 +22,7 @@ export function FormRow({ label, summary, children, onClick, className = "", ari
 
   if (onClick) {
     return (
-      <button aria-label={ariaLabel} className={`form-row form-row--interactive ${className}`.trim()} onClick={onClick} type="button">
+      <button aria-label={ariaLabel} className={`form-row form-row--interactive ${className}`.trim()} disabled={disabled} onClick={onClick} type="button">
         {content}
       </button>
     );

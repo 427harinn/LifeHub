@@ -373,3 +373,7 @@ Money履歴も `BACKUP_AND_RETENTION.md` の対象。
 - 共有家計簿
 
 LifeHubでは「ざっくり把握できる」ことを優先する。
+
+## 20. M14 category color selection
+
+Money categoryの色選択は既存の`colorKey` paletteを正とし、orange / green / blue / purple / red / pink / gray（既存income用goldを含む）をswatchと日本語labelで表示する。選択した`colorKey`はSettingsのdot、Moneyのdonut / legend、projectionのcategory color resolverで同一に解決し、任意の新hex色を追加しない。
