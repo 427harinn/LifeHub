@@ -1,5 +1,8 @@
 import type { ArchiveCandidateResponse, ArchiveManifest } from "../lib/archive";
 import type { BackupExportResponse, BackupManifest, LifeHubBackup } from "../lib/backup";
+import type { LastUsedNotificationPreference } from "../lib/notification-preferences";
+
+export type { LastUsedNotificationPreference } from "../lib/notification-preferences";
 
 export type AuthUser = { id: string; email: string; displayName: string };
 export type UserSettings = {
@@ -11,6 +14,8 @@ export type UserSettings = {
   eveningSummaryEnabled: boolean;
   eveningSummaryTime: string;
   periodDefaultDeadlineTime: string;
+  lastUsedNotificationHome: LastUsedNotificationPreference;
+  lastUsedNotificationWork: LastUsedNotificationPreference;
   createdAt: string;
   updatedAt: string;
 };

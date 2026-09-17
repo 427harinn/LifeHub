@@ -19,6 +19,7 @@ import { AuthService } from "./services/auth-service";
 import { EventService } from "./services/event-service";
 import { EventProjectionService, dayToRange, isDateKey, monthKeyToGridRange } from "./services/event-projection-service";
 import type { Event, UserSettings } from "./types";
+import { normalizeNotificationPreference } from "../lib/notification-preferences";
 import { runNotificationScheduler } from "./services/notification-scheduler-service";
 import { MoneyService } from "./services/money-service";
 import { MoneyOccurrenceOverrideRepository } from "./repositories/money-occurrence-override-repository";
@@ -108,6 +109,13 @@ const patchSettings = requireAuth(async ({ request, env, user }) => {
     if (body[field] !== undefined) {
       if (typeof body[field] !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body[field])) details[field] = "時刻はHH:MM形式で入力してください。";
       else input[field] = body[field];
+    }
+  }
+  for (const field of ["lastUsedNotificationHome", "lastUsedNotificationWork"] as const) {
+    if (body[field] !== undefined) {
+      const preference = normalizeNotificationPreference(body[field]);
+      if (!preference) details[field] = "通知の前回設定が不正です。";
+      else input[field] = preference;
     }
   }
   if (Object.keys(details).length > 0) throw validationError(details);

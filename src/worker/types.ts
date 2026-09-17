@@ -1,3 +1,5 @@
+import type { LastUsedNotificationPreference } from "../lib/notification-preferences";
+
 export type AuthenticatedUser = {
   id: string;
   email: string;
@@ -13,6 +15,8 @@ export type UserSettings = {
   eveningSummaryEnabled: boolean;
   eveningSummaryTime: string;
   periodDefaultDeadlineTime: string;
+  lastUsedNotificationHome: LastUsedNotificationPreference;
+  lastUsedNotificationWork: LastUsedNotificationPreference;
   createdAt: string;
   updatedAt: string;
 };

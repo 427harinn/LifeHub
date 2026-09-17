@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { NotificationOffsetPicker, NotificationSettingsSection, TemplateManager } from "./NotificationSettings";
 import { notificationSummary } from "../lib/notification-labels";
 
-const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", createdAt: "", updatedAt: "" };
+const settings = { userId: "user-1", timezone: "Asia/Tokyo", weekStartsOn: 1, morningSummaryEnabled: true, morningSummaryTime: "09:00", eveningSummaryEnabled: true, eveningSummaryTime: "21:00", periodDefaultDeadlineTime: "21:00", lastUsedNotificationHome: { mode: "none" as const, templateId: null, offsets: [] }, lastUsedNotificationWork: { mode: "none" as const, templateId: null, offsets: [] }, createdAt: "", updatedAt: "" };
 
 describe("notification settings UI", () => {
   it("summarizes multiple offsets without exposing raw minutes", () => {
