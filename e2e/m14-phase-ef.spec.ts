@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 
 test.use({ viewport: { width: 390, height: 844 }, video: "on" });
 
@@ -33,7 +33,7 @@ test("Bottom Navigation assets, PWA manifest, and one SW registration", async ({
   await page.screenshot({ path: path.join(evidenceDir, "03-selected-daily-390x844.png"), fullPage: true });
 
   await nav.getByRole("button", { name: "お金" }).click();
-  await expect(page.getByRole("heading", { name: "お金" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await expect(nav.getByRole("button", { name: "お金" })).toHaveAttribute("aria-current", "page");
   await page.screenshot({ path: path.join(evidenceDir, "04-selected-money-390x844.png"), fullPage: true });
 
@@ -45,13 +45,11 @@ test("Bottom Navigation assets, PWA manifest, and one SW registration", async ({
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "11-final-calendar-390x844.png"), fullPage: true });
   await nav.getByRole("button", { name: "お金" }).click();
-  await expect(page.getByRole("heading", { name: "お金" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "お金", exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "12-final-money-390x844.png"), fullPage: true });
   await nav.getByRole("button", { name: "設定" }).click();
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "10-final-settings-390x844.png"), fullPage: true });
-  await page.goto("/icons/app/lifehub-512.png");
-  await page.screenshot({ path: path.join(evidenceDir, "06-pwa-home-icon-512.png") });
 
   const manifest = await page.request.get("/manifest.webmanifest");
   expect(manifest.ok()).toBeTruthy();
@@ -61,6 +59,21 @@ test("Bottom Navigation assets, PWA manifest, and one SW registration", async ({
     expect.objectContaining({ sizes: "192x192", purpose: "any", src: "/icons/app/lifehub-192.png" }),
     expect.objectContaining({ sizes: "512x512", purpose: "maskable", src: "/icons/app/lifehub-512.png" })
   ]));
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/icons/app/lifehub.svg");
+  const iconPaths = [
+    "/icons/app/lifehub.svg",
+    "/icons/app/lifehub-192.png",
+    "/icons/app/lifehub-512.png",
+    "/icons/app/apple-touch-icon.png"
+  ];
+  const iconStatuses = await Promise.all(iconPaths.map(async (iconPath) => {
+    const response = await page.request.get(iconPath);
+    return { path: iconPath, ok: response.ok(), contentType: response.headers()["content-type"] ?? "" };
+  }));
+  expect(iconStatuses.every(({ ok }) => ok)).toBeTruthy();
+  await writeFile(path.join(evidenceDir, "manifest-icon-check.json"), JSON.stringify({ manifest: manifestBody, icons: iconStatuses }, null, 2));
+  await page.goto("/icons/app/lifehub-512.png");
+  await page.screenshot({ path: path.join(evidenceDir, "06-pwa-home-icon-512.png") });
   const sw = await page.request.get("/sw.js");
   expect(sw.ok()).toBeTruthy();
   const swText = await sw.text();

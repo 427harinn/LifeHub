@@ -1,5 +1,11 @@
 # Milestone 14 Phase E+F Tasks
 
+## App icon follow-up
+
+- [x] A1: calendar + money bag SVGと192 / 512 / maskable / apple-touch-iconを更新
+- [x] A2: manifest / HTML / favicon参照を確認
+- [x] A3: typecheck / lint / build / staging icon smokeを実行し、新規PR作成後STOP
+
 ## 開始記録
 
 - [x] T1: Phase C+D HEAD `6ba09c7fecac08d9c0fcf30de9529ae0fdf43912`を保持した`codex/m14-release-readiness-ef`を作成
