@@ -212,7 +212,7 @@ function LoginPage({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => v
 
 function FixtureTabs({ active, onChange }: { active: CalendarFilter; onChange: (filter: CalendarFilter) => void }) { return <div aria-label="表示切替" className="shell-tabs" role="tablist">{(Object.keys(filterLabels) as CalendarFilter[]).map((filter) => <button aria-selected={active === filter} className="shell-tab" key={filter} onClick={() => onChange(filter)} role="tab" type="button">{filterLabels[filter]}</button>)}</div>; }
 
-function CalendarShell({ events, money, filter, month, loadState, onRetry, onDateSelect, onFilterChange, onMonthChange, onSearch }: { events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; month: string; loadState: DataLoadState; onRetry: () => void; onDateSelect: (date: string, filter: CalendarFilter) => void; onFilterChange: (filter: CalendarFilter) => void; onMonthChange: (month: string) => void; onSearch: () => void }) {
+export function CalendarShell({ events, money, filter, month, loadState, onRetry, onDateSelect, onFilterChange, onMonthChange, onSearch }: { events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; month: string; loadState: DataLoadState; onRetry: () => void; onDateSelect: (date: string, filter: CalendarFilter) => void; onFilterChange: (filter: CalendarFilter) => void; onMonthChange: (month: string) => void; onSearch: () => void }) {
   const { clickCapture, dragging: monthDragging, offset: monthOffset, pointerCancel, pointerDown, pointerMove, pointerUp } = useHorizontalSwipe((direction) => onMonthChange(shiftMonth(month, direction === "next" ? 1 : -1)));
   const date = dateFromKey(month);
   const year = date.getFullYear();
@@ -226,7 +226,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
   const bands = useMemo(() => filter === "money" ? [] : buildCalendarBandSegments(filteredEvents, firstWeekday), [filteredEvents, filter, firstWeekday]);
   const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const [calendarCellHeight, setCalendarCellHeight] = useState(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const grid = calendarGridRef.current;
     if (!grid) return undefined;
     const measure = () => { const height = grid.getBoundingClientRect().height / 6; if (height > 0) setCalendarCellHeight(height); };
@@ -235,7 +235,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
     const observer = new ResizeObserver(measure);
     observer.observe(grid);
     return () => observer.disconnect();
-  }, [month]);
+  }, [loadState, month]);
   const candidateValue = Number(new URLSearchParams(window.location.search).get("calendarMax"));
   const autoRowCapacity = calendarCellHeight > 0 ? Math.max(1, Math.min(4, Math.floor((calendarCellHeight - 33) / 14))) : 4;
   const rowCapacity = candidateValue === 2 || candidateValue === 3 || candidateValue === 4 ? Math.min(autoRowCapacity, candidateValue) : autoRowCapacity;

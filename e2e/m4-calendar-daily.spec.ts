@@ -91,9 +91,9 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
 
   await page.getByRole("tab", { name: "お金" }).click();
   const moneyCell = page.getByRole("button", { name: `${todayDay}日`, exact: true });
-  await expect(moneyCell.locator(".calendar-cell__money")).toHaveCount(4);
+  await expect(moneyCell.locator(".calendar-cell__money")).toHaveCount(3);
   expect(await moneyCell.locator(".calendar-cell__money").allTextContents()).toEqual(expect.arrayContaining(["+699"]));
-  await expect(moneyCell.locator(".calendar-cell__count")).toHaveCount(0);
+  await expect(moneyCell.locator(".calendar-cell__count")).toHaveText("1");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-money-390x844.png") });
   await moneyCell.click();
   const moneyDateSheet = page.getByRole("dialog");
