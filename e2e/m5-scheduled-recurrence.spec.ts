@@ -8,6 +8,19 @@ const password = "correct-horse-battery";
 const uniqueEmail = () => `m5-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
 const today = () => new Date().toISOString().slice(0, 10);
 const shiftDate = (value: string, amount: number) => { const date = new Date(`${value}T00:00:00Z`); date.setUTCDate(date.getUTCDate() + amount); return date.toISOString().slice(0, 10); };
+const daysUntilFirstBiweeklyWeekday = (value: string) => {
+  const start = new Date(`${value}T00:00:00Z`);
+  const weekStart = (date: Date) => { const result = new Date(date); result.setUTCDate(result.getUTCDate() - ((result.getUTCDay() + 6) % 7)); return result; };
+  const anchorWeek = weekStart(start);
+  for (let offset = 0; offset < 30; offset += 1) {
+    const candidate = new Date(start);
+    candidate.setUTCDate(candidate.getUTCDate() + offset);
+    if (![1, 3].includes(candidate.getUTCDay())) continue;
+    const weekOffset = Math.round((weekStart(candidate).getTime() - anchorWeek.getTime()) / 86_400_000 / 7);
+    if (weekOffset % 2 === 0) return offset;
+  }
+  throw new Error("No biweekly weekday found");
+};
 
 async function registerThroughUi(page: import("@playwright/test").Page) {
   await page.goto("/");
@@ -57,7 +70,7 @@ test("recurrence form states and Calendar/Daily projection evidence", async ({ p
   await page.screenshot({ path: path.join(evidenceDir, "recurrence-end-none-390x844.png") });
   await page.getByRole("button", { name: "終了設定" }).click();
   await page.getByRole("button", { name: "終了日を指定" }).click();
-  await page.getByLabel("終了日").fill(shiftDate(today(), 14));
+  await page.getByRole("dialog", { name: "繰り返し" }).getByLabel("終了日").fill(shiftDate(today(), 14));
   await page.screenshot({ path: path.join(evidenceDir, "recurrence-custom-weekdays-interval2-endsOn-390x844.png") });
   await page.getByRole("button", { name: "この設定にする" }).click();
   await expect(page.getByRole("button", { name: "繰り返し" })).toContainText("2週間ごと");
@@ -71,8 +84,8 @@ test("recurrence form states and Calendar/Daily projection evidence", async ({ p
   await page.screenshot({ path: path.join(evidenceDir, "calendar-recurring-event-390x844.png") });
   await page.getByRole("button", { name: "デイリー" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
-  const daysUntilWednesday = (3 - new Date(`${today()}T00:00:00`).getDay() + 7) % 7 || 7;
-  for (let index = 0; index < daysUntilWednesday; index += 1) await page.getByRole("button", { name: "次の日" }).click();
+  const daysUntilOccurrence = daysUntilFirstBiweeklyWeekday(today());
+  for (let index = 0; index < daysUntilOccurrence; index += 1) await page.getByRole("button", { name: "次の日" }).click();
   await expect(page.getByText("朝の支度", { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-recurring-event-390x844.png") });
 });
@@ -153,4 +166,15 @@ test("occurrence scopes, projection parity, and ownership", async ({ page, brows
   await page.getByRole("dialog").getByRole("button", { name: "この予定のみ" }).click();
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "occurrence-edit-form-390x844.png") });
+  await page.getByRole("button", { name: "削除", exact: true }).click();
+  const deleteScope = page.getByRole("dialog", { name: "削除する範囲" });
+  await expect(deleteScope).toBeVisible();
+  await expect(deleteScope.getByRole("button", { name: "この予定のみ", exact: true })).toBeVisible();
+  await expect(deleteScope.getByRole("button", { name: "この予定以降", exact: true })).toBeVisible();
+  await expect(deleteScope.getByRole("button", { name: "すべての予定", exact: true })).toBeVisible();
+  await deleteScope.getByRole("button", { name: "この予定のみ", exact: true }).click();
+  const deleteConfirmation = page.getByRole("dialog", { name: "予定を削除" });
+  await expect(deleteConfirmation).toBeVisible();
+  await deleteConfirmation.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(deleteConfirmation).toHaveCount(0);
 });

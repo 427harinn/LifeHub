@@ -213,7 +213,7 @@ function LoginPage({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => v
 
 function FixtureTabs({ active, onChange }: { active: CalendarFilter; onChange: (filter: CalendarFilter) => void }) { return <div aria-label="表示切替" className="shell-tabs" role="tablist">{(Object.keys(filterLabels) as CalendarFilter[]).map((filter) => <button aria-selected={active === filter} className="shell-tab" key={filter} onClick={() => onChange(filter)} role="tab" type="button">{filterLabels[filter]}</button>)}</div>; }
 
-function CalendarShell({ events, money, filter, month, loadState, onRetry, onDateSelect, onFilterChange, onMonthChange, onSearch }: { events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; month: string; loadState: DataLoadState; onRetry: () => void; onDateSelect: (date: string, filter: CalendarFilter) => void; onFilterChange: (filter: CalendarFilter) => void; onMonthChange: (month: string) => void; onSearch: () => void }) {
+export function CalendarShell({ events, money, filter, month, loadState, onRetry, onDateSelect, onFilterChange, onMonthChange, onSearch }: { events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; month: string; loadState: DataLoadState; onRetry: () => void; onDateSelect: (date: string, filter: CalendarFilter) => void; onFilterChange: (filter: CalendarFilter) => void; onMonthChange: (month: string) => void; onSearch: () => void }) {
   const { clickCapture, dragging: monthDragging, offset: monthOffset, pointerCancel, pointerDown, pointerMove, pointerUp } = useHorizontalSwipe((direction) => onMonthChange(shiftMonth(month, direction === "next" ? 1 : -1)));
   const date = dateFromKey(month);
   const year = date.getFullYear();
@@ -227,7 +227,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
   const bands = useMemo(() => filter === "money" ? [] : buildCalendarBandSegments(filteredEvents, firstWeekday), [filteredEvents, filter, firstWeekday]);
   const calendarGridRef = useRef<HTMLDivElement | null>(null);
   const [calendarCellHeight, setCalendarCellHeight] = useState(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const grid = calendarGridRef.current;
     if (!grid) return undefined;
     const measure = () => { const height = grid.getBoundingClientRect().height / 6; if (height > 0) setCalendarCellHeight(height); };
@@ -236,7 +236,7 @@ function CalendarShell({ events, money, filter, month, loadState, onRetry, onDat
     const observer = new ResizeObserver(measure);
     observer.observe(grid);
     return () => observer.disconnect();
-  }, [month]);
+  }, [loadState, month]);
   const candidateValue = Number(new URLSearchParams(window.location.search).get("calendarMax"));
   const autoRowCapacity = calendarCellHeight > 0 ? Math.max(1, Math.min(4, Math.floor((calendarCellHeight - 33) / 14))) : 4;
   const rowCapacity = candidateValue === 2 || candidateValue === 3 || candidateValue === 4 ? Math.min(autoRowCapacity, candidateValue) : autoRowCapacity;
@@ -830,7 +830,7 @@ useEffect(() => { let active = true; void authMe().then(async ({ user: authentic
   const closeDetail = () => { const context = detailState?.returnTo; setDetailState(null); if (context) restore(context); };
   const openEventEdit = (event: Event, returnTo: ReturnContext) => { if (event.recurrenceRuleId && event.occurrenceKey) { setScopeState({ event, returnTo, action: "edit" }); return; } setDetailState(null); setFormState({ category: event.category, event, initialDate: event.startDate ?? event.periodAnchorDate ?? event.periodStartDate ?? returnTo.date, returnTo, scope: "series" }); };
   const editEvent = () => { if (!detailState) return; openEventEdit(detailState.event, detailState.returnTo); };
-  const requestDelete = (event: Event, returnTo: ReturnContext) => { if (event.recurrenceRuleId && event.occurrenceKey) { setScopeState({ event, returnTo, action: "delete" }); return; } setDeleteTarget({ event, returnTo, scope: "series" }); setFormState(null); setDeleteOpen(true); };
+  const requestDelete = (event: Event, returnTo: ReturnContext) => { if (returnTo.screen === "calendar") setDateSheetOpen(false); if (event.recurrenceRuleId && event.occurrenceKey) { setScopeState({ event, returnTo, action: "delete" }); return; } setDeleteTarget({ event, returnTo, scope: "series" }); setFormState(null); setDeleteOpen(true); };
   const refreshProjection = (context: ReturnContext) => { if (context.screen === "calendar") { setMonth(monthStart(context.date)); setCalendarLoad("loading"); } else { setDailyDate(context.date); setDailyLoad("loading"); } setReloadNonce((current) => current + 1); };
   const requestMoneyDelete = (item: MoneyItem, scope: EventScope = moneyFormState?.scope ?? "series") => { setMoneyDeleteTarget({ item, scope, returnTo: moneyFormState?.returnTo ?? { screen: "money", month: moneyMonth } }); setMoneyDeleteOpen(true); };
   const confirmMoneyDelete = async () => { const target = moneyDeleteTarget; if (!target) return; setDeleteBusy(true); try { await deleteMoney(target.item.id, target.scope, target.item.occurrenceKey ?? undefined); setMoneyDeleteOpen(false); setMoneyDeleteTarget(null); setMoneyFormState(null); if (target.returnTo.screen === "calendar" || target.returnTo.screen === "daily") { restore(target.returnTo); void refreshProjection(target.returnTo); } else { setMoneyMonth(target.returnTo.screen === "money" ? target.returnTo.month : moneyMonth); setMoneyLoad("loading"); setReloadNonce((current) => current + 1); } } catch (caught) { setSelectionNote(caught instanceof Error ? caught.message : "削除できませんでした。"); } finally { setDeleteBusy(false); } };

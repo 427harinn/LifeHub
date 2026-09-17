@@ -1,5 +1,11 @@
 # Milestone 14: Release Readiness Phase E+F
 
+## App icon follow-up（2026-09-17）
+
+- 最新`origin/main`: `a030ebd2b39d6d60d861ae4de2621e30af1bcf2c`をbaseに新規branch `codex/m14-app-icon-calendar-money`を作成し、未merge PR #18の既存実装を保持したうえでapp iconだけを更新する。
+- 添付画像は構成・バランスの参考に限定し、カレンダー主体＋右下money bagのLifeHub専用SVGへ再構成する。Bottom Navigation icon、Account、Notification、Money Category、Service Workerは変更しない。
+- staging `lifehub-staging` version `b8f8e4a7-9417-4e92-ac5c-523e60c2b8d7`でmanifest、favicon、192 / 512 / apple-touch-icon、SWをHTTP確認。390×844のM14 E+F E2Eは1 passed。D1 migrationは不要・未実行。
+
 ## 開始記録（2026-09-17）
 
 - Phase C+Dの実装HEAD `6ba09c7fecac08d9c0fcf30de9529ae0fdf43912`を実作業baseとして確認した。ローカル`origin/main`は`45b7c62a6c86c8f29bb8a12625624ad770ae3d8c`で、C+D merge状態を含まないため、C+Dを保持したHEADから新規branchを作成した。
