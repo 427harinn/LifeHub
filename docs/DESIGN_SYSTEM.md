@@ -87,6 +87,15 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 オレンジを大きなsurfaceとして常用しない。
 テーマ色を画面へ直接ハードコードせずtoken参照する。
 
+### M14 Phase C+D accessibility / layout rules
+
+- 共通 `Input` / `FormRow` / form containerは `min-width: 0` と `max-width: 100%` を持ち、date / timeを含むnative inputも親幅を超えない。
+- フォームのinput / textarea / selectはiPhone Safariのズームを避けるため16px以上とする。時間2カラムは `minmax(0, 1fr) auto minmax(0, 1fr)` を基本とする。
+- BottomSheetはportal上のviewport基準で表示し、initial focus、focus trap、focus restore、背景inert、dynamic viewport、safe-areaを共通実装する。
+- すべての操作対象は見た目の密度を保ちながら44px以上のhit areaを確保する。Calendar gridのcell高やavailableRowsを不要に増やさない。
+- Swipeだけに依存せず、展開detailまたは同等のkeyboard到達可能な編集導線を置く。
+- 画面遷移で復元すべき状態（Settings detail、Daily date、Calendar selected date）はURL/historyを正本とし、reload / browser back / forwardで復元する。
+
 **Bottom Navigation中央の `+` にはオレンジ背景を付けない。**
 HouseToDo同様、白いナビゲーション面の中で `+` アイコン自体を少し大きくするだけにする。
 

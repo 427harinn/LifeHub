@@ -160,6 +160,15 @@ fixtureは本番データやDB仕様と混同しない構造にし、後続実�
 
 Calendarの1日表示密度は固定maxを決めず、実測したセル利用可能高さから`availableRows`を算出する。Evidenceは最終件数を決定するためではなく、端末差を含むadaptive row allocation、Money最終row予約、overflowのhidden countが実機で崩れないことを確認するために作成する。
 
+### M14 Phase C+D UI / history rules
+
+- Responsive確認は `375×812`、`390×844`、`393×852` を最低限とし、`document.documentElement.scrollWidth <= clientWidth`、form section内幅、native date/time/number/textareaの幅を確認する。
+- 共通入力は `box-sizing: border-box`、`min-width: 0`、`max-width: 100%`、16px以上を維持する。個別inputだけに固定widthを足して解決しない。
+- BottomSheetはopen時にsheet内へfocusし、Tab / Shift+Tabをtrapする。閉じるとopenerへfocusを戻し、背景はinertにする。Escapeはclosable sheetだけを閉じる。
+- すべての操作対象は44px以上のhit areaを持つ。ただしCalendarのcell高、weekday header、Money reserved rowをtap target調整で不必要に増やさない。
+- Swipe操作は補助操作とし、同じrowのdetail展開などにキーボードで到達できる編集導線を用意する。
+- Settings detailとDaily date、Calendarのselected dateはURL/historyと同期する。直接URL、reload、browser back/forward、returnToを同じ状態へ復元する。
+
 ---
 
 ## 6. 動画Evidence

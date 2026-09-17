@@ -719,6 +719,16 @@ M14 Polish / Release Readiness
 
 ---
 
+# M14 Release Readiness Phase C+D 実装記録
+
+2026-09-17、Phase A+B merge済み `origin/main` / base SHA `45b7c62a6c86c8f29bb8a12625624ad770ae3d8c` から `codex/m14-release-readiness-cd` を作成した。
+
+Phase C+Dでは、共通Input / FormRow / form layoutのoverflow制御、BottomSheetのfocus管理と背景inert、44px hit area、Swipe編集のkeyboard代替、Settings detail / Daily date / Calendar selected dateのURL・history同期を対象とする。375×812、390×844、393×852で横overflowとmobile keyboard状態を確認し、Calendar adaptive row allocationとMoney reserved rowの密度を維持する。画像と操作動画は `artifacts/evidence/m14/phase-cd/` に保存する。
+
+schema migrationは原則追加せず、stagingはLifeHub専用Workerのみを対象とする。Cloudflare API `7403` が発生した場合はSTOPし、production/default・HouseToDo・auto-mergeには触れない。
+
+---
+
 # M14 Release Readiness Phase A+B 実装記録
 
 2026-09-14、`origin/main` の `482d73447d131e292799a561912579521b02a105`（PR #15 merge済み）をbaseとして、`codex/m14-release-readiness-ab` でPhase A+Bを開始した。
