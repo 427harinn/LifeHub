@@ -1,6 +1,7 @@
 import type { DailyNote, Event, MoneyProjection } from "../api/client";
 import {
   deleteActiveSnapshotRecordsForUser,
+  evictCalendarSnapshotRecords,
   readActiveSnapshotMetadataRecord,
   readActiveSnapshotRecord,
   writeActiveSnapshotMetadataRecord,
@@ -87,6 +88,11 @@ const identityFor = (identity: CalendarSnapshotIdentity | DailySnapshotIdentity)
 
 export const getActiveSnapshotEpoch = () => cacheEpoch;
 
+export const invalidateActiveSnapshotEpoch = () => {
+  cacheEpoch += 1;
+  return cacheEpoch;
+};
+
 const isValidSnapshotMetadata = (value: unknown, userId: string): value is ActiveSnapshotMetadataRecord => {
   if (!isRecord(value) || value.schemaVersion !== ACTIVE_SNAPSHOT_SCHEMA_VERSION || value.key !== `active-snapshot-metadata:${userId}` || value.userId !== userId || !isString(value.timezone) || (value.weekStartsOn !== 0 && value.weekStartsOn !== 1) || typeof value.savedAt !== "number" || !Number.isFinite(value.savedAt) || !isString(value.serverConfirmedAt)) return false;
   return true;
@@ -136,7 +142,37 @@ export const readPersistentActiveSnapshot = async <T>(identity: CalendarSnapshot
   }
 };
 
-export const writeServerConfirmedActiveSnapshot = async <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity, data: T, validate: (value: unknown) => value is T, expectedEpoch = cacheEpoch): Promise<boolean> => {
+export const getActiveSnapshotSavedAt = async (identity: CalendarSnapshotIdentity | DailySnapshotIdentity): Promise<number | null> => {
+  const expected = identityFor(identity);
+  const memory = memorySnapshots.get(expected.key);
+  if (memory && isValidRecord(memory, expected, () => true)) return memory.savedAt;
+  try {
+    const record = await readActiveSnapshotRecord(expected.key);
+    return record && isValidRecord(record, expected, () => true) ? record.savedAt : null;
+  } catch {
+    return null;
+  }
+};
+
+type SnapshotWriteOptions = {
+  evictCalendarSnapshots?: { preserveMonths: string[]; maxRecords?: number };
+};
+
+const evictMemoryCalendarSnapshots = (identity: CalendarSnapshotIdentity, preserveMonths: string[], maxRecords: number) => {
+  const prefix = `calendar-month:${identity.userId}:${identity.timezone}:${identity.weekStartsOn}:`;
+  const scoped = [...memorySnapshots.entries()]
+    .filter(([key, record]) => key.startsWith(prefix) && record.userId === identity.userId && record.timezone === identity.timezone && record.weekStartsOn === identity.weekStartsOn)
+    .sort(([, left], [, right]) => (right.lastAccessedAt ?? right.savedAt) - (left.lastAccessedAt ?? left.savedAt));
+  const protectedKeys = new Set(preserveMonths.map((month) => `${prefix}${month.slice(0, 7)}`));
+  const keep = new Set(scoped.filter(([key]) => protectedKeys.has(key)).map(([key]) => key));
+  for (const [key] of scoped) {
+    if (keep.size >= maxRecords || keep.has(key)) continue;
+    keep.add(key);
+  }
+  scoped.forEach(([key]) => { if (!keep.has(key)) memorySnapshots.delete(key); });
+};
+
+export const writeServerConfirmedActiveSnapshot = async <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity, data: T, validate: (value: unknown) => value is T, expectedEpoch = cacheEpoch, options?: SnapshotWriteOptions): Promise<boolean> => {
   const expected = identityFor(identity);
   if (expectedEpoch !== cacheEpoch || !validate(data)) return false;
   const record: ActiveSnapshotRecord = {
@@ -146,18 +182,26 @@ export const writeServerConfirmedActiveSnapshot = async <T>(identity: CalendarSn
     timezone: expected.timezone,
     weekStartsOn: expected.weekStartsOn,
     savedAt: Date.now(),
+    lastAccessedAt: Date.now(),
     serverConfirmedAt: new Date().toISOString(),
     data
   };
   const previous = memorySnapshots.get(record.key);
   if (previous && previous.savedAt > record.savedAt) return false;
   memorySnapshots.set(record.key, record);
+  const calendarEviction = "month" in identity ? options?.evictCalendarSnapshots : undefined;
+  const maxRecords = calendarEviction?.maxRecords ?? 5;
+  if (expectedEpoch === cacheEpoch && "month" in identity && calendarEviction) evictMemoryCalendarSnapshots(identity, calendarEviction.preserveMonths, maxRecords);
   try {
     if (expectedEpoch === cacheEpoch) await writeActiveSnapshotRecord(record);
+    if (expectedEpoch === cacheEpoch && "month" in identity && calendarEviction) {
+      const deletedKeys = await evictCalendarSnapshotRecords(identity, calendarEviction.preserveMonths, maxRecords);
+      if (expectedEpoch === cacheEpoch) deletedKeys.forEach((key) => memorySnapshots.delete(key));
+    }
   } catch {
     // IndexedDB is an optional acceleration layer.
   }
-  return true;
+  return expectedEpoch === cacheEpoch;
 };
 
 export const clearActiveSnapshotsForUser = async (userId: string): Promise<void> => {

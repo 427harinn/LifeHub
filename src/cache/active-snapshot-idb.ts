@@ -10,6 +10,7 @@ export type ActiveSnapshotRecord = {
   timezone: string;
   weekStartsOn: number;
   savedAt: number;
+  lastAccessedAt?: number;
   serverConfirmedAt: string;
   data: unknown;
 };
@@ -119,6 +120,38 @@ export const deleteActiveSnapshotRecordsForUser = async (userId: string): Promis
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB delete failed"));
       transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB delete aborted"));
+    });
+  } finally {
+    database.close();
+  }
+};
+
+export const evictCalendarSnapshotRecords = async (scope: { userId: string; timezone: string; weekStartsOn: number }, preserveMonths: string[], maxRecords = 5): Promise<string[]> => {
+  const database = await openDatabase();
+  try {
+    return await new Promise<string[]>((resolve, reject) => {
+      const transaction = database.transaction(ACTIVE_SNAPSHOT_STORE_NAME, "readwrite");
+      const store = transaction.objectStore(ACTIVE_SNAPSHOT_STORE_NAME);
+      const request = store.getAll();
+      let deletedKeys: string[] = [];
+      request.onsuccess = () => {
+        const prefix = `calendar-month:${scope.userId}:${scope.timezone}:${scope.weekStartsOn}:`;
+        const scoped = (request.result as ActiveSnapshotRecord[])
+          .filter((record) => record.userId === scope.userId && record.timezone === scope.timezone && record.weekStartsOn === scope.weekStartsOn && record.key.startsWith(prefix))
+          .sort((left, right) => (right.lastAccessedAt ?? right.savedAt) - (left.lastAccessedAt ?? left.savedAt));
+        const protectedKeys = new Set(preserveMonths.map((month) => `${prefix}${month.slice(0, 7)}`));
+        const keep = new Set(scoped.filter((record) => protectedKeys.has(record.key)).map((record) => record.key));
+        for (const record of scoped) {
+          if (keep.size >= maxRecords || keep.has(record.key)) continue;
+          keep.add(record.key);
+        }
+        deletedKeys = scoped.filter((record) => !keep.has(record.key)).map((record) => record.key);
+        deletedKeys.forEach((key) => store.delete(key));
+      };
+      request.onerror = () => transaction.abort();
+      transaction.oncomplete = () => resolve(deletedKeys);
+      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB calendar eviction failed"));
+      transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB calendar eviction aborted"));
     });
   } finally {
     database.close();
