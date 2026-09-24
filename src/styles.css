@@ -315,8 +315,9 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-form-section { display: grid; min-width: 0; max-width: 100%; gap: var(--space-2); }
 .event-form-section h2 { margin: 0; font-size: .9375rem; font-weight: 600; }
 .event-form-section .form-row { min-height: 48px; }
-.date-input { display: grid; gap: var(--space-2); color: var(--color-text); font-size: .9375rem; }
-.date-input .input { width: 100%; min-height: 48px; background: var(--color-surface); }
+.date-input { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 176px); min-width: 0; min-height: 48px; align-items: center; gap: var(--space-3); color: var(--color-text); font-size: .9375rem; }
+.date-input > span { min-width: 0; overflow-wrap: anywhere; }
+.date-input .input { width: 100%; min-width: 0; min-height: 48px; background: var(--color-surface); font-size: 16px; }
 .input[type="date"], .input[type="time"] { min-inline-size: 0; inline-size: 100%; max-inline-size: 100%; }
 .date-input-group { display: grid; gap: var(--space-3); }
 .event-option-sheet { display: grid; gap: var(--space-2); }
@@ -357,8 +358,8 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-toggle-row input { width: 22px; height: 22px; accent-color: var(--color-primary-strong); }
 .event-toggle-value { width: 28px; color: var(--color-text); font-size: .8125rem; text-align: right; }
 .event-time-fields { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: var(--space-2); }
-.event-time-fields > .input-field { min-width: 0; }
-.event-time-fields .input { min-width: 0; }
+.event-time-fields > .input-field { width: min(100%, 136px); min-width: 0; justify-self: center; }
+.event-time-fields .input { width: 100%; min-width: 0; min-height: 48px; font-size: 16px; }
 .event-time-fields > span { padding-bottom: 14px; color: var(--color-text-secondary); }
 .expanded-input { padding-top: var(--space-2); }
 .textarea { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 104px; resize: vertical; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text); background: var(--color-surface); }

@@ -43,9 +43,20 @@ test("EventForm, MoneyForm, and time row stay inside 375/390/393px", async ({ pa
     expect(await timeRow.locator("input").count()).toBe(2);
     const rowBox = await timeRow.boundingBox();
     const inputs = await timeRow.locator("input").evaluateAll((elements) => elements.map((element) => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, width: rect.width }; }));
+    const dateInputs = await page.locator(".event-form .date-input input").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().width));
+    const titleBox = await page.getByLabel("タイトル").boundingBox();
+    const formBox = await page.locator(".event-form").boundingBox();
     expect(rowBox).not.toBeNull();
     expect(inputs[0].width).toBeGreaterThan(0);
     expect(inputs[1].width).toBeGreaterThan(0);
+    expect(dateInputs).toHaveLength(2);
+    for (const widthValue of dateInputs) expect(widthValue).toBeGreaterThanOrEqual(160);
+    for (const widthValue of dateInputs) expect(widthValue).toBeLessThanOrEqual(180);
+    for (const input of inputs) expect(input.width).toBeGreaterThanOrEqual(120);
+    for (const input of inputs) expect(input.width).toBeLessThanOrEqual(140);
+    expect(titleBox).not.toBeNull();
+    expect(formBox).not.toBeNull();
+    if (titleBox && formBox) expect(titleBox.width).toBeCloseTo(formBox.width, 0);
     expect(inputs[1].right).toBeLessThanOrEqual(width + 1);
     if (width === 375 && rowBox) {
       await page.screenshot({ path: path.join(evidenceDir, "time-row-375x812.png"), clip: rowBox });
