@@ -317,11 +317,13 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-form-section .form-row { min-height: 48px; }
 .date-input { display: grid; gap: var(--space-2); color: var(--color-text); font-size: .9375rem; }
 .date-input .input { width: 100%; min-height: 48px; background: var(--color-surface); }
-.date-input--compact, .time-input { display: flex; min-width: 0; max-width: 100%; min-height: 48px; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.date-input--compact, .time-input { display: flex; min-width: 0; max-width: 100%; min-height: 44px; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .date-input--compact > span:first-child, .time-input > span:first-child { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
 .date-input:not(.date-input--compact) .native-input-row__control { width: 100%; }
 .native-input-row__control { display: flex; min-width: 0; max-width: 100%; flex: 0 1 auto; justify-content: flex-end; }
-.date-input--compact .input, .time-input .input { width: auto; min-width: 0; max-width: 100%; min-height: 48px; flex: 0 1 auto; background: var(--color-surface); font-size: 16px; }
+.date-input--compact .native-input-row__control { width: clamp(176px, 48vw, 184px); flex: 0 1 clamp(176px, 48vw, 184px); }
+.time-input .native-input-row__control { width: clamp(120px, 32vw, 128px); flex: 0 1 clamp(120px, 32vw, 128px); }
+.date-input--compact .input, .time-input .input { width: 100%; min-width: 0; max-width: 100%; min-height: 44px; flex: 1 1 auto; padding: 8px 10px; background: var(--color-surface); font-size: 16px; line-height: 1.25; }
 .input[type="date"], .input[type="time"] { min-inline-size: 0; max-inline-size: 100%; }
 .date-input-group { display: grid; gap: var(--space-3); }
 .event-option-sheet { display: grid; gap: var(--space-2); }
