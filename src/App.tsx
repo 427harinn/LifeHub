@@ -52,7 +52,10 @@ const dateFromKey = (value: string) => new Date(`${value}T00:00:00`);
 const monthStart = (value: string) => { const date = dateFromKey(value); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-01`; };
 const monthEnd = (value: string) => { const date = dateFromKey(value); return dateKey(new Date(date.getFullYear(), date.getMonth() + 1, 0)); };
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"] as const;
-const eventIdentity = (event: Event) => event.occurrenceKey ?? event.id;
+const eventUiIdentity = (event: Event) => event.timingType === "period" && event.occurrenceKey && event.startDate
+  ? `${event.occurrenceKey}:${event.startDate}`
+  : event.occurrenceKey ?? event.id;
+const eventIdentity = eventUiIdentity;
 const recurrenceWeekday = (date: string) => dateFromKey(date).getDay();
 const formatMonth = (value: string) => { const date = dateFromKey(value); return `${date.getFullYear()}年${date.getMonth() + 1}月`; };
 const shiftMonth = (value: string, amount: number) => { const date = dateFromKey(value); date.setMonth(date.getMonth() + amount, 1); return dateKey(date); };
@@ -143,7 +146,7 @@ function useRecentEntryOpenGuard(suppressInitialOpen: boolean) {
 const eventMatchesFilter = (event: Event, filter: CalendarFilter) => filter === "all" || filter === event.category;
 const fixtureEventMatchesFilter = (event: CalendarProjectedEvent, filter: CalendarFilter) => filter !== "money" && (filter === "all" || filter === event.category);
 const eventOverlapsDate = (event: Event, date: string) => event.timingType === "period"
-  ? Boolean(event.periodStartDate && event.periodEndDate && event.periodStartDate <= date && event.periodEndDate >= date)
+  ? event.startDate === date
   : Boolean(event.startDate && event.endDate && event.startDate <= date && event.endDate >= date);
 const eventTimeLabel = (event: Event) => event.timingType === "period" ? "期間" : event.allDay ? "終日" : `${event.startTime}〜${event.endTime}`;
 const searchDateLabel = (value: string) => formatDate(value, dateFromKey(value).getFullYear() !== new Date().getFullYear());
@@ -308,7 +311,7 @@ function CalendarSearchPage({ onBack, onSelect, searchResults = searchCalendarEv
   </main>;
 }
 
-function CalendarDateSheet({ date, events, money, filter, onClose, onAddCategory, onAddMoney, onOpenDaily, onEditEvent, onEditMoney, onMoneyChanged, onDateChange }: { date: string; events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; onClose: () => void; onAddCategory: (category: Event["category"]) => void; onAddMoney: () => void; onOpenDaily: () => void; onEditEvent: (event: Event) => void; onEditMoney: (item: MoneyItem) => void; onMoneyChanged?: () => void; onDateChange: (date: string) => void }) {
+export function CalendarDateSheet({ date, events, money, filter, onClose, onAddCategory, onAddMoney, onOpenDaily, onEditEvent, onEditMoney, onMoneyChanged, onDateChange }: { date: string; events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; onClose: () => void; onAddCategory: (category: Event["category"]) => void; onAddMoney: () => void; onOpenDaily: () => void; onEditEvent: (event: Event) => void; onEditMoney: (item: MoneyItem) => void; onMoneyChanged?: () => void; onDateChange: (date: string) => void }) {
   const scheduledEvents = filter === "money" ? [] : [...new Map(events.filter((event) => event.timingType !== "period" && eventOverlapsDate(event, date) && (filter === "all" || event.category === filter)).map((event) => [eventIdentity(event), event])).values()];
   const periodEvents = filter === "money" ? [] : events.filter((event) => event.timingType === "period" && eventOverlapsDate(event, date) && (filter === "all" || event.category === filter));
   const dayEvents = [...periodEvents, ...scheduledEvents].sort((left, right) => (left.allDay ? "00:00" : left.startTime ?? "00:00").localeCompare(right.allDay ? "00:00" : right.startTime ?? "00:00"));
@@ -354,7 +357,7 @@ function DailyEventRow({ event, expanded, onToggle, actionsOpen, onActionsOpen, 
   return <SwipeActionRow actions={[{ label: "編集", onClick: onEdit }]} ariaLabel={event.title} expandedContent={expanded ? <DailyEventDetail event={event} onEdit={onEdit} showTime={showTimeInDetail} /> : null} onMainClick={onToggle} onOpenChange={(open) => open ? onActionsOpen() : onActionsClose()} onOtherRowTouch={onOtherRowTouch} open={actionsOpen}><button aria-controls={`daily-event-detail-${eventIdentity(event)}`} aria-expanded={expanded} className={`fixture-row fixture-row--${event.category} event-swipe-row__main${event.allDay ? " event-swipe-row__main--all-day" : ""}`} type="button">{event.allDay ? null : <time>{event.startTime}〜{event.endTime}</time>}<span className="fixture-row__title">{event.title}</span></button></SwipeActionRow>;
 }
 
-function DailyShell({ date, events, money, filter, dailyNote, onDateChange, onFilterChange, onEditEvent, onEditMoney, onMoneyChanged, onSaveNote }: { date: string; events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; dailyNote: DailyNote | null; onDateChange: (date: string) => void; onFilterChange: (filter: CalendarFilter) => void; onEditEvent: (event: Event) => void; onEditMoney: (item: MoneyItem) => void; onMoneyChanged?: () => void; onSaveNote: (content: string) => Promise<DailyNote | null> }) {
+export function DailyShell({ date, events, money, filter, dailyNote, onDateChange, onFilterChange, onEditEvent, onEditMoney, onMoneyChanged, onSaveNote }: { date: string; events: Event[]; money: MoneyProjection | null; filter: CalendarFilter; dailyNote: DailyNote | null; onDateChange: (date: string) => void; onFilterChange: (filter: CalendarFilter) => void; onEditEvent: (event: Event) => void; onEditMoney: (item: MoneyItem) => void; onMoneyChanged?: () => void; onSaveNote: (content: string) => Promise<DailyNote | null> }) {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [expandedMoneyId, setExpandedMoneyId] = useState<string | null>(null);
   const [moneyActionId, setMoneyActionId] = useState<string | null>(null);
@@ -837,12 +840,12 @@ useEffect(() => { let active = true; void authMe().then(async ({ user: authentic
   const openMoneyEdit = (item: MoneyItem, context: MoneyReturnContext = { screen: "money", month: moneyMonth }) => { if (item.recurrenceRuleId && item.occurrenceKey) { setMoneyScopeState({ item, returnTo: context, action: "edit" }); return; } openMoney(context, item, "series"); };
   const handleMoneyScopeSelect = (scope: EventScope) => { const target = moneyScopeState; if (!target) return; setMoneyScopeState(null); if (target.action === "edit") openMoney(target.returnTo, target.item, scope); else { setMoneyDeleteTarget({ item: target.item, scope, returnTo: target.returnTo }); setMoneyDeleteOpen(true); } };
   const handleScopeSelect = (scope: EventScope) => { const target = scopeState; if (!target) return; setScopeState(null); if (target.action === "edit") { setDetailState(null); setFormState({ category: target.event.category, event: target.event, initialDate: target.event.startDate ?? target.event.periodAnchorDate ?? target.event.periodStartDate ?? target.returnTo.date, returnTo: target.returnTo, scope }); } else { setDeleteTarget({ event: target.event, returnTo: target.returnTo, scope }); setDeleteOpen(true); } };
-  const handleSaved = (event: Event) => { setEvents((current) => [...current.filter((item) => event.occurrenceKey ? eventIdentity(item) !== event.occurrenceKey : item.id !== event.id), event]); const context = formState?.returnTo; setFormState(null); if (context) { restore(context); void refreshProjection(context); } };
+  const handleSaved = (event: Event) => { setEvents((current) => [...current.filter((item) => event.occurrenceKey ? item.occurrenceKey !== event.occurrenceKey : item.id !== event.id), event]); const context = formState?.returnTo; setFormState(null); if (context) { restore(context); void refreshProjection(context); } };
   const saveLastUsedNotification = async (category: Event["category"], preference: LastUsedNotificationPreference) => {
     const result = await updateSettings(category === "home" ? { lastUsedNotificationHome: preference } : { lastUsedNotificationWork: preference });
     setSettings(result.settings);
   };
-  const confirmDelete = async () => { const target = deleteTarget; if (!target) return; setDeleteBusy(true); try { await deleteEvent(target.event.id, target.scope, target.event.occurrenceKey ?? undefined); setEvents((current) => target.scope === "occurrence" ? current.filter((event) => eventIdentity(event) !== target.event.occurrenceKey) : current.filter((event) => event.id !== target.event.id)); setDeleteOpen(false); setDeleteTarget(null); setDetailState(null); restore(target.returnTo); void refreshProjection(target.returnTo); } catch (caught) { setSelectionNote(caught instanceof Error ? caught.message : "削除できませんでした。"); } finally { setDeleteBusy(false); } };
+  const confirmDelete = async () => { const target = deleteTarget; if (!target) return; setDeleteBusy(true); try { await deleteEvent(target.event.id, target.scope, target.event.occurrenceKey ?? undefined); setEvents((current) => target.scope === "occurrence" ? current.filter((event) => event.occurrenceKey !== target.event.occurrenceKey) : current.filter((event) => event.id !== target.event.id)); setDeleteOpen(false); setDeleteTarget(null); setDetailState(null); restore(target.returnTo); void refreshProjection(target.returnTo); } catch (caught) { setSelectionNote(caught instanceof Error ? caught.message : "削除できませんでした。"); } finally { setDeleteBusy(false); } };
   if (!authChecked) return <div className="auth-page"><header className="app-header"><h1>LifeHub</h1></header><main className="auth-content"><p className="empty-state">読み込み中</p></main></div>;
   if (!user) return <><LoginPage onAuthenticated={handleAuthenticated} />{authError ? <p className="auth-global-error" role="alert">{authError}</p> : null}</>;
   if (userState?.migrationState === "migration_locked") return <MigrationScreen migrationId={migrationId} onCompleted={() => { setUserState((current) => current ? { ...current, migrationState: "active" } : current); setMigrationId(undefined); }} user={user} />;

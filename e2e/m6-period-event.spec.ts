@@ -72,7 +72,7 @@ test("period form states and Calendar/Daily/Date Sheet evidence", async ({ page 
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
   await expect(page.getByText("今週中UI", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "period-calendar-week-start-390x844.png") });
-  await page.getByRole("button", { name: "9日", exact: true }).click();
+  await page.getByRole("button", { name: `${Number(today().slice(-2))}日`, exact: true }).click();
   const dateSheet = page.getByRole("dialog");
   await expect(dateSheet).toBeVisible();
   await expect(dateSheet).toHaveCSS("opacity", "1");
@@ -99,7 +99,9 @@ test("period recurrence projection and occurrence override API", async ({ page }
   const weeklyCreated = await weeklyResponse.json() as { event: { id: string } };
   await page.goto("/calendar");
   await expect(page.getByRole("heading", { name: "カレンダー" })).toBeVisible();
-  await expect(page.getByText("毎週の整理", { exact: true })).toHaveCount(4);
+  const calendarPayload = await (await page.request.get(`/api/calendar?month=${start.slice(0, 7)}`)).json() as { events: Array<{ id: string; startDate: string; periodStartDate: string | null }> };
+  const recurringAnchors = calendarPayload.events.filter((event) => event.id === weeklyCreated.event.id && event.startDate === event.periodStartDate && event.startDate.startsWith(start.slice(0, 7))).length;
+  await expect(page.getByText("毎週の整理", { exact: true })).toHaveCount(recurringAnchors);
   await page.screenshot({ path: path.join(evidenceDir, "calendar-period-and-recurring-390x844.png") });
   expect((await page.request.delete(`/api/events/${weeklyCreated.event.id}?scope=series`)).status()).toBe(200);
   const calendar = await (await page.request.get(`/api/calendar?month=${start.slice(0, 7)}`)).json() as { events: Array<{ id: string; startDate: string; periodStartDate: string | null; occurrenceKey: string | null }> };
@@ -125,7 +127,7 @@ test("period recurrence projection and occurrence override API", async ({ page }
   await expect(page.getByText("今回のみ変更", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "period-occurrence-modified-390x844.png") });
   await page.reload();
-  await expect(page.getByText("今回のみ変更", { exact: true })).toHaveCount(1);
+  await expect(page.locator("main.daily-page .event-swipe-row").filter({ hasText: "今回のみ変更" })).toHaveCount(1);
   const modified = await page.request.patch(`/api/events/${created.event.id}`, { data: { ...input, periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: shiftDate(start, 2), periodEndDate: shiftDate(start, 4), recurrence: undefined, scope: "occurrence", occurrenceKey: occurrence.occurrenceKey } });
   expect(modified.status()).toBe(200);
   const changedDaily = await (await page.request.get(`/api/daily?date=${shiftDate(start, 3)}`)).json() as { events: Array<{ title: string; occurrenceKey: string | null }> };

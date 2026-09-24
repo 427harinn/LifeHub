@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { App, CalendarShell, EventForm, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon } from "./App";
+import { App, CalendarDateSheet, CalendarShell, DailyShell, EventForm, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon } from "./App";
 import { allocateCalendarCellRows, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, moneyAverageDivisorFor, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./lib/app-view-helpers";
 import type { Event, MoneyItem, MoneyProjection } from "./api/client";
 import { defaultEndTimeForStart } from "./lib/event-time";
@@ -17,6 +17,54 @@ const timedEvent = (overrides: Partial<Event> = {}): Event => ({
   startDate: "2026-09-10", startTime: "09:00", endDate: "2026-09-10", endTime: "10:00", periodWindowType: null, periodAnchorDate: null,
   periodStartDate: null, periodEndDate: null, deadlineTime: null, recurrenceRuleId: null, active: true, deletedAt: null,
   createdAt: "2026-09-09T00:00:00.000Z", updatedAt: "2026-09-09T00:00:00.000Z", ...overrides
+});
+
+const periodProjectionWeek = (): Event[] => Array.from({ length: 7 }, (_, index) => {
+  const date = `2026-09-${String(7 + index).padStart(2, "0")}`;
+  return timedEvent({
+    id: "period-week-1",
+    title: "週次の整理",
+    timingType: "period",
+    allDay: true,
+    startDate: date,
+    endDate: date,
+    startTime: null,
+    endTime: null,
+    periodWindowType: "this_week",
+    periodAnchorDate: "2026-09-07",
+    periodStartDate: "2026-09-07",
+    periodEndDate: "2026-09-13",
+    deadlineTime: "21:00",
+    recurrenceRuleId: "weekly-rule-1",
+    occurrenceKey: "event:period-week-1:week:2026-09-07",
+  });
+});
+
+const periodSheetProps = (events: Event[]) => ({
+  date: "2026-09-10",
+  events,
+  money: null,
+  filter: "all" as const,
+  onClose: vi.fn(),
+  onAddCategory: vi.fn(),
+  onAddMoney: vi.fn(),
+  onOpenDaily: vi.fn(),
+  onEditEvent: vi.fn(),
+  onEditMoney: vi.fn(),
+  onDateChange: vi.fn(),
+});
+
+const periodDailyProps = (events: Event[]) => ({
+  date: "2026-09-10",
+  events,
+  money: null,
+  filter: "all" as const,
+  dailyNote: null,
+  onDateChange: vi.fn(),
+  onFilterChange: vi.fn(),
+  onEditEvent: vi.fn(),
+  onEditMoney: vi.fn(),
+  onSaveNote: vi.fn().mockResolvedValue(null),
 });
 
 const renderEventForm = (props: Partial<Parameters<typeof EventForm>[0]> = {}) => render(<EventForm category="home" initialDate="2026-09-10" onCancel={vi.fn()} onSaved={vi.fn()} suppressInitialRecentOpen={false} {...props} />);
@@ -601,6 +649,40 @@ describe("Calendar date and money projections", () => {
     expect(entries.map((entry) => entry.amount)).toEqual([-1500, 2999, -800]);
     expect(calendarMoneySummaryForDate("2026-09-10", "2026-09-10", projection)).toMatchObject({ amount: 699, category: "income" });
     expect(calendarMoneySummaryForDate("2026-09-11", "2026-09-10", projection)).toBeNull();
+  });
+});
+
+describe("period projection row identity", () => {
+  it("renders one period event in a Calendar Date Sheet day", () => {
+    render(<CalendarDateSheet {...periodSheetProps(periodProjectionWeek())} />);
+
+    expect(screen.getAllByRole("article", { name: "週次の整理" })).toHaveLength(1);
+  });
+
+  it("opens Edit for only the swiped period projection row", () => {
+    render(<CalendarDateSheet {...periodSheetProps(periodProjectionWeek())} />);
+
+    const row = screen.getAllByRole("article", { name: "週次の整理" })[0];
+    fireEvent.pointerDown(row, { clientX: 200, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(row, { clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerUp(row, { clientX: 100, clientY: 100, pointerId: 1 });
+
+    expect(screen.getAllByRole("button", { name: "編集" })).toHaveLength(1);
+  });
+
+  it("expands only the tapped period projection row", () => {
+    render(<CalendarDateSheet {...periodSheetProps(periodProjectionWeek())} />);
+
+    const row = screen.getAllByRole("article", { name: "週次の整理" })[0];
+    fireEvent.click(within(row).getByRole("button", { name: "週次の整理" }));
+
+    expect(screen.getAllByRole("button", { name: "編集" })).toHaveLength(1);
+  });
+
+  it("renders one period event in Daily for the requested day", () => {
+    render(<DailyShell {...periodDailyProps(periodProjectionWeek())} />);
+
+    expect(screen.getAllByRole("article", { name: "週次の整理" })).toHaveLength(1);
   });
 });
 
