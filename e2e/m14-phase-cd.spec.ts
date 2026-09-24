@@ -30,6 +30,25 @@ async function assertNoOverflow(page: import("@playwright/test").Page) {
   }
 }
 
+async function assertNativeRowsFit(scope: import("@playwright/test").Locator) {
+  const rows = await scope.locator(".date-input, .time-input").evaluateAll((elements) => elements.map((element) => {
+    const row = element.getBoundingClientRect();
+    const input = element.querySelector("input")?.getBoundingClientRect();
+    return input ? { rowLeft: row.left, rowRight: row.right, top: row.top, bottom: row.bottom, inputLeft: input.left, inputRight: input.right, inputTop: input.top, inputBottom: input.bottom } : null;
+  }).filter((value): value is NonNullable<typeof value> => value !== null));
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(row.inputLeft).toBeGreaterThanOrEqual(row.rowLeft - 1);
+    expect(row.inputRight).toBeLessThanOrEqual(row.rowRight + 1);
+    expect(row.inputTop).toBeGreaterThanOrEqual(row.top - 1);
+    expect(row.inputBottom).toBeLessThanOrEqual(row.bottom + 1);
+  }
+  const sortedRows = [...rows].sort((left, right) => left.top - right.top);
+  for (let index = 1; index < sortedRows.length; index += 1) {
+    expect(sortedRows[index - 1].bottom).toBeLessThanOrEqual(sortedRows[index].top + 1);
+  }
+}
+
 test("EventForm, MoneyForm, and time row stay inside 375/390/393px", async ({ page }) => {
   await mkdir(evidenceDir, { recursive: true });
   await register(page);
@@ -40,13 +59,15 @@ test("EventForm, MoneyForm, and time row stay inside 375/390/393px", async ({ pa
     await page.setViewportSize({ width, height: width === 375 ? 812 : width === 390 ? 844 : 852 });
     await assertNoOverflow(page);
     const timeRow = page.locator(".event-time-fields");
-    expect(await timeRow.locator("input").count()).toBe(2);
+    expect(await timeRow.locator(".time-input").count()).toBe(2);
     const rowBox = await timeRow.boundingBox();
-    const inputs = await timeRow.locator("input").evaluateAll((elements) => elements.map((element) => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, width: rect.width }; }));
+    const titleBox = await page.getByLabel("タイトル").boundingBox();
+    const formBox = await page.locator(".event-form").boundingBox();
     expect(rowBox).not.toBeNull();
-    expect(inputs[0].width).toBeGreaterThan(0);
-    expect(inputs[1].width).toBeGreaterThan(0);
-    expect(inputs[1].right).toBeLessThanOrEqual(width + 1);
+    await assertNativeRowsFit(page.locator(".event-form"));
+    expect(titleBox).not.toBeNull();
+    expect(formBox).not.toBeNull();
+    if (titleBox && formBox) expect(titleBox.width).toBeCloseTo(formBox.width, 0);
     if (width === 375 && rowBox) {
       await page.screenshot({ path: path.join(evidenceDir, "time-row-375x812.png"), clip: rowBox });
     }

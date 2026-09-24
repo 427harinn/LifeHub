@@ -317,7 +317,14 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-form-section .form-row { min-height: 48px; }
 .date-input { display: grid; gap: var(--space-2); color: var(--color-text); font-size: .9375rem; }
 .date-input .input { width: 100%; min-height: 48px; background: var(--color-surface); }
-.input[type="date"], .input[type="time"] { min-inline-size: 0; inline-size: 100%; max-inline-size: 100%; }
+.date-input--compact, .time-input { display: flex; min-width: 0; max-width: 100%; min-height: 44px; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.date-input--compact > span:first-child, .time-input > span:first-child { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+.date-input:not(.date-input--compact) .native-input-row__control { width: 100%; }
+.native-input-row__control { display: flex; min-width: 0; max-width: 100%; flex: 0 1 auto; justify-content: flex-end; }
+.date-input--compact .native-input-row__control { width: clamp(176px, 48vw, 184px); flex: 0 1 clamp(176px, 48vw, 184px); }
+.time-input .native-input-row__control { width: clamp(120px, 32vw, 128px); flex: 0 1 clamp(120px, 32vw, 128px); }
+.date-input--compact .input, .time-input .input { width: 100%; min-width: 0; max-width: 100%; min-height: 44px; flex: 1 1 auto; padding: 8px 10px; background: var(--color-surface); font-size: 16px; line-height: 1.25; }
+.input[type="date"], .input[type="time"] { min-inline-size: 0; max-inline-size: 100%; }
 .date-input-group { display: grid; gap: var(--space-3); }
 .event-option-sheet { display: grid; gap: var(--space-2); }
 .event-option-sheet__option { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 8px 0; border: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
@@ -356,10 +363,7 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-toggle-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; min-height: 48px; align-items: center; gap: var(--space-2); padding: 8px 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: .875rem; }
 .event-toggle-row input { width: 22px; height: 22px; accent-color: var(--color-primary-strong); }
 .event-toggle-value { width: 28px; color: var(--color-text); font-size: .8125rem; text-align: right; }
-.event-time-fields { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: var(--space-2); }
-.event-time-fields > .input-field { min-width: 0; }
-.event-time-fields .input { min-width: 0; }
-.event-time-fields > span { padding-bottom: 14px; color: var(--color-text-secondary); }
+.event-time-fields { display: grid; min-width: 0; gap: var(--space-3); }
 .expanded-input { padding-top: var(--space-2); }
 .textarea { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 104px; resize: vertical; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text); background: var(--color-surface); }
 .input, .textarea, select { max-width: 100%; font-size: 16px; }
