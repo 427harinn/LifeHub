@@ -77,12 +77,17 @@ describe("scheduled recurrence projection", () => {
     expect(week).toHaveLength(7);
     expect(week.map((item) => item.startDate)).toEqual(["2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-12", "2026-09-13"]);
     expect(new Set(week.map((item) => item.occurrenceKey))).toEqual(new Set([stablePeriodWeekOccurrenceKey("period-1", "2026-09-07")]));
+    for (const date of ["2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-12", "2026-09-13"]) {
+      expect(projectDefinitions([{ event: periodEvent(), rule: null, overrides: [] }], dayToRange(date))).toMatchObject([{ startDate: date, endDate: date, periodStartDate: "2026-09-07", periodEndDate: "2026-09-13" }]);
+    }
     const month = projectDefinitions([{ event: periodEvent({ id: "period-month", periodWindowType: "this_month", periodAnchorDate: "2026-09-10" }), rule: null, overrides: [] }], { startDate: "2026-09-01", endDate: "2026-09-30" });
     expect(month).toHaveLength(30);
     expect(month[0].occurrenceKey).toBe(stablePeriodMonthOccurrenceKey("period-month", "2026-09"));
+    expect(projectDefinitions([{ event: periodEvent({ id: "period-month", periodWindowType: "this_month", periodAnchorDate: "2026-09-10" }), rule: null, overrides: [] }], dayToRange("2026-09-15"))).toMatchObject([{ startDate: "2026-09-15", endDate: "2026-09-15", periodStartDate: "2026-09-01", periodEndDate: "2026-09-30" }]);
     const custom = projectDefinitions([{ event: periodEvent({ id: "period-range", periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: "2026-09-10", periodEndDate: "2026-09-12" }), rule: null, overrides: [] }], { startDate: "2026-09-01", endDate: "2026-09-30" });
     expect(custom.map((item) => item.startDate)).toEqual(["2026-09-10", "2026-09-11", "2026-09-12"]);
     expect(custom[0].occurrenceKey).toBe(stablePeriodRangeOccurrenceKey("period-range", "2026-09-10"));
+    expect(projectDefinitions([{ event: periodEvent({ id: "period-range", periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: "2026-09-10", periodEndDate: "2026-09-12" }), rule: null, overrides: [] }], dayToRange("2026-09-11"))).toMatchObject([{ startDate: "2026-09-11", endDate: "2026-09-11", periodStartDate: "2026-09-10", periodEndDate: "2026-09-12" }]);
   });
 
   it("projects recurring period weeks/months from their anchor and applies overrides", () => {
