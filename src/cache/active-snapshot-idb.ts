@@ -1,6 +1,7 @@
 export const ACTIVE_SNAPSHOT_DB_NAME = "lifehub-active-snapshots";
 export const ACTIVE_SNAPSHOT_STORE_NAME = "snapshots";
-export const ACTIVE_SNAPSHOT_DB_VERSION = 1;
+export const ACTIVE_SNAPSHOT_METADATA_STORE_NAME = "metadata";
+export const ACTIVE_SNAPSHOT_DB_VERSION = 2;
 
 export type ActiveSnapshotRecord = {
   schemaVersion: number;
@@ -13,6 +14,18 @@ export type ActiveSnapshotRecord = {
   data: unknown;
 };
 
+export type ActiveSnapshotMetadataRecord = {
+  schemaVersion: number;
+  key: string;
+  userId: string;
+  timezone: string;
+  weekStartsOn: number;
+  savedAt: number;
+  serverConfirmedAt: string;
+};
+
+export const activeSnapshotMetadataKey = (userId: string) => `active-snapshot-metadata:${userId}`;
+
 const openDatabase = (): Promise<IDBDatabase> => {
   if (typeof indexedDB === "undefined") return Promise.reject(new Error("IndexedDB is unavailable"));
   return new Promise((resolve, reject) => {
@@ -20,6 +33,9 @@ const openDatabase = (): Promise<IDBDatabase> => {
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(ACTIVE_SNAPSHOT_STORE_NAME)) {
         request.result.createObjectStore(ACTIVE_SNAPSHOT_STORE_NAME, { keyPath: "key" });
+      }
+      if (!request.result.objectStoreNames.contains(ACTIVE_SNAPSHOT_METADATA_STORE_NAME)) {
+        request.result.createObjectStore(ACTIVE_SNAPSHOT_METADATA_STORE_NAME, { keyPath: "key" });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -60,17 +76,44 @@ export const writeActiveSnapshotRecord = async (record: ActiveSnapshotRecord): P
   }
 };
 
+export const readActiveSnapshotMetadataRecord = async (userId: string): Promise<ActiveSnapshotMetadataRecord | null> => {
+  const database = await openDatabase();
+  return new Promise<ActiveSnapshotMetadataRecord | null>((resolve, reject) => {
+    const transaction = database.transaction(ACTIVE_SNAPSHOT_METADATA_STORE_NAME, "readonly");
+    const request = transaction.objectStore(ACTIVE_SNAPSHOT_METADATA_STORE_NAME).get(activeSnapshotMetadataKey(userId));
+    request.onsuccess = () => resolve((request.result as ActiveSnapshotMetadataRecord | undefined) ?? null);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB metadata read failed"));
+    transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB metadata read transaction failed"));
+  }).finally(() => database.close());
+};
+
+export const writeActiveSnapshotMetadataRecord = async (record: ActiveSnapshotMetadataRecord): Promise<void> => {
+  const database = await openDatabase();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(ACTIVE_SNAPSHOT_METADATA_STORE_NAME, "readwrite");
+      transaction.objectStore(ACTIVE_SNAPSHOT_METADATA_STORE_NAME).put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB metadata write failed"));
+      transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB metadata write aborted"));
+    });
+  } finally {
+    database.close();
+  }
+};
+
 export const deleteActiveSnapshotRecordsForUser = async (userId: string): Promise<void> => {
   const database = await openDatabase();
   try {
     await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(ACTIVE_SNAPSHOT_STORE_NAME, "readwrite");
+      const transaction = database.transaction([ACTIVE_SNAPSHOT_STORE_NAME, ACTIVE_SNAPSHOT_METADATA_STORE_NAME], "readwrite");
       const store = transaction.objectStore(ACTIVE_SNAPSHOT_STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
         (request.result as ActiveSnapshotRecord[])
           .filter((record) => record.userId === userId)
           .forEach((record) => store.delete(record.key));
+        transaction.objectStore(ACTIVE_SNAPSHOT_METADATA_STORE_NAME).delete(activeSnapshotMetadataKey(userId));
       };
       request.onerror = () => transaction.abort();
       transaction.oncomplete = () => resolve();

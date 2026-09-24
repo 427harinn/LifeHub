@@ -20,11 +20,16 @@ const money = { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 
 
 const installApiRoutes = async (page: import("@playwright/test").Page, kind: "calendar" | "daily", release: { promise: Promise<void>; resolve: () => void }) => {
   let dataRequests = 0;
+  let settingsRequests = 0;
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     if (!url.pathname.startsWith("/api/")) return route.continue();
     if (url.pathname === "/api/auth/me") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ user }) });
-    if (url.pathname === "/api/settings") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ settings }) });
+    if (url.pathname === "/api/settings") {
+      settingsRequests += 1;
+      if (settingsRequests > 1) await release.promise;
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify({ settings }) });
+    }
     if (url.pathname === "/api/user-state") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ state: { migrationState: "active" } }) });
     if (kind === "calendar" && url.pathname === "/api/calendar") {
       dataRequests += 1;
@@ -62,6 +67,7 @@ test("Daily reuses IndexedDB snapshot before a reload refresh resolves", async (
   const requestCount = await installApiRoutes(page, "daily", release);
   await page.goto("/daily");
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
+  await expect(page.getByText("読み込み中…")).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await expect(page.getByText("読み込み中…")).toHaveCount(0);

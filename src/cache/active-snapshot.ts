@@ -1,8 +1,11 @@
 import type { DailyNote, Event, MoneyProjection } from "../api/client";
 import {
   deleteActiveSnapshotRecordsForUser,
+  readActiveSnapshotMetadataRecord,
   readActiveSnapshotRecord,
+  writeActiveSnapshotMetadataRecord,
   writeActiveSnapshotRecord,
+  type ActiveSnapshotMetadataRecord,
   type ActiveSnapshotRecord
 } from "./active-snapshot-idb";
 
@@ -35,6 +38,8 @@ export type DailySnapshotIdentity = {
   weekStartsOn: number;
   date: string;
 };
+
+export type ActiveSnapshotMetadata = Pick<ActiveSnapshotMetadataRecord, "userId" | "timezone" | "weekStartsOn" | "savedAt" | "serverConfirmedAt">;
 
 const memorySnapshots = new Map<string, ActiveSnapshotRecord>();
 let cacheEpoch = 0;
@@ -81,6 +86,39 @@ const identityFor = (identity: CalendarSnapshotIdentity | DailySnapshotIdentity)
 });
 
 export const getActiveSnapshotEpoch = () => cacheEpoch;
+
+const isValidSnapshotMetadata = (value: unknown, userId: string): value is ActiveSnapshotMetadataRecord => {
+  if (!isRecord(value) || value.schemaVersion !== ACTIVE_SNAPSHOT_SCHEMA_VERSION || value.key !== `active-snapshot-metadata:${userId}` || value.userId !== userId || !isString(value.timezone) || (value.weekStartsOn !== 0 && value.weekStartsOn !== 1) || typeof value.savedAt !== "number" || !Number.isFinite(value.savedAt) || !isString(value.serverConfirmedAt)) return false;
+  return true;
+};
+
+export const readActiveSnapshotMetadata = async (userId: string): Promise<ActiveSnapshotMetadata | null> => {
+  try {
+    const record = await readActiveSnapshotMetadataRecord(userId);
+    return record && isValidSnapshotMetadata(record, userId) ? record : null;
+  } catch {
+    return null;
+  }
+};
+
+export const writeActiveSnapshotMetadata = async (userId: string, timezone: string, weekStartsOn: number, expectedEpoch = cacheEpoch): Promise<boolean> => {
+  if (expectedEpoch !== cacheEpoch || !isString(timezone) || (weekStartsOn !== 0 && weekStartsOn !== 1)) return false;
+  const record: ActiveSnapshotMetadataRecord = {
+    schemaVersion: ACTIVE_SNAPSHOT_SCHEMA_VERSION,
+    key: `active-snapshot-metadata:${userId}`,
+    userId,
+    timezone,
+    weekStartsOn,
+    savedAt: Date.now(),
+    serverConfirmedAt: new Date().toISOString()
+  };
+  try {
+    if (expectedEpoch === cacheEpoch) await writeActiveSnapshotMetadataRecord(record);
+  } catch {
+    // Metadata persistence is optional; network settings remain authoritative.
+  }
+  return true;
+};
 
 export const readMemoryActiveSnapshot = <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity, validate: (data: unknown) => data is T): T | null => {
   const expected = identityFor(identity);
