@@ -25,7 +25,9 @@ import {
   clearActiveSnapshotsForUser,
   clearMemoryActiveSnapshots,
   dailySnapshotKey,
+  getActiveSnapshotSavedAt,
   getActiveSnapshotEpoch,
+  invalidateActiveSnapshotEpoch,
   isCalendarSnapshotData,
   isDailySnapshotData,
   readActiveSnapshotMetadata,
@@ -50,6 +52,16 @@ function DataStateMessage({ state, onRetry }: { state: DataLoadState; onRetry: (
   return null;
 }
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
+const CALENDAR_PREFETCH_TTL_MS = 5 * 60 * 1000;
+type CalendarPrefetchEntry = { phase: "scheduled" | "in-flight"; completedAt?: number; controller?: AbortController };
+const scheduleBackgroundWork = (work: () => void) => {
+  const idleWindow = window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number };
+  if (idleWindow.requestIdleCallback) {
+    idleWindow.requestIdleCallback(work, { timeout: 500 });
+    return;
+  }
+  window.setTimeout(work, 0);
+};
 
 const settingsDetailFromPath = (): SettingsDetail | null => {
   const detail = window.location.pathname.match(/^\/settings\/([^/]+)$/)?.[1];
@@ -803,6 +815,7 @@ export function App() {
   const calendarAuthoritativeRef = useRef(false);
   const dailyAuthoritativeRef = useRef(false);
   const calendarControllerRef = useRef<AbortController | null>(null);
+  const calendarPrefetchRef = useRef(new Map<string, CalendarPrefetchEntry>());
   const dailyControllerRef = useRef<AbortController | null>(null);
   const archiveRowsRef = useRef<ArchiveRecord[]>([]);
   const archiveMetadataRef = useRef<ArchiveMetadata[]>([]);
@@ -813,6 +826,10 @@ export function App() {
   const serverSnapshotContext = settingsLoad === "success" && settings && user?.id === settings.userId ? { timezone: settings.timezone, weekStartsOn: settings.weekStartsOn } : null;
   const metadataSnapshotContext = snapshotMetadata && user?.id === snapshotMetadata.userId ? { timezone: snapshotMetadata.timezone, weekStartsOn: snapshotMetadata.weekStartsOn } : null;
   const snapshotContext = serverSnapshotContext ?? metadataSnapshotContext;
+  const applySettingsState = (nextSettings: UserSettings) => {
+    if (settings && (settings.timezone !== nextSettings.timezone || settings.weekStartsOn !== nextSettings.weekStartsOn)) invalidateActiveSnapshotEpoch();
+    setSettings(nextSettings);
+  };
 useEffect(() => { let active = true; void authMe().then(async ({ user: authenticatedUser }) => { if (!active) return; setUser(authenticatedUser); setSnapshotMetadata(null); setSettingsLoad("loading"); setAuthChecked(true); void readActiveSnapshotMetadata(authenticatedUser.id).then((metadata) => { if (active && metadata) setSnapshotMetadata({ userId: metadata.userId, timezone: metadata.timezone, weekStartsOn: metadata.weekStartsOn }); }); const [result, stateResult] = await Promise.all([getSettings().catch(() => null), getUserState().catch(() => null)]); if (!active) return; if (result) { setSettings(result.settings); setSettingsLoad("success"); void writeActiveSnapshotMetadata(authenticatedUser.id, result.settings.timezone, result.settings.weekStartsOn); } else setSettingsLoad("error"); if (stateResult) setUserState(stateResult.state); }).catch((error: unknown) => { if (active) { if (apiErrorStatus(error) !== 401) setAuthError("ログイン状態を確認できませんでした。"); setAuthChecked(true); } }); const syncLocation = () => { const nextScreen = screenFromPath(); const nextDate = notificationDateFromPath(); setScreen(nextScreen); setSettingsDetail(nextScreen === "settings" ? settingsDetailFromPath() : null); if (nextScreen === "daily") { const restoredDate = nextDate ?? todayDateKey(); setDailyDate(restoredDate); setMonth(monthStart(restoredDate)); } if (nextScreen === "calendar") { setSelectedDate(nextDate); setDateSheetOpen(Boolean(nextDate)); if (nextDate) setMonth(monthStart(nextDate)); } else { setDateSheetOpen(false); } }; const onPopState = syncLocation; window.addEventListener("popstate", onPopState); return () => { active = false; window.removeEventListener("popstate", onPopState); }; }, []);
   useEffect(() => { if (!user || userState?.migrationState === "migration_locked") return; let active = true; void Promise.all([getArchiveRows(user.id), getArchiveMetadata(user.id)]).then(([rows, metadata]) => { if (!active) return; setArchiveRows(rows); setArchiveMetadata(metadata); setArchiveState(metadata.some((item) => item.status === "confirm_pending") ? "confirm_pending" : metadata.some((item) => item.status === "confirmed") ? "complete" : "idle"); }).catch(() => { if (active) setArchiveRows([]); }); return () => { active = false; }; }, [user, userState?.migrationState]);
   useEffect(() => {
@@ -838,6 +855,46 @@ useEffect(() => { let active = true; void authMe().then(async ({ user: authentic
       setMoneyProjection(mergeMoneyProjections(data.money, localMoney, retentionBoundary));
       setCalendarDataReady(true);
     };
+    const queuePrefetch = (targetMonth: string) => {
+      const targetIdentity = { userId: user.id, ...snapshotContext, month: targetMonth };
+      const targetKey = calendarSnapshotKey(targetIdentity);
+      const existing = calendarPrefetchRef.current.get(targetKey);
+      if (existing?.phase === "scheduled" || existing?.phase === "in-flight") return;
+      if (existing?.completedAt && Date.now() - existing.completedAt < CALENDAR_PREFETCH_TTL_MS) return;
+      const entry: CalendarPrefetchEntry = { phase: "scheduled" };
+      calendarPrefetchRef.current.set(targetKey, entry);
+      scheduleBackgroundWork(() => {
+        if (!active || requestEpoch !== getActiveSnapshotEpoch() || calendarMutationRevisionRef.current !== mutationRevision) {
+          if (calendarPrefetchRef.current.get(targetKey) === entry) calendarPrefetchRef.current.delete(targetKey);
+          return;
+        }
+        entry.phase = "in-flight";
+        const prefetchController = new AbortController();
+        entry.controller = prefetchController;
+        void (async () => {
+          try {
+            const savedAt = await getActiveSnapshotSavedAt(targetIdentity);
+            if (!active || requestEpoch !== getActiveSnapshotEpoch() || calendarMutationRevisionRef.current !== mutationRevision) return;
+            if (savedAt !== null && Date.now() - savedAt < CALENDAR_PREFETCH_TTL_MS) {
+              entry.completedAt = savedAt;
+              return;
+            }
+            const result = await getCalendar(targetMonth, prefetchController.signal);
+            const data: CalendarSnapshotData = { month: result.month ?? targetMonth.slice(0, 7), range: result.range, events: result.events ?? [], money: result.money };
+            if (!isCalendarSnapshotData(data) || data.month !== targetMonth.slice(0, 7)) throw new Error("Calendar prefetch response was invalid");
+            if (!active || requestEpoch !== getActiveSnapshotEpoch() || calendarMutationRevisionRef.current !== mutationRevision) return;
+            const written = await writeServerConfirmedActiveSnapshot(targetIdentity, data, isCalendarSnapshotData, requestEpoch, { evictCalendarSnapshots: { preserveMonths: [month, shiftMonth(month, -1), shiftMonth(month, 1), targetMonth] } });
+            if (written) entry.completedAt = Date.now();
+          } catch (error) {
+            if (!prefetchController.signal.aborted && !isAbortError(error)) {
+              // Prefetch is an optional acceleration layer; the visible month is unaffected.
+            }
+          } finally {
+            if (calendarPrefetchRef.current.get(targetKey) === entry && entry.completedAt === undefined) calendarPrefetchRef.current.delete(targetKey);
+          }
+        })();
+      });
+    };
     const memory = readMemoryActiveSnapshot(identity, isCalendarSnapshotData);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCalendarDataReady(Boolean(memory));
@@ -856,7 +913,9 @@ useEffect(() => { let active = true; void authMe().then(async ({ user: authentic
       calendarAuthoritativeRef.current = true;
       apply(data);
       setCalendarLoad("success");
-      void writeServerConfirmedActiveSnapshot(identity, data, isCalendarSnapshotData, requestEpoch);
+      void writeServerConfirmedActiveSnapshot(identity, data, isCalendarSnapshotData, requestEpoch, { evictCalendarSnapshots: { preserveMonths: [month, shiftMonth(month, -1), shiftMonth(month, 1)] } });
+      queuePrefetch(shiftMonth(month, -1));
+      queuePrefetch(shiftMonth(month, 1));
     }).catch((error: unknown) => {
       if (!active || controller.signal.aborted || isAbortError(error) || calendarGenerationRef.current !== generation || calendarLatestStartedRef.current !== sequence) return;
       setCalendarLoad("error");
@@ -954,9 +1013,9 @@ useEffect(() => { let active = true; void authMe().then(async ({ user: authentic
   const openMoneyAnalysis = () => { setMoneyYearProjection(null); setScreen("money-analysis"); window.history.pushState({}, "", screenPath["money-analysis"]); };
   const changeAnalysisYear = (nextYear: number) => { setMoneyYearProjection(null); setAnalysisYear(nextYear); };
   const closeMoneyAnalysis = () => { setScreen("money"); window.history.replaceState({}, "", screenPath.money); };
-  const loadSettings = () => { setSettingsLoad("loading"); void getSettings().then((result) => { setSettings(result.settings); setSettingsLoad("success"); }).catch(() => setSettingsLoad("error")); };
-  const handleAuthenticated = (authenticatedUser: AuthUser) => { setUser(authenticatedUser); setSnapshotMetadata(null); setAuthError(""); setSettingsLoad("loading"); void readActiveSnapshotMetadata(authenticatedUser.id).then((metadata) => { if (metadata) setSnapshotMetadata({ userId: metadata.userId, timezone: metadata.timezone, weekStartsOn: metadata.weekStartsOn }); }); void Promise.all([getSettings(), getUserState()]).then(([settingsResult, stateResult]) => { setSettings(settingsResult.settings); setSettingsLoad("success"); void writeActiveSnapshotMetadata(authenticatedUser.id, settingsResult.settings.timezone, settingsResult.settings.weekStartsOn); setUserState(stateResult.state); }).catch(() => setSettingsLoad("error")); };
-  const handleLogout = () => { const currentUserId = user?.id; calendarControllerRef.current?.abort(); dailyControllerRef.current?.abort(); calendarGenerationRef.current += 1; dailyGenerationRef.current += 1; clearMemoryActiveSnapshots(); void logout().finally(async () => { if (currentUserId) await clearActiveSnapshotsForUser(currentUserId); setUser(null); setSettings(null); setSnapshotMetadata(null); setSettingsLoad("loading"); setUserState(null); setMigrationId(undefined); setEvents([]); setMoneyProjection(null); setDailyNote(null); setCalendarDataReady(false); setDailyDataReady(false); calendarRawRef.current = null; dailyRawRef.current = null; setSettingsDetail(null); setScreen("calendar"); window.history.pushState({}, "", "/calendar"); }); };
+  const loadSettings = () => { setSettingsLoad("loading"); void getSettings().then((result) => { applySettingsState(result.settings); setSettingsLoad("success"); }).catch(() => setSettingsLoad("error")); };
+  const handleAuthenticated = (authenticatedUser: AuthUser) => { setUser(authenticatedUser); setSnapshotMetadata(null); setAuthError(""); setSettingsLoad("loading"); void readActiveSnapshotMetadata(authenticatedUser.id).then((metadata) => { if (metadata) setSnapshotMetadata({ userId: metadata.userId, timezone: metadata.timezone, weekStartsOn: metadata.weekStartsOn }); }); void Promise.all([getSettings(), getUserState()]).then(([settingsResult, stateResult]) => { applySettingsState(settingsResult.settings); setSettingsLoad("success"); void writeActiveSnapshotMetadata(authenticatedUser.id, settingsResult.settings.timezone, settingsResult.settings.weekStartsOn); setUserState(stateResult.state); }).catch(() => setSettingsLoad("error")); };
+  const handleLogout = () => { const currentUserId = user?.id; calendarControllerRef.current?.abort(); dailyControllerRef.current?.abort(); calendarPrefetchRef.current.forEach((entry) => entry.controller?.abort()); calendarPrefetchRef.current.clear(); calendarGenerationRef.current += 1; dailyGenerationRef.current += 1; clearMemoryActiveSnapshots(); void logout().finally(async () => { if (currentUserId) await clearActiveSnapshotsForUser(currentUserId); setUser(null); setSettings(null); setSnapshotMetadata(null); setSettingsLoad("loading"); setUserState(null); setMigrationId(undefined); setEvents([]); setMoneyProjection(null); setDailyNote(null); setCalendarDataReady(false); setDailyDataReady(false); calendarRawRef.current = null; dailyRawRef.current = null; setSettingsDetail(null); setScreen("calendar"); window.history.pushState({}, "", "/calendar"); }); };
   const checkArchive = async () => {
     if (!user) return;
     setArchiveState("saving"); setArchiveError("");
@@ -1004,13 +1063,13 @@ useEffect(() => { let active = true; void authMe().then(async ({ user: authentic
   const handleSaved = (event: Event) => { setEvents((current) => [...current.filter((item) => event.occurrenceKey ? item.occurrenceKey !== event.occurrenceKey : item.id !== event.id), event]); const context = formState?.returnTo; setFormState(null); if (context) { restore(context); void refreshProjection(context); } };
   const saveLastUsedNotification = async (category: Event["category"], preference: LastUsedNotificationPreference) => {
     const result = await updateSettings(category === "home" ? { lastUsedNotificationHome: preference } : { lastUsedNotificationWork: preference });
-    setSettings(result.settings);
+    applySettingsState(result.settings);
   };
   const confirmDelete = async () => { const target = deleteTarget; if (!target) return; setDeleteBusy(true); try { await deleteEvent(target.event.id, target.scope, target.event.occurrenceKey ?? undefined); setEvents((current) => target.scope === "occurrence" ? current.filter((event) => event.occurrenceKey !== target.event.occurrenceKey) : current.filter((event) => event.id !== target.event.id)); setDeleteOpen(false); setDeleteTarget(null); setDetailState(null); restore(target.returnTo); void refreshProjection(target.returnTo); } catch (caught) { setSelectionNote(caught instanceof Error ? caught.message : "削除できませんでした。"); } finally { setDeleteBusy(false); } };
   if (!authChecked) return <div className="auth-page"><header className="app-header"><h1>LifeHub</h1></header><main className="auth-content"><p className="empty-state">読み込み中</p></main></div>;
   if (!user) return <><LoginPage onAuthenticated={handleAuthenticated} />{authError ? <p className="auth-global-error" role="alert">{authError}</p> : null}</>;
   if (userState?.migrationState === "migration_locked") return <MigrationScreen migrationId={migrationId} onCompleted={() => { setUserState((current) => current ? { ...current, migrationState: "active" } : current); setMigrationId(undefined); }} user={user} />;
-const content = moneyFormState ? <MoneyForm initialDate={moneyFormState.initialDate} item={moneyFormState.item} onCancel={closeMoneyForm} onDelete={moneyFormState.item ? () => requestMoneyDelete(moneyFormState.item as MoneyItem, moneyFormState.scope) : undefined} onSaved={handleMoneySaved} scope={moneyFormState.scope} suppressInitialRecentOpen /> : formState ? <EventForm category={formState.category} event={formState.event} initialDate={formState.initialDate} lastUsedNotification={formState.event ? null : settings ? formState.category === "home" ? settings.lastUsedNotificationHome : settings.lastUsedNotificationWork : null} onCancel={closeForm} onDelete={formState.event ? () => requestDelete(formState.event as Event, formState.returnTo) : undefined} onNotificationPreferenceSaved={saveLastUsedNotification} onSaved={handleSaved} scope={formState.scope} suppressInitialRecentOpen /> : detailState ? <EventDetailPage event={detailState.event} onBack={closeDetail} onDelete={() => requestDelete(detailState.event, detailState.returnTo)} onEdit={editEvent} /> : screen === "calendar-search" ? <CalendarSearchPage onBack={() => navigate("calendar")} onSelect={selectCalendarSearchResult} searchResults={searchWithArchive} /> : screen === "calendar" ? <CalendarShell events={events} loadState={calendarLoad} hasData={calendarDataReady} money={moneyProjection} filter={calendarFilter} month={month} onRetry={() => setReloadNonce((current) => current + 1)} onDateSelect={selectCalendarDate} onFilterChange={setCalendarFilter} onMonthChange={setMonth} onSearch={openCalendarSearch} /> : screen === "daily" ? !dailyDataReady ? <main className="screen-page daily-page"><header className="screen-header"><h1>デイリー</h1></header><DataStateMessage onRetry={() => setReloadNonce((current) => current + 1)} state={dailyLoad} /></main> : <DailyShell key={dailyDate} date={dailyDate} dailyNote={dailyNote} events={events} money={moneyProjection} filter={dailyFilter} onDateChange={changeDailyDate} onFilterChange={setDailyFilter} onEditEvent={(event) => openEventEdit(event, { screen: "daily", date: dailyDate, filter: dailyFilter })} onEditMoney={(item) => openMoneyEdit(item, { screen: "daily", date: dailyDate, filter: dailyFilter })} onMoneyChanged={() => { void refreshProjection({ screen: "daily", date: dailyDate, filter: dailyFilter }); }} onSaveNote={handleNoteSaved} /> : screen === "money" ? moneyLoad !== "success" ? <main className="screen-page money-page"><header className="screen-header"><h1>お金</h1></header><DataStateMessage onRetry={() => setReloadNonce((current) => current + 1)} state={moneyLoad} /></main> : <MoneyPage month={moneyMonth} money={moneyProjection} onEdit={(item) => openMoneyEdit(item)} onMoneyChanged={() => { setMoneyLoad("loading"); setReloadNonce((current) => current + 1); }} onMonthChange={setMoneyMonth} onOpenAnalysis={openMoneyAnalysis} /> : screen === "money-analysis" ? analysisLoad !== "success" ? <main className="screen-page money-analysis-page"><header className="screen-header"><button aria-label="お金へ戻る" className="back-button" onClick={closeMoneyAnalysis} type="button">‹</button><h1>お金の分析</h1></header><DataStateMessage onRetry={() => setReloadNonce((current) => current + 1)} state={analysisLoad} /></main> : <MoneyAnalysisPage key={analysisYear} data={moneyYearProjection} onBack={closeMoneyAnalysis} onYearChange={changeAnalysisYear} year={analysisYear} /> : <SettingsShell archiveCandidate={archiveCandidate} archiveError={archiveError} archiveMetadata={archiveMetadata} archiveState={archiveState} detail={settingsDetail} onArchiveCheck={() => { void checkArchive(); }} onBack={closeSettingsDetail} onLogout={handleLogout} onMigrationStarted={(id) => { setMigrationId(id); setUserState({ migrationState: "migration_locked" }); }} onOpenDetail={openSettingsDetail} onRetrySettings={loadSettings} onSettingsChange={setSettings} settings={settings} settingsLoad={settingsLoad} user={user} />;
+const content = moneyFormState ? <MoneyForm initialDate={moneyFormState.initialDate} item={moneyFormState.item} onCancel={closeMoneyForm} onDelete={moneyFormState.item ? () => requestMoneyDelete(moneyFormState.item as MoneyItem, moneyFormState.scope) : undefined} onSaved={handleMoneySaved} scope={moneyFormState.scope} suppressInitialRecentOpen /> : formState ? <EventForm category={formState.category} event={formState.event} initialDate={formState.initialDate} lastUsedNotification={formState.event ? null : settings ? formState.category === "home" ? settings.lastUsedNotificationHome : settings.lastUsedNotificationWork : null} onCancel={closeForm} onDelete={formState.event ? () => requestDelete(formState.event as Event, formState.returnTo) : undefined} onNotificationPreferenceSaved={saveLastUsedNotification} onSaved={handleSaved} scope={formState.scope} suppressInitialRecentOpen /> : detailState ? <EventDetailPage event={detailState.event} onBack={closeDetail} onDelete={() => requestDelete(detailState.event, detailState.returnTo)} onEdit={editEvent} /> : screen === "calendar-search" ? <CalendarSearchPage onBack={() => navigate("calendar")} onSelect={selectCalendarSearchResult} searchResults={searchWithArchive} /> : screen === "calendar" ? <CalendarShell events={events} loadState={calendarLoad} hasData={calendarDataReady} money={moneyProjection} filter={calendarFilter} month={month} onRetry={() => setReloadNonce((current) => current + 1)} onDateSelect={selectCalendarDate} onFilterChange={setCalendarFilter} onMonthChange={setMonth} onSearch={openCalendarSearch} /> : screen === "daily" ? !dailyDataReady ? <main className="screen-page daily-page"><header className="screen-header"><h1>デイリー</h1></header><DataStateMessage onRetry={() => setReloadNonce((current) => current + 1)} state={dailyLoad} /></main> : <DailyShell key={dailyDate} date={dailyDate} dailyNote={dailyNote} events={events} money={moneyProjection} filter={dailyFilter} onDateChange={changeDailyDate} onFilterChange={setDailyFilter} onEditEvent={(event) => openEventEdit(event, { screen: "daily", date: dailyDate, filter: dailyFilter })} onEditMoney={(item) => openMoneyEdit(item, { screen: "daily", date: dailyDate, filter: dailyFilter })} onMoneyChanged={() => { void refreshProjection({ screen: "daily", date: dailyDate, filter: dailyFilter }); }} onSaveNote={handleNoteSaved} /> : screen === "money" ? moneyLoad !== "success" ? <main className="screen-page money-page"><header className="screen-header"><h1>お金</h1></header><DataStateMessage onRetry={() => setReloadNonce((current) => current + 1)} state={moneyLoad} /></main> : <MoneyPage month={moneyMonth} money={moneyProjection} onEdit={(item) => openMoneyEdit(item)} onMoneyChanged={() => { setMoneyLoad("loading"); setReloadNonce((current) => current + 1); }} onMonthChange={setMoneyMonth} onOpenAnalysis={openMoneyAnalysis} /> : screen === "money-analysis" ? analysisLoad !== "success" ? <main className="screen-page money-analysis-page"><header className="screen-header"><button aria-label="お金へ戻る" className="back-button" onClick={closeMoneyAnalysis} type="button">‹</button><h1>お金の分析</h1></header><DataStateMessage onRetry={() => setReloadNonce((current) => current + 1)} state={analysisLoad} /></main> : <MoneyAnalysisPage key={analysisYear} data={moneyYearProjection} onBack={closeMoneyAnalysis} onYearChange={changeAnalysisYear} year={analysisYear} /> : <SettingsShell archiveCandidate={archiveCandidate} archiveError={archiveError} archiveMetadata={archiveMetadata} archiveState={archiveState} detail={settingsDetail} onArchiveCheck={() => { void checkArchive(); }} onBack={closeSettingsDetail} onLogout={handleLogout} onMigrationStarted={(id) => { setMigrationId(id); setUserState({ migrationState: "migration_locked" }); }} onOpenDetail={openSettingsDetail} onRetrySettings={loadSettings} onSettingsChange={applySettingsState} settings={settings} settingsLoad={settingsLoad} user={user} />;
   const activeNavigation = screen === "money-analysis" || screen === "calendar-search" ? screen === "calendar-search" ? "calendar" : "money" : screen;
 return <MobileShell activeNavigation={formState || moneyFormState || detailState || deleteOpen || moneyDeleteOpen || moneyScopeState ? undefined : activeNavigation} onAdd={() => { const context: MoneyReturnContext = screen === "daily" ? { screen: "daily", date: dailyDate, filter: dailyFilter } : screen === "money" || screen === "money-analysis" ? { screen: "money", month: moneyMonth } : { screen: "calendar", date: selectedDate ?? todayDateKey(), filter: calendarFilter }; setPendingAddContext(context); setSelectedDate(null); setDateSheetOpen(false); setAddOpen(true); }} onNavigate={navigate} showBottomNavigation={!formState && !moneyFormState && !detailState && !deleteOpen && !moneyDeleteOpen && !moneyScopeState}>{content}{selectionNote ? <p className="selection-note" role="status">{selectionNote}</p> : null}{selectedDate && dateSheetOpen && !formState && !moneyFormState && !detailState ? <CalendarDateSheet date={selectedDate} events={events} money={moneyProjection} filter={calendarFilter} onAddCategory={(category) => { setDateSheetOpen(false); openAdd(category, { screen: "calendar", date: selectedDate, filter: calendarFilter }); }} onAddMoney={() => openMoney({ screen: "calendar", date: selectedDate, filter: calendarFilter })} onClose={() => setDateSheetOpen(false)} onDateChange={(nextDate) => selectCalendarDate(nextDate, calendarFilter)} onEditEvent={(event) => openEventEdit(event, { screen: "calendar", date: selectedDate, filter: calendarFilter })} onEditMoney={(item) => openMoneyEdit(item, { screen: "calendar", date: selectedDate, filter: calendarFilter })} onMoneyChanged={() => { void refreshProjection({ screen: "calendar", date: selectedDate, filter: calendarFilter }); }} onOpenDaily={() => openDaily(selectedDate, calendarFilter)} /> : null}<AddChoiceSheet onClose={() => { setPendingAddContext(null); setAddOpen(false); }} onSelect={handleAddSelect} open={addOpen} /><ScopeSheet action={scopeState?.action ?? "edit"} onClose={() => setScopeState(null)} onSelect={handleScopeSelect} open={Boolean(scopeState)} /><ScopeSheet action={moneyScopeState?.action ?? "edit"} onClose={() => setMoneyScopeState(null)} onSelect={handleMoneyScopeSelect} open={Boolean(moneyScopeState)} subject="項目" /><DeleteConfirmSheet busy={deleteBusy} onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }} onConfirm={() => { void confirmDelete(); }} open={deleteOpen} title={deleteTarget?.event.title ?? "予定"} />{moneyDeleteOpen && moneyDeleteTarget ? <MoneyDeleteConfirmSheet busy={deleteBusy} onClose={() => { setMoneyDeleteOpen(false); setMoneyDeleteTarget(null); }} onConfirm={() => { void confirmMoneyDelete(); }} title={moneyDeleteTarget.item.title} /> : null}</MobileShell>;
 }
