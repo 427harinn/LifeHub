@@ -338,7 +338,7 @@ describe("Money analysis", () => {
       if (path.endsWith("/api/settings")) return Promise.resolve(response({ settings }));
       if (path.includes("/api/calendar")) return Promise.resolve(response({ range: { startDate: "2026-09-01", endDate: "2026-10-12" }, events: [], money: { occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] } }));
       if (path.includes("/api/money/year-summary")) return Promise.resolve(response(year));
-      if (path.includes("/api/money/month")) return Promise.resolve(response({ occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] }));
+      if (path.includes("/api/money/month")) return Promise.resolve(response({ month: "2026-09", occurrences: [], summary: { expenseForecast: 0, incomeForecast: 0, remaining: 0 }, days: [] }));
       return Promise.resolve(response({}));
     });
     render(<App />);

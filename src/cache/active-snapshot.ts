@@ -2,6 +2,7 @@ import type { DailyNote, Event, MoneyProjection } from "../api/client";
 import {
   deleteActiveSnapshotRecordsForUser,
   evictCalendarSnapshotRecords,
+  evictMoneySnapshotRecords,
   readActiveSnapshotMetadataRecord,
   readActiveSnapshotRecord,
   writeActiveSnapshotMetadataRecord,
@@ -40,6 +41,14 @@ export type DailySnapshotIdentity = {
   date: string;
 };
 
+export type MoneySnapshotIdentity = {
+  kind: "money";
+  userId: string;
+  timezone: string;
+  weekStartsOn: number;
+  month: string;
+};
+
 export type ActiveSnapshotMetadata = Pick<ActiveSnapshotMetadataRecord, "userId" | "timezone" | "weekStartsOn" | "savedAt" | "serverConfirmedAt">;
 
 const memorySnapshots = new Map<string, ActiveSnapshotRecord>();
@@ -50,6 +59,9 @@ export const calendarSnapshotKey = (identity: CalendarSnapshotIdentity) =>
 
 export const dailySnapshotKey = (identity: DailySnapshotIdentity) =>
   `daily:${identity.userId}:${identity.timezone}:${identity.weekStartsOn}:${identity.date}`;
+
+export const moneySnapshotKey = (identity: MoneySnapshotIdentity) =>
+  `money-month:${identity.userId}:${identity.timezone}:${identity.weekStartsOn}:${identity.month.slice(0, 7)}`;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object";
 const isString = (value: unknown): value is string => typeof value === "string";
@@ -74,13 +86,15 @@ export const isDailySnapshotData = (value: unknown): value is DailySnapshotData 
   return true;
 };
 
+export const isMoneySnapshotData = isMoneyProjection;
+
 const isValidRecord = (value: unknown, identity: { key: string; userId: string; timezone: string; weekStartsOn: number }, validate: (data: unknown) => boolean): value is ActiveSnapshotRecord => {
   if (!isRecord(value) || value.schemaVersion !== ACTIVE_SNAPSHOT_SCHEMA_VERSION || value.key !== identity.key || value.userId !== identity.userId || value.timezone !== identity.timezone || value.weekStartsOn !== identity.weekStartsOn || typeof value.savedAt !== "number" || !Number.isFinite(value.savedAt) || !isString(value.serverConfirmedAt) || !validate(value.data)) return false;
   return true;
 };
 
-const identityFor = (identity: CalendarSnapshotIdentity | DailySnapshotIdentity) => ({
-  key: "month" in identity ? calendarSnapshotKey(identity) : dailySnapshotKey(identity),
+const identityFor = (identity: CalendarSnapshotIdentity | DailySnapshotIdentity | MoneySnapshotIdentity) => ({
+  key: "date" in identity ? dailySnapshotKey(identity) : "kind" in identity && identity.kind === "money" ? moneySnapshotKey(identity) : calendarSnapshotKey(identity),
   userId: identity.userId,
   timezone: identity.timezone,
   weekStartsOn: identity.weekStartsOn
@@ -126,13 +140,13 @@ export const writeActiveSnapshotMetadata = async (userId: string, timezone: stri
   return true;
 };
 
-export const readMemoryActiveSnapshot = <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity, validate: (data: unknown) => data is T): T | null => {
+export const readMemoryActiveSnapshot = <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity | MoneySnapshotIdentity, validate: (data: unknown) => data is T): T | null => {
   const expected = identityFor(identity);
   const record = memorySnapshots.get(expected.key);
   return record && isValidRecord(record, expected, validate) ? record.data as T : null;
 };
 
-export const readPersistentActiveSnapshot = async <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity, validate: (data: unknown) => data is T): Promise<T | null> => {
+export const readPersistentActiveSnapshot = async <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity | MoneySnapshotIdentity, validate: (data: unknown) => data is T): Promise<T | null> => {
   const expected = identityFor(identity);
   try {
     const record = await readActiveSnapshotRecord(expected.key);
@@ -142,7 +156,7 @@ export const readPersistentActiveSnapshot = async <T>(identity: CalendarSnapshot
   }
 };
 
-export const getActiveSnapshotSavedAt = async (identity: CalendarSnapshotIdentity | DailySnapshotIdentity): Promise<number | null> => {
+export const getActiveSnapshotSavedAt = async (identity: CalendarSnapshotIdentity | DailySnapshotIdentity | MoneySnapshotIdentity): Promise<number | null> => {
   const expected = identityFor(identity);
   const memory = memorySnapshots.get(expected.key);
   if (memory && isValidRecord(memory, expected, () => true)) return memory.savedAt;
@@ -156,10 +170,11 @@ export const getActiveSnapshotSavedAt = async (identity: CalendarSnapshotIdentit
 
 type SnapshotWriteOptions = {
   evictCalendarSnapshots?: { preserveMonths: string[]; maxRecords?: number };
+  evictMoneySnapshots?: { preserveMonths: string[]; maxRecords?: number };
 };
 
-const evictMemoryCalendarSnapshots = (identity: CalendarSnapshotIdentity, preserveMonths: string[], maxRecords: number) => {
-  const prefix = `calendar-month:${identity.userId}:${identity.timezone}:${identity.weekStartsOn}:`;
+const evictMemoryMonthSnapshots = (identity: { userId: string; timezone: string; weekStartsOn: number }, snapshotKind: "calendar" | "money", preserveMonths: string[], maxRecords: number) => {
+  const prefix = `${snapshotKind === "calendar" ? "calendar-month" : "money-month"}:${identity.userId}:${identity.timezone}:${identity.weekStartsOn}:`;
   const scoped = [...memorySnapshots.entries()]
     .filter(([key, record]) => key.startsWith(prefix) && record.userId === identity.userId && record.timezone === identity.timezone && record.weekStartsOn === identity.weekStartsOn)
     .sort(([, left], [, right]) => (right.lastAccessedAt ?? right.savedAt) - (left.lastAccessedAt ?? left.savedAt));
@@ -172,7 +187,7 @@ const evictMemoryCalendarSnapshots = (identity: CalendarSnapshotIdentity, preser
   scoped.forEach(([key]) => { if (!keep.has(key)) memorySnapshots.delete(key); });
 };
 
-export const writeServerConfirmedActiveSnapshot = async <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity, data: T, validate: (value: unknown) => value is T, expectedEpoch = cacheEpoch, options?: SnapshotWriteOptions): Promise<boolean> => {
+export const writeServerConfirmedActiveSnapshot = async <T>(identity: CalendarSnapshotIdentity | DailySnapshotIdentity | MoneySnapshotIdentity, data: T, validate: (value: unknown) => value is T, expectedEpoch = cacheEpoch, options?: SnapshotWriteOptions): Promise<boolean> => {
   const expected = identityFor(identity);
   if (expectedEpoch !== cacheEpoch || !validate(data)) return false;
   const record: ActiveSnapshotRecord = {
@@ -189,13 +204,14 @@ export const writeServerConfirmedActiveSnapshot = async <T>(identity: CalendarSn
   const previous = memorySnapshots.get(record.key);
   if (previous && previous.savedAt > record.savedAt) return false;
   memorySnapshots.set(record.key, record);
-  const calendarEviction = "month" in identity ? options?.evictCalendarSnapshots : undefined;
-  const maxRecords = calendarEviction?.maxRecords ?? 5;
-  if (expectedEpoch === cacheEpoch && "month" in identity && calendarEviction) evictMemoryCalendarSnapshots(identity, calendarEviction.preserveMonths, maxRecords);
+  const snapshotKind = "date" in identity ? undefined : "kind" in identity && identity.kind === "money" ? "money" : "calendar";
+  const monthEviction = snapshotKind === "money" ? options?.evictMoneySnapshots : options?.evictCalendarSnapshots;
+  const maxRecords = monthEviction?.maxRecords ?? 5;
+  if (expectedEpoch === cacheEpoch && snapshotKind && monthEviction) evictMemoryMonthSnapshots(identity, snapshotKind, monthEviction.preserveMonths, maxRecords);
   try {
     if (expectedEpoch === cacheEpoch) await writeActiveSnapshotRecord(record);
-    if (expectedEpoch === cacheEpoch && "month" in identity && calendarEviction) {
-      const deletedKeys = await evictCalendarSnapshotRecords(identity, calendarEviction.preserveMonths, maxRecords);
+    if (expectedEpoch === cacheEpoch && snapshotKind && monthEviction) {
+      const deletedKeys = await (snapshotKind === "money" ? evictMoneySnapshotRecords(identity, monthEviction.preserveMonths, maxRecords) : evictCalendarSnapshotRecords(identity, monthEviction.preserveMonths, maxRecords));
       if (expectedEpoch === cacheEpoch) deletedKeys.forEach((key) => memorySnapshots.delete(key));
     }
   } catch {
