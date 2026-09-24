@@ -5,3 +5,4 @@ export { FormRow } from "./FormRow";
 export { Input } from "./Input";
 export { MobileShell } from "./MobileShell";
 export { NavIcon } from "./NavIcon";
+export { TimeInput } from "./TimeInput";

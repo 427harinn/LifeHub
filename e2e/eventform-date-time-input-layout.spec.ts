@@ -33,16 +33,26 @@ async function assertNoOverflow(page: import("@playwright/test").Page) {
   }
 }
 
-async function assertCompactDateInputs(scope: import("@playwright/test").Locator) {
-  const widths = await scope.locator(".date-input input").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().width));
-  expect(widths.length).toBeGreaterThan(0);
-  for (const width of widths) {
-    expect(width).toBeGreaterThanOrEqual(160);
-    expect(width).toBeLessThanOrEqual(180);
+async function assertNativeRowsFit(scope: import("@playwright/test").Locator) {
+  const rows = await scope.locator(".date-input, .time-input").evaluateAll((elements) => elements.map((element) => {
+    const row = element.getBoundingClientRect();
+    const input = element.querySelector("input")?.getBoundingClientRect();
+    return input ? { rowLeft: row.left, rowRight: row.right, top: row.top, bottom: row.bottom, inputLeft: input.left, inputRight: input.right, inputTop: input.top, inputBottom: input.bottom } : null;
+  }).filter((value): value is NonNullable<typeof value> => value !== null));
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(row.inputLeft).toBeGreaterThanOrEqual(row.rowLeft - 1);
+    expect(row.inputRight).toBeLessThanOrEqual(row.rowRight + 1);
+    expect(row.inputTop).toBeGreaterThanOrEqual(row.top - 1);
+    expect(row.inputBottom).toBeLessThanOrEqual(row.bottom + 1);
+  }
+  const sortedRows = [...rows].sort((left, right) => left.top - right.top);
+  for (let index = 1; index < sortedRows.length; index += 1) {
+    expect(sortedRows[index - 1].bottom).toBeLessThanOrEqual(sortedRows[index].top + 1);
   }
 }
 
-test("EventForm date/time inputs stay compact at both mobile widths", async ({ page }) => {
+test("EventForm date/time inputs stay within mobile rows at both widths", async ({ page }) => {
   await mkdir(evidenceDir, { recursive: true });
   await registerThroughUi(page);
   await openEventForm(page);
@@ -50,13 +60,8 @@ test("EventForm date/time inputs stay compact at both mobile widths", async ({ p
   for (const [width, height] of [[390, 844], [375, 812]] as const) {
     await page.setViewportSize({ width, height });
     await assertNoOverflow(page);
-    await assertCompactDateInputs(page.locator(".event-form"));
-    const timeWidths = await page.locator(".event-time-fields input").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().width));
-    expect(timeWidths).toHaveLength(2);
-    for (const timeWidth of timeWidths) {
-      expect(timeWidth).toBeGreaterThanOrEqual(120);
-      expect(timeWidth).toBeLessThanOrEqual(140);
-    }
+    await assertNativeRowsFit(page.locator(".event-form"));
+    expect(await page.locator(".event-time-fields .time-input").count()).toBe(2);
     const titleWidth = await page.getByLabel("タイトル").evaluate((element) => element.getBoundingClientRect().width);
     const formWidth = await page.locator(".event-form").evaluate((element) => element.getBoundingClientRect().width);
     expect(titleWidth).toBeCloseTo(formWidth, 0);
@@ -69,7 +74,7 @@ test("EventForm date/time inputs stay compact at both mobile widths", async ({ p
   await page.getByRole("button", { name: "実施時期" }).click();
   await page.getByRole("dialog", { name: "実施時期" }).getByRole("button", { name: "日付範囲を指定" }).click();
   await assertNoOverflow(page);
-  await assertCompactDateInputs(page.locator(".event-form"));
+  await assertNativeRowsFit(page.locator(".event-form"));
   await page.screenshot({ path: path.join(evidenceDir, "period-custom-range-390x844.png"), fullPage: true });
 
   await page.getByRole("button", { name: "予定の種類" }).click();
@@ -80,6 +85,6 @@ test("EventForm date/time inputs stay compact at both mobile widths", async ({ p
   await page.getByRole("button", { name: "終了設定" }).click();
   await recurrenceSheet.getByRole("button", { name: "終了日を指定" }).click();
   await assertNoOverflow(page);
-  await assertCompactDateInputs(page, recurrenceSheet);
+  await assertNativeRowsFit(recurrenceSheet);
   await page.screenshot({ path: path.join(evidenceDir, "recurrence-ends-on-390x844.png"), fullPage: true });
 });
