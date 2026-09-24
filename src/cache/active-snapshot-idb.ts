@@ -126,7 +126,7 @@ export const deleteActiveSnapshotRecordsForUser = async (userId: string): Promis
   }
 };
 
-export const evictCalendarSnapshotRecords = async (scope: { userId: string; timezone: string; weekStartsOn: number }, preserveMonths: string[], maxRecords = 5): Promise<string[]> => {
+export const evictActiveSnapshotRecords = async (scope: { userId: string; timezone: string; weekStartsOn: number }, snapshotKind: "calendar" | "money", preserveMonths: string[], maxRecords = 5): Promise<string[]> => {
   const database = await openDatabase();
   try {
     return await new Promise<string[]>((resolve, reject) => {
@@ -135,7 +135,7 @@ export const evictCalendarSnapshotRecords = async (scope: { userId: string; time
       const request = store.getAll();
       let deletedKeys: string[] = [];
       request.onsuccess = () => {
-        const prefix = `calendar-month:${scope.userId}:${scope.timezone}:${scope.weekStartsOn}:`;
+        const prefix = `${snapshotKind === "calendar" ? "calendar-month" : "money-month"}:${scope.userId}:${scope.timezone}:${scope.weekStartsOn}:`;
         const scoped = (request.result as ActiveSnapshotRecord[])
           .filter((record) => record.userId === scope.userId && record.timezone === scope.timezone && record.weekStartsOn === scope.weekStartsOn && record.key.startsWith(prefix))
           .sort((left, right) => (right.lastAccessedAt ?? right.savedAt) - (left.lastAccessedAt ?? left.savedAt));
@@ -150,10 +150,14 @@ export const evictCalendarSnapshotRecords = async (scope: { userId: string; time
       };
       request.onerror = () => transaction.abort();
       transaction.oncomplete = () => resolve(deletedKeys);
-      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB calendar eviction failed"));
-      transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB calendar eviction aborted"));
+      transaction.onerror = () => reject(transaction.error ?? new Error(`IndexedDB ${snapshotKind} eviction failed`));
+      transaction.onabort = () => reject(transaction.error ?? new Error(`IndexedDB ${snapshotKind} eviction aborted`));
     });
   } finally {
     database.close();
   }
 };
+
+export const evictCalendarSnapshotRecords = async (scope: { userId: string; timezone: string; weekStartsOn: number }, preserveMonths: string[], maxRecords = 5) => evictActiveSnapshotRecords(scope, "calendar", preserveMonths, maxRecords);
+
+export const evictMoneySnapshotRecords = async (scope: { userId: string; timezone: string; weekStartsOn: number }, preserveMonths: string[], maxRecords = 5) => evictActiveSnapshotRecords(scope, "money", preserveMonths, maxRecords);
