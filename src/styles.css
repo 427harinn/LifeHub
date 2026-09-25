@@ -168,7 +168,8 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .money-summary-list strong { color: var(--color-primary-strong); font-size: 1rem; font-weight: 600; }
 .money-entries { margin-top: var(--space-2); }
 
-.bottom-sheet.calendar-date-sheet { min-height: min(420px, calc(100svh - 96px)); max-height: min(88svh, 720px); }
+.bottom-sheet.calendar-date-sheet { display: flex; min-height: min(420px, calc(100svh - 96px)); max-height: min(88svh, 720px); flex-direction: column; }
+.calendar-date-sheet .bottom-sheet__content { display: flex; min-height: 0; flex: 1 1 auto; }
 .bottom-sheet.search-sheet { max-height: min(84svh, 680px); }
 .sheet-detail { display: grid; gap: var(--space-4); }
 .sheet-total, .sheet-note { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0; color: var(--color-text-secondary); font-size: .875rem; }
@@ -269,7 +270,9 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-swipe-row__actions button.swipe-action--danger { color: var(--color-danger, #b8473d); background: var(--color-danger-soft, #f9e8e5); }
 .event-inline-detail { display: grid; gap: var(--space-2); padding: 10px 0 12px; }
 .event-inline-detail p { margin: 0; color: var(--color-text-secondary); font-size: .8125rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-.calendar-date-sheet__gesture { touch-action: pan-y; }
+.calendar-date-sheet__gesture { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; touch-action: pan-y; }
+.calendar-date-sheet__gesture > .sheet-list { min-height: 0; flex: 1 1 auto; align-content: start; grid-auto-rows: max-content; overflow-y: auto; overscroll-behavior: contain; }
+.calendar-date-sheet .sheet-footer { min-height: 0; flex: 0 0 auto; margin-top: auto; }
 .calendar-date-sheet__header-nav { display: flex; gap: 2px; }
 .calendar-date-sheet__header-nav button { display: inline-grid; width: 44px; min-height: 44px; place-items: center; border: 0; color: var(--color-primary-strong); background: transparent; font-size: 1.5rem; cursor: pointer; }
 .calendar-date-sheet__day-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; margin: calc(var(--space-2) * -1) 0 0; color: var(--color-text-secondary); font-size: .8125rem; text-align: center; }
