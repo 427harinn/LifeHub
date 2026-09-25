@@ -131,15 +131,15 @@ test("BottomSheet focus, inert background, Settings history, and Daily date hist
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
 });
 
-test("Swipe edit remains available and inline detail exposes a keyboard edit alternative", async ({ page }) => {
+test("Inline detail edit remains keyboard accessible", async ({ page }) => {
   await mkdir(evidenceDir, { recursive: true });
   await register(page);
   const create = await page.request.post("/api/events", { data: { category: "home", title: "キーボード代替予定", place: null, memo: null, timingType: "scheduled", allDay: false, startDate: today(), startTime: "09:00", endDate: today(), endTime: "10:00" } });
   expect(create.status()).toBe(201);
   await page.getByRole("button", { name: "デイリー" }).click();
-  const row = page.locator(".daily-page .event-swipe-row").filter({ hasText: "キーボード代替予定" }).first();
+  const row = page.locator(".daily-page .tap-expand-row").filter({ hasText: "キーボード代替予定" }).first();
   await expect(row).toBeVisible();
-  await row.locator(".event-swipe-row__main").focus();
+  await row.locator(".tap-expand-row__trigger").focus();
   await page.keyboard.press("Enter");
   await expect(row.locator(".event-inline-detail")).toBeVisible();
   const inlineEdit = row.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true });

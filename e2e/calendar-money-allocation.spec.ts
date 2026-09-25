@@ -91,14 +91,14 @@ test("Calendar All and Money allocation stays inside the cell across mobile view
   await expect(dateSheet.locator(".money-sheet-row").filter({ hasText: "電気代" }).locator(".money-status-icon")).toHaveAttribute("aria-label", "確定");
   await expect(dateSheet.locator(".money-sheet-row").filter({ hasText: "水道代" }).locator(".money-status-icon")).toHaveAttribute("aria-label", "予定");
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-normal-390x844.png") });
-  await dateSheet.locator(".money-sheet-row").first().click();
+  await dateSheet.locator(".money-sheet-row").filter({ hasText: "電気代" }).click();
   const detail = dateSheet.locator(".money-inline-detail");
   await expect(detail).toBeVisible();
   await expect(detail).toContainText("カテゴリ");
   await expect(detail).toContainText("食費");
   await expect(detail.locator(".money-inline-detail__list > div")).toHaveCount(3);
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-expanded-390x844.png") });
-  const firstRow = dateSheet.locator(".event-swipe-row").filter({ hasText: "電気代" }).first();
+  const firstRow = dateSheet.locator(".tap-expand-row").filter({ hasText: "電気代" }).first();
   const firstRowBox = await firstRow.boundingBox();
   if (!firstRowBox) throw new Error("Date Sheet Money row bounds unavailable");
   await page.mouse.move(firstRowBox.x + firstRowBox.width - 24, firstRowBox.y + 20);
@@ -106,6 +106,9 @@ test("Calendar All and Money allocation stays inside the cell across mobile view
   await page.mouse.move(firstRowBox.x + 24, firstRowBox.y + 20, { steps: 8 });
   await page.mouse.up();
   await expect(firstRow.getByRole("button", { name: "編集" })).toBeVisible();
-  await expect(firstRow.locator(".money-inline-detail")).toHaveCount(0);
-  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-swipe-390x844.png") });
+  await expect(firstRow.locator(".money-inline-detail")).toBeVisible();
+  await expect(firstRow.locator(".event-swipe-row__actions")).toHaveCount(0);
+  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-no-swipe-action-390x844.png") });
+  await firstRow.locator(".money-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "お金を編集" })).toBeVisible();
 });

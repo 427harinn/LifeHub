@@ -112,12 +112,9 @@ test("period recurrence projection and occurrence override API", async ({ page }
   expect(occurrence.occurrenceKey).toBeTruthy();
   await page.goto("/daily");
   await expect(page.getByText("月次期間", { exact: true })).toHaveCount(1);
-  const periodRow = page.locator(".event-swipe-row").filter({ hasText: "月次期間" }).first();
-  await periodRow.locator(".event-swipe-row__main").click();
-  const periodBox = await periodRow.boundingBox();
-  if (!periodBox) throw new Error("period row bounds unavailable");
-  await page.mouse.move(periodBox.x + 260, periodBox.y + 24); await page.mouse.down(); await page.mouse.move(periodBox.x + 170, periodBox.y + 24, { steps: 4 }); await page.mouse.up();
-  await periodRow.getByRole("button", { name: "編集", exact: true }).click();
+  const periodRow = page.locator(".tap-expand-row").filter({ hasText: "月次期間" }).first();
+  await periodRow.locator(".tap-expand-row__trigger").click();
+  await periodRow.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "編集する範囲" })).toBeVisible();
   await page.waitForTimeout(300);
   await page.screenshot({ path: path.join(evidenceDir, "period-scope-sheet-390x844.png") });
@@ -127,7 +124,7 @@ test("period recurrence projection and occurrence override API", async ({ page }
   await expect(page.getByText("今回のみ変更", { exact: true })).toHaveCount(1);
   await page.screenshot({ path: path.join(evidenceDir, "period-occurrence-modified-390x844.png") });
   await page.reload();
-  await expect(page.locator("main.daily-page .event-swipe-row").filter({ hasText: "今回のみ変更" })).toHaveCount(1);
+  await expect(page.locator("main.daily-page .tap-expand-row").filter({ hasText: "今回のみ変更" })).toHaveCount(1);
   const modified = await page.request.patch(`/api/events/${created.event.id}`, { data: { ...input, periodWindowType: "custom_range", periodAnchorDate: null, periodStartDate: shiftDate(start, 2), periodEndDate: shiftDate(start, 4), recurrence: undefined, scope: "occurrence", occurrenceKey: occurrence.occurrenceKey } });
   expect(modified.status()).toBe(200);
   const changedDaily = await (await page.request.get(`/api/daily?date=${shiftDate(start, 3)}`)).json() as { events: Array<{ title: string; occurrenceKey: string | null }> };

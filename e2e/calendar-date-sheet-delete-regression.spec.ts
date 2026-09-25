@@ -18,15 +18,10 @@ async function registerThroughUi(page: import("@playwright/test").Page) {
 }
 
 async function revealEdit(page: import("@playwright/test").Page, title: string) {
-  const row = page.getByRole("dialog").locator(".event-swipe-row").filter({ hasText: title }).first();
+  const row = page.getByRole("dialog").locator(".tap-expand-row").filter({ hasText: title }).first();
   await expect(row).toBeVisible();
-  const box = await row.boundingBox();
-  if (!box) throw new Error("Calendar Date Sheet row bounds unavailable");
-  await page.mouse.move(box.x + 260, box.y + 24);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 170, box.y + 24, { steps: 4 });
-  await page.mouse.up();
-  const edit = row.getByRole("button", { name: "編集", exact: true });
+  await row.locator(".tap-expand-row__trigger").click();
+  const edit = row.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true });
   await expect(edit).toBeVisible();
   await edit.click();
 }
@@ -84,16 +79,10 @@ test("Daily edit delete remains a single-sheet flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   const dateSheet = page.getByRole("dialog");
   if (await dateSheet.count()) await dateSheet.getByRole("button", { name: "閉じる", exact: true }).click();
-  const row = page.locator(".daily-page .event-swipe-row").filter({ hasText: title }).first();
+  const row = page.locator(".daily-page .tap-expand-row").filter({ hasText: title }).first();
   await expect(row).toBeVisible();
-  await row.locator(".event-swipe-row__main").click();
-  const box = await row.boundingBox();
-  if (!box) throw new Error("Daily row bounds unavailable");
-  await page.mouse.move(box.x + 260, box.y + 24);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 170, box.y + 24, { steps: 4 });
-  await page.mouse.up();
-  await row.getByRole("button", { name: "編集", exact: true }).click();
+  await row.locator(".tap-expand-row__trigger").click();
+  await row.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await page.getByRole("button", { name: "削除", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "予定を削除" });

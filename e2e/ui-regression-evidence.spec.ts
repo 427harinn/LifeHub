@@ -38,7 +38,7 @@ test("Money UI regression evidence at 390x844", async ({ page }) => {
   await page.getByRole("button", { name: "登録", exact: true }).click();
 
   await page.locator("nav.mobile-nav button[aria-label='お金']").click();
-  const row = page.locator(".money-list .event-swipe-row").filter({ hasText: "電気代" }).first();
+  const row = page.locator(".money-list .tap-expand-row").filter({ hasText: "電気代" }).first();
   await row.locator(".money-list-row").click();
   await expect(row.getByRole("button", { name: "金額を確定" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "money-planned-detail-full-width-390x844.png") });
@@ -58,7 +58,7 @@ test("Money UI regression evidence at 390x844", async ({ page }) => {
   const dateSheet = page.getByRole("dialog", { name: /月/ });
   await expect(dateSheet).toContainText("電気代");
   await page.screenshot({ path: path.join(evidenceDir, "calendar-date-sheet-money-normal-390x844.png") });
-  const dateRow = dateSheet.locator(".event-swipe-row").filter({ hasText: "電気代" }).first();
+  const dateRow = dateSheet.locator(".tap-expand-row").filter({ hasText: "電気代" }).first();
   const box = await dateRow.boundingBox();
   if (!box) throw new Error("date sheet money row is not visible");
   await page.mouse.move(box.x + box.width - 24, box.y + box.height / 2);

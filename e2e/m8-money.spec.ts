@@ -113,15 +113,23 @@ test("Money MVP recurrence, projections, UI grammar, and swipe actions", async (
   const categoryRow = page.locator(".money-category-settings .event-swipe-row").filter({ hasText: "食費" });
   await swipeLeft(page, categoryRow);
   await expect(categoryRow.getByRole("button", { name: "編集" })).toBeVisible();
+  await expect(categoryRow.getByRole("button", { name: "無効化" })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "settings-money-category-swipe-390x844.png") });
+  await categoryRow.getByRole("button", { name: "編集" }).click();
+  await page.getByRole("textbox", { name: "カテゴリ名" }).fill("食費テスト編集");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  const editedCategoryRow = page.locator(".money-category-settings .event-swipe-row").filter({ hasText: "食費テスト編集" });
+  await swipeLeft(page, editedCategoryRow);
+  await editedCategoryRow.getByRole("button", { name: "無効化" }).click();
+  await expect(editedCategoryRow).toContainText("（無効）");
   await page.getByText("収入カテゴリ").click();
-  await expect(categoryRow.getByRole("button", { name: "編集" })).toHaveCount(0);
+  await expect(editedCategoryRow.getByRole("button", { name: "編集" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "お金" }).last().click();
-  const moneyRow = page.locator(".money-list .event-swipe-row").filter({ hasText: "家賃" }).first();
-  await swipeLeft(page, moneyRow);
+  const moneyRow = page.locator(".money-list .tap-expand-row").filter({ hasText: "家賃" }).first();
+  await moneyRow.locator(".money-list-row").click();
   await expect(moneyRow.getByRole("button", { name: "編集" })).toBeVisible();
-  await page.getByRole("button", { name: "編集" }).last().click();
+  await moneyRow.getByRole("button", { name: "編集" }).click();
   await page.getByRole("dialog", { name: "編集する範囲" }).getByRole("button", { name: "すべての項目" }).click();
   await expect(page.getByRole("heading", { name: "お金を編集" })).toBeVisible();
   const movedDate = `${date.slice(0, 8)}15`;

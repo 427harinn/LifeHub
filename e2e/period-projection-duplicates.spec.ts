@@ -58,29 +58,30 @@ test("renders period projections once per day while keeping Calendar anchors and
     await expect(dateSheet.getByText(title, { exact: true })).toHaveCount(1);
   }
 
-  const recurringRow = dateSheet.locator(".event-swipe-row").filter({ hasText: "週次期間・毎週" });
+  const recurringRow = dateSheet.locator(".tap-expand-row").filter({ hasText: "週次期間・毎週" });
   const recurringBounds = await recurringRow.boundingBox();
   if (!recurringBounds) throw new Error("recurring period row bounds unavailable");
   await page.mouse.move(recurringBounds.x + 260, recurringBounds.y + 24);
   await page.mouse.down();
   await page.mouse.move(recurringBounds.x + 170, recurringBounds.y + 24, { steps: 4 });
   await page.mouse.up();
-  await expect(recurringRow.getByRole("button", { name: "編集", exact: true })).toHaveCount(1);
-  await expect(dateSheet.locator(".event-swipe-row__actions")).toHaveCount(1);
-  await recurringRow.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(recurringRow.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
+  await expect(dateSheet.locator(".event-swipe-row__actions")).toHaveCount(0);
+  await recurringRow.locator(".tap-expand-row__trigger").click();
+  await recurringRow.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "編集する範囲" })).toBeVisible();
   await page.getByRole("dialog", { name: "編集する範囲" }).getByRole("button", { name: "閉じる" }).click();
 
   await page.goto(`/calendar?date=${start}`);
   const expandedSheet = page.getByRole("dialog");
-  const nonRecurringRow = expandedSheet.locator(".event-swipe-row").filter({ hasText: "週次期間・単発" });
-  await nonRecurringRow.locator(".event-swipe-row__main").click();
+  const nonRecurringRow = expandedSheet.locator(".tap-expand-row").filter({ hasText: "週次期間・単発" });
+  await nonRecurringRow.locator(".tap-expand-row__trigger").click();
   await expect(nonRecurringRow.locator(".event-inline-detail")).toHaveCount(1);
   await expect(expandedSheet.getByRole("button", { name: "編集", exact: true })).toHaveCount(1);
 
   await page.goto("/daily");
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   for (const title of ["週次期間・単発", "週次期間・毎週", "月次期間・単発", "月次期間・毎月", "範囲期間"]) {
-    await expect(page.locator("main.daily-page .event-swipe-row").filter({ hasText: title })).toHaveCount(1);
+    await expect(page.locator("main.daily-page .tap-expand-row").filter({ hasText: title })).toHaveCount(1);
   }
 });

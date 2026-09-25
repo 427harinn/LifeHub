@@ -659,7 +659,7 @@ describe("period projection row identity", () => {
     expect(screen.getAllByRole("article", { name: "週次の整理" })).toHaveLength(1);
   });
 
-  it("opens Edit for only the swiped period projection row", () => {
+  it("does not reveal swipe actions and keeps Edit in the expanded period detail", () => {
     render(<CalendarDateSheet {...periodSheetProps(periodProjectionWeek())} />);
 
     const row = screen.getAllByRole("article", { name: "週次の整理" })[0];
@@ -667,6 +667,10 @@ describe("period projection row identity", () => {
     fireEvent.pointerMove(row, { clientX: 100, clientY: 100, pointerId: 1 });
     fireEvent.pointerUp(row, { clientX: 100, clientY: 100, pointerId: 1 });
 
+    expect(screen.queryAllByRole("button", { name: "編集" })).toHaveLength(0);
+    fireEvent.click(within(row).getByRole("button", { name: "週次の整理" }));
+    expect(screen.queryAllByRole("button", { name: "編集" })).toHaveLength(0);
+    fireEvent.click(within(row).getByRole("button", { name: "週次の整理" }));
     expect(screen.getAllByRole("button", { name: "編集" })).toHaveLength(1);
   });
 
