@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { lockBodyScroll } from "./body-scroll-lock";
 
 type BottomSheetProps = {
   className?: string;
@@ -37,8 +38,7 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
     if (!open) return undefined;
     dragStart.current = null;
     dragOffsetRef.current = 0;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseBodyScroll = lockBodyScroll();
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const layer = layerRef.current;
     const backgroundState = new Map<HTMLElement, boolean>();
@@ -63,7 +63,7 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
     const focusTimer = window.setTimeout(focusInitialElement, 0);
     return () => {
       window.clearTimeout(focusTimer);
-      document.body.style.overflow = previousOverflow;
+      releaseBodyScroll();
       backgroundState.forEach((inert, element) => { element.inert = inert; });
       if (opener?.isConnected) opener.focus({ preventScroll: true });
     };
