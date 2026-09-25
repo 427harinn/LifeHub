@@ -151,12 +151,9 @@ test("occurrence scopes, projection parity, and ownership", async ({ page, brows
   await page.getByRole("button", { name: "次の日" }).click();
   await expect(page.getByText("次回以降変更", { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "following-series-390x844.png") });
-  const row = page.locator(".event-swipe-row").filter({ hasText: "次回以降変更" }).first();
-  await row.locator(".event-swipe-row__main").click();
-  const box = await row.boundingBox();
-  if (!box) throw new Error("recurring row bounds unavailable");
-  await page.mouse.move(box.x + 260, box.y + 24); await page.mouse.down(); await page.mouse.move(box.x + 170, box.y + 24, { steps: 4 }); await page.mouse.up();
-  await row.getByRole("button", { name: "編集", exact: true }).click();
+  const row = page.locator(".tap-expand-row").filter({ hasText: "次回以降変更" }).first();
+  await row.locator(".tap-expand-row__trigger").click();
+  await row.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "編集する範囲" })).toBeVisible();
   await expect(page.getByRole("button", { name: "この予定のみ" })).toBeVisible();
   await expect(page.getByRole("button", { name: "この予定以降" })).toBeVisible();

@@ -190,8 +190,7 @@ Date Sheetのinteraction:
 - 左swipeで翌日、右swipeで前日へ移動する
 - 予定tapは別画面へ遷移せずinline展開し、再tapでcloseする
 - inline detailは日付 / 期間、場所、メモの値だけを表示する。通常行に時刻があるため時間は重複表示しない
-- 左swipeで編集actionを表示し、編集押下でEvent detailを経由せず直接Event edit formへ進む
-- swipe actionは画面の空き領域、他の予定、他セクションの外側tapでcloseする
+- 行の横swipeでは編集actionを表示しない。編集はinline detail内の「編集」から行う
 - `+`は大きなBottomSheetを重ねず、家 / 仕事 / お金の小型ポップアップメニューを表示する。メニューを閉じても親Date Sheetは維持する
 - Date Sheetは背景tap、close操作、上から下へのdragでcloseする
 
@@ -275,11 +274,11 @@ M3/M4前のshellでも「予定はありません」だけにせず、終日・�
 
 M2で確定したDailyの情報階層・spacing・dividerを維持する。M3のscheduled Eventは実データへ差し替えるが、通常行を別の詳細ページへ遷移させない。
 
-- 行タップでその行だけを縦に展開し、存在する日時、期間、場所、メモの値だけを静かに表示する。`日付 / 時間`、`場所`、`メモ`等の項目名ラベルは表示しない。展開内に編集リンクや追加dividerを常設しない
+- 行タップでその行だけを縦に展開し、存在する日時、期間、場所、メモの値だけを静かに表示する。`日付 / 時間`、`場所`、`メモ`等の項目名ラベルは表示しない。展開内の編集ボタンから編集フォームへ進む
 - 再タップで閉じ、別の行を開くと前の行を閉じる
-- HouseToDo Home / Shoppingの実装を基準にした左swipeで`編集`をrevealし、展開中なら先にinline detailを閉じてから編集フォームへ遷移する。action open中に行をtapした場合は、先にactionを閉じてinline detailを開く
+- 行の横swipeでは編集actionを表示しない。編集はinline detail内の「編集」から編集フォームへ進む
 - 通常行に削除操作を露出せず、削除は展開後の深い導線または編集画面から行う
-- 通常Eventとperiod予定は同じtap → inline expand → 再tap close → 左swipe edit → 外側tap closeのgrammarを使う。M4のperiod予定はinteraction確認用fixtureであり、本データモデル / API実装は後続Milestoneで行う
+- 通常Eventとperiod予定は同じtap → inline expand → 再tap closeのgrammarを使い、編集はinline detail内の編集ボタンから行う。M4のperiod予定はinteraction確認用fixtureであり、本データモデル / API実装は後続Milestoneで行う
 
 ### お金
 
@@ -372,7 +371,7 @@ MoneyFormのカテゴリ・日付・繰り返しはEventFormと同じFormRow + B
 - 今月のお金一覧
 - カテゴリ別の支出（当月effective amountのdonut）
 
-M9では共通MoneyProjectionのeffective amountを表示する。予定は空丸、actual / estimated_actualはチェック丸で状態を控えめに示し、内部語は通常画面に出さない。Money rowのtapは既存Event/Dailyと同じinline detailを開き、実績登録・変更へ進む。繰り返しMoneyの編集・削除ではEventと同じBottomSheetで`この項目のみ / この項目以降 / すべての項目`を選ぶ。新規登録時のみ、登録内容として実績 / 予定を選択できる。カテゴリ別の支出donutはeffective amountを使うM9 UI polishの先行範囲であり、M10の月別・長期・比較グラフは未着手とする。
+M9では共通MoneyProjectionのeffective amountを表示する。予定は空丸、actual / estimated_actualはチェック丸で状態を控えめに示し、内部語は通常画面に出さない。Money rowのtapはinline detailを開き、編集と実績登録・変更へ進む。行の横swipeでは編集actionを表示しない。繰り返しMoneyの編集・削除ではEventと同じBottomSheetで`この項目のみ / この項目以降 / すべての項目`を選ぶ。新規登録時のみ、登録内容として実績 / 予定を選択できる。カテゴリ別の支出donutはeffective amountを使うM9 UI polishの先行範囲であり、M10の月別・長期・比較グラフは未着手とする。
 
 M8前のshellでも `記録はありません` だけで終わらせず、最終UIを判断できる仮の金額・カテゴリ・明細を表示する。
 

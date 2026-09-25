@@ -71,10 +71,10 @@ test("staging EventForm timed UX at 390x844", async ({ page }) => {
 
   const editEventId = await createEvent(page, { title: "編集終了保持", startTime: "09:00", endTime: "16:00" });
   await page.getByRole("button", { name: "デイリー" }).click();
-  const editRow = page.locator(".event-swipe-row").filter({ hasText: "編集終了保持" }).first();
+  const editRow = page.locator(".tap-expand-row").filter({ hasText: "編集終了保持" }).first();
   await expect(editRow).toBeVisible();
-  await swipeLeftToRevealEdit(page, editRow);
-  await editRow.getByRole("button", { name: "編集", exact: true }).click();
+  await editRow.locator(".tap-expand-row__trigger").click();
+  await editRow.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await page.getByLabel("開始時間").fill("15:00");
   await expect(page.getByLabel("終了時間")).toHaveValue("16:00");

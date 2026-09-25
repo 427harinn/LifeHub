@@ -99,7 +99,7 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   const moneyDateSheet = page.getByRole("dialog");
   await expect(moneyDateSheet.locator(".sheet-money-entry")).toHaveCount(3);
   await expect(moneyDateSheet.locator(".sheet-money-summary")).toContainText("+699円");
-  await expect(moneyDateSheet.locator(".event-swipe-row")).toHaveCount(3);
+  await expect(moneyDateSheet.locator(".tap-expand-row")).toHaveCount(3);
   await page.waitForTimeout(220);
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-money-390x844.png") });
   await moneyDateSheet.getByRole("button", { name: "閉じる" }).click();
@@ -107,8 +107,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.getByRole("tab", { name: "家" }).click();
   await page.getByRole("button", { name: `${todayDay}日`, exact: true }).click();
   const homeDateSheet = page.getByRole("dialog");
-  await expect(homeDateSheet.locator(".event-swipe-row").filter({ hasText: "朝の家予定" })).toBeVisible();
-  await expect(homeDateSheet.locator(".event-swipe-row").filter({ hasText: "仕事の予定" })).toHaveCount(0);
+  await expect(homeDateSheet.locator(".tap-expand-row").filter({ hasText: "朝の家予定" })).toBeVisible();
+  await expect(homeDateSheet.locator(".tap-expand-row").filter({ hasText: "仕事の予定" })).toHaveCount(0);
   await expect(homeDateSheet.getByText("収支", { exact: true })).toHaveCount(0);
   await expect(page.locator(".calendar-cell__money")).toHaveCount(0);
   await page.waitForTimeout(220);
@@ -118,8 +118,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.getByRole("tab", { name: "仕事" }).click();
   await page.getByRole("button", { name: `${todayDay}日`, exact: true }).click();
   const workDateSheet = page.getByRole("dialog");
-  await expect(workDateSheet.locator(".event-swipe-row").filter({ hasText: "仕事の予定" })).toBeVisible();
-  await expect(workDateSheet.locator(".event-swipe-row").filter({ hasText: "朝の家予定" })).toHaveCount(0);
+  await expect(workDateSheet.locator(".tap-expand-row").filter({ hasText: "仕事の予定" })).toBeVisible();
+  await expect(workDateSheet.locator(".tap-expand-row").filter({ hasText: "朝の家予定" })).toHaveCount(0);
   await expect(workDateSheet.getByText("収支", { exact: true })).toHaveCount(0);
   await expect(page.locator(".calendar-cell__money")).toHaveCount(0);
   await page.waitForTimeout(220);
@@ -165,8 +165,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await expect(dateSheet.locator(".sheet-money-summary")).toContainText("収支");
   await expect(dateSheet.locator(".sheet-money-summary")).not.toContainText("食費");
   await page.screenshot({ path: path.join(evidenceDir, "date-sheet-390x844.png") });
-  const dateSheetEvent = dateSheet.locator(".event-swipe-row").filter({ hasText: "朝の家予定" }).first();
-  await dateSheetEvent.locator(".event-swipe-row__main").click();
+  const dateSheetEvent = dateSheet.locator(".tap-expand-row").filter({ hasText: "朝の家予定" }).first();
+  await dateSheetEvent.locator(".tap-expand-row__trigger").click();
   await expect(dateSheetEvent.locator(".event-inline-detail")).toContainText("駅");
   await expect(dateSheetEvent.locator(".event-inline-detail")).toContainText("9月");
   await expect(dateSheetEvent.locator(".event-inline-detail")).toContainText("持ち物");
@@ -178,10 +178,11 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.mouse.down();
   await page.mouse.move(dateSheetEventBox.x + 170, dateSheetEventBox.y + 24, { steps: 4 });
   await page.mouse.up();
-  await expect(dateSheetEvent.getByRole("button", { name: "編集", exact: true })).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-swipe-edit-390x844.png") });
+  await expect(dateSheetEvent.locator(".event-swipe-row__actions")).toHaveCount(0);
+  await expect(dateSheetEvent.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "date-sheet-no-swipe-edit-390x844.png") });
   await dateSheet.locator(".sheet-money-summary").click();
-  await expect(dateSheetEvent.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
+  await expect(dateSheetEvent.locator(".event-swipe-row__actions")).toHaveCount(0);
   const dateSheetFooter = page.getByRole("dialog").locator(".sheet-footer");
   const dateSheetFooterBox = await dateSheetFooter.boundingBox();
   if (!dateSheetFooterBox) throw new Error("Date Sheet gesture bounds unavailable");
@@ -195,8 +196,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.getByRole("dialog").getByRole("button", { name: "1日の詳細を見る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();
   await expect(page.locator(".daily-date-label")).toHaveText(displayDate(today));
-  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今週中：書類を整理" })).toHaveCount(0);
-  await expect(page.locator(".daily-page .event-swipe-row").filter({ hasText: "今月中：資料をまとめる" })).toHaveCount(0);
+  await expect(page.locator(".daily-page .tap-expand-row").filter({ hasText: "今週中：書類を整理" })).toHaveCount(0);
+  await expect(page.locator(".daily-page .tap-expand-row").filter({ hasText: "今月中：資料をまとめる" })).toHaveCount(0);
   await expect(page.getByText("実データの今日メモ", { exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(evidenceDir, "daily-normal-390x844.png") });
 
@@ -216,8 +217,8 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.screenshot({ path: path.join(evidenceDir, "daily-date-swipe-after-390x844.png") });
   await page.getByRole("button", { name: "今日", exact: true }).click();
 
-  const eventRow = page.locator(".event-swipe-row").filter({ hasText: "朝の家予定" }).first();
-  await eventRow.locator(".event-swipe-row__main").click();
+  const eventRow = page.locator(".tap-expand-row").filter({ hasText: "朝の家予定" }).first();
+  await eventRow.locator(".tap-expand-row__trigger").click();
   await expect(eventRow.locator(".event-inline-detail")).toContainText("駅");
   await page.screenshot({ path: path.join(evidenceDir, "daily-expanded-390x844.png") });
   const rowBox = await eventRow.boundingBox();
@@ -226,9 +227,10 @@ test("Calendar range projection, Date Sheet to Daily, navigation and DailyNote",
   await page.mouse.down();
   await page.mouse.move(rowBox.x + 170, rowBox.y + 24, { steps: 4 });
   await page.mouse.up();
-  await expect(eventRow.getByRole("button", { name: "編集", exact: true })).toBeVisible();
-  await page.screenshot({ path: path.join(evidenceDir, "daily-swipe-edit-390x844.png") });
-  await eventRow.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(eventRow.locator(".event-swipe-row__actions")).toHaveCount(0);
+  await expect(eventRow.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(evidenceDir, "daily-no-swipe-edit-390x844.png") });
+  await eventRow.locator(".event-inline-detail").getByRole("button", { name: "編集", exact: true }).click();
   await expect(page.getByRole("heading", { name: "予定を編集" })).toBeVisible();
   await page.getByRole("button", { name: "予定一覧へ戻る" }).click();
   await expect(page.getByRole("heading", { name: "デイリー" })).toBeVisible();

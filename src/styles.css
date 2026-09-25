@@ -262,9 +262,10 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .event-swipe-row__content { position: relative; z-index: 1; display: flex; min-height: 48px; align-items: stretch; transform: translateX(var(--event-swipe-offset, 0)); transition: transform 180ms ease-out; background: transparent; }
 .event-swipe-row.is-actions-open .event-swipe-row__content { transition: none; }
 .event-swipe-row.is-dragging .event-swipe-row__content { transition: none; }
-.event-swipe-row__main { display: grid; grid-template-columns: auto minmax(0, 1fr); width: 100%; min-height: 48px; align-items: center; gap: var(--space-3); padding: 10px 0; border: 0; color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
-.event-swipe-row__main.fixture-row { border-bottom: 0; }
-.event-swipe-row__main--all-day { grid-template-columns: minmax(0, 1fr); }
+.tap-expand-row { min-width: 0; border-bottom: 1px solid var(--color-border); }
+.tap-expand-row__trigger { display: grid; grid-template-columns: auto minmax(0, 1fr); width: 100%; min-height: 48px; align-items: center; gap: var(--space-3); padding: 10px 0; border: 0; color: var(--color-text); background: transparent; text-align: left; cursor: pointer; }
+.tap-expand-row__trigger--all-day { grid-template-columns: minmax(0, 1fr); }
+.fixture-group .tap-expand-row:not(:last-child), .daily-section .tap-expand-row:not(:last-child) { border-bottom: 1px solid var(--color-border); }
 .event-swipe-row__actions { position: absolute; inset: 0 0 0 auto; z-index: 0; display: flex; min-width: 80px; background: var(--color-primary-soft); }
 .event-swipe-row__actions button { width: 80px; min-height: 44px; border: 0; color: var(--color-primary-strong); background: var(--color-primary-soft); cursor: pointer; }
 .event-swipe-row__actions button.swipe-action--danger { color: var(--color-danger, #b8473d); background: var(--color-danger-soft, #f9e8e5); }
@@ -284,7 +285,7 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .sheet-money-entry--button { width: 100%; border-top: 0; border-right: 0; border-left: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .sheet-money-entry strong { font-size: .9375rem; font-weight: 600; }
 .calendar-date-sheet .sheet-list:has(.money-sheet-row) { gap: var(--space-2); border-top: 0; }
-.calendar-date-sheet .sheet-list:has(.money-sheet-row) .event-swipe-row { border-bottom: 0; }
+.calendar-date-sheet .sheet-list:has(.money-sheet-row) .tap-expand-row { border-bottom: 0; }
 .calendar-date-sheet .money-sheet-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--space-2); min-height: 52px; align-items: center; padding: 8px 0; border: 0; color: var(--color-text); }
 .calendar-date-sheet .money-sheet-row > span { min-width: 0; }
 .calendar-date-sheet .money-sheet-row > span strong { display: block; overflow: hidden; font-size: .9375rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
@@ -444,10 +445,8 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .money-chart__legend > div { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 6px; align-items: center; font-size: .75rem; }
 .money-chart__legend-dot { width: 9px; height: 9px; border-radius: 50%; }
 .money-chart__legend strong { font-weight: 600; white-space: nowrap; }
-.money-list .event-swipe-row__actions, .daily-section .event-swipe-row__actions { inset: 0 0 auto auto; height: 64px; }
-.daily-section .event-swipe-row__actions { height: 48px; }
-.calendar-date-sheet .event-swipe-row__actions { inset: 0 0 auto auto; height: 52px; }
 .calendar-date-sheet .money-list-row { min-height: 52px; }
+.money-list .tap-expand-row { border-bottom: 1px solid var(--color-border); }
 .actual-sheet { display: grid; gap: var(--space-3); }
 .money-type-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .money-type-switch button { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-input); color: var(--color-text-secondary); background: transparent; font: inherit; cursor: pointer; }
