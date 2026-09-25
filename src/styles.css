@@ -168,7 +168,7 @@ button:focus:not(:focus-visible), input:focus:not(:focus-visible), select:focus:
 .money-summary-list strong { color: var(--color-primary-strong); font-size: 1rem; font-weight: 600; }
 .money-entries { margin-top: var(--space-2); }
 
-.bottom-sheet.calendar-date-sheet { max-height: min(88svh, 720px); }
+.bottom-sheet.calendar-date-sheet { min-height: min(420px, calc(100svh - 96px)); max-height: min(88svh, 720px); }
 .bottom-sheet.search-sheet { max-height: min(84svh, 680px); }
 .sheet-detail { display: grid; gap: var(--space-4); }
 .sheet-total, .sheet-note { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0; color: var(--color-text-secondary); font-size: .875rem; }
