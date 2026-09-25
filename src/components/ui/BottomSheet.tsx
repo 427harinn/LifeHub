@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { lockBodyScroll } from "./body-scroll-lock";
 
 type BottomSheetProps = {
   className?: string;
@@ -23,12 +24,30 @@ const focusableSelector = [
   "[tabindex]:not([tabindex=\"-1\"])",
 ].join(",");
 
+type DragStart = {
+  axis: "pending" | "vertical";
+  x: number;
+  y: number;
+  scrollContainer: HTMLElement | null;
+};
+
+const findVerticalScrollContainer = (target: Element | null, dialog: HTMLElement | null) => {
+  let element = target;
+  while (element instanceof HTMLElement && element !== dialog) {
+    const style = window.getComputedStyle(element);
+    const canScrollVertically = (style.overflowY === "auto" || style.overflowY === "scroll") && element.scrollHeight > element.clientHeight;
+    if (canScrollVertically) return element;
+    element = element.parentElement;
+  }
+  return null;
+};
+
 export function BottomSheet({ className, headerActions, open, title, onClose, closable = true, initialFocus, children }: BottomSheetProps) {
   const titleId = useId();
   const layerRef = useRef<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const dragStart = useRef<{ x: number; y: number; axis: "pending" | "vertical" } | null>(null);
+  const dragStart = useRef<DragStart | null>(null);
   const dragOffsetRef = useRef(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -37,8 +56,7 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
     if (!open) return undefined;
     dragStart.current = null;
     dragOffsetRef.current = 0;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseBodyScroll = lockBodyScroll();
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const layer = layerRef.current;
     const backgroundState = new Map<HTMLElement, boolean>();
@@ -63,7 +81,7 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
     const focusTimer = window.setTimeout(focusInitialElement, 0);
     return () => {
       window.clearTimeout(focusTimer);
-      document.body.style.overflow = previousOverflow;
+      releaseBodyScroll();
       backgroundState.forEach((inert, element) => { element.inert = inert; });
       if (opener?.isConnected) opener.focus({ preventScroll: true });
     };
@@ -109,9 +127,9 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
   const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const target = event.target instanceof Element ? event.target : null;
-    const content = target?.closest(".bottom-sheet__content");
-    if (content instanceof HTMLElement && content.scrollTop > 0) return;
-    dragStart.current = { axis: "pending", x: event.clientX, y: event.clientY };
+    const scrollContainer = findVerticalScrollContainer(target, dialogRef.current);
+    if (scrollContainer && scrollContainer.scrollTop > 0) return;
+    dragStart.current = { axis: "pending", x: event.clientX, y: event.clientY, scrollContainer };
     dragOffsetRef.current = 0;
   };
 
@@ -123,6 +141,10 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
     if (gesture.axis === "pending") {
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
       if (dy <= 0 || Math.abs(dy) <= Math.abs(dx)) {
+        dragStart.current = null;
+        return;
+      }
+      if (gesture.scrollContainer && gesture.scrollContainer.scrollTop > 0) {
         dragStart.current = null;
         return;
       }
@@ -150,6 +172,14 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
     if (shouldClose) onClose();
   };
 
+  const handlePointerCancel = (event: PointerEvent<HTMLElement>) => {
+    dragStart.current = null;
+    dragOffsetRef.current = 0;
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+    setDragOffset(0);
+  };
+
   return createPortal((
     <div className="bottom-sheet-layer" onClick={(event) => event.stopPropagation()} ref={layerRef}>
       <button aria-label="背景を閉じる" className="bottom-sheet__backdrop" onClick={closable ? onClose : undefined} tabIndex={-1} type="button" />
@@ -157,10 +187,10 @@ export function BottomSheet({ className, headerActions, open, title, onClose, cl
         aria-labelledby={titleId}
         aria-modal="true"
         className={`bottom-sheet${className ? ` ${className}` : ""}${dragging ? " is-dragging" : ""}`}
-        onPointerCancel={handlePointerUp}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onPointerDownCapture={handlePointerDown}
+        onPointerMoveCapture={handlePointerMove}
+        onPointerUpCapture={handlePointerUp}
         role="dialog"
         ref={dialogRef}
         tabIndex={-1}

@@ -3,6 +3,41 @@ import { describe, expect, it, vi } from "vitest";
 import { BottomSheet } from "./BottomSheet";
 
 describe("BottomSheet", () => {
+  it("locks the body with a fixed offset and restores its exact style and scroll position", () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    Object.defineProperty(window, "scrollX", { configurable: true, value: 24 });
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 240 });
+    document.body.setAttribute("style", "color: red; overflow: auto;");
+    const { rerender } = render(<BottomSheet open onClose={vi.fn()} title="確認"><p>内容</p></BottomSheet>);
+
+    expect(document.body.style.position).toBe("fixed");
+    expect(document.body.style.top).toBe("-240px");
+    expect(document.body.style.left).toBe("-24px");
+    expect(document.body.style.width).toBe("100%");
+    expect(document.body.style.overflow).toBe("hidden");
+
+    rerender(<div />);
+    expect(document.body.getAttribute("style")).toBe("color: red; overflow: auto;");
+    expect(scrollTo).toHaveBeenCalledWith(24, 240);
+    scrollTo.mockRestore();
+  });
+
+  it("keeps the body locked until the last nested sheet closes", () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    Object.defineProperty(window, "scrollX", { configurable: true, value: 0 });
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 180 });
+    const { rerender } = render(<><BottomSheet open onClose={vi.fn()} title="親"><p>親</p></BottomSheet><BottomSheet open onClose={vi.fn()} title="子"><p>子</p></BottomSheet></>);
+
+    rerender(<><BottomSheet open={false} onClose={vi.fn()} title="親"><p>親</p></BottomSheet><BottomSheet open onClose={vi.fn()} title="子"><p>子</p></BottomSheet></>);
+    expect(document.body.style.position).toBe("fixed");
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    rerender(<><BottomSheet open={false} onClose={vi.fn()} title="親"><p>親</p></BottomSheet><BottomSheet open={false} onClose={vi.fn()} title="子"><p>子</p></BottomSheet></>);
+    expect(document.body.style.position).toBe("");
+    expect(scrollTo).toHaveBeenCalledWith(0, 180);
+    scrollTo.mockRestore();
+  });
+
   it("portals the viewport overlay outside transformed form containers", () => {
     const { container } = render(<div style={{ overflow: "hidden", transform: "translateY(1px)" }}><BottomSheet open onClose={vi.fn()} title="確認"><p>内容</p></BottomSheet></div>);
     const layer = screen.getByRole("dialog", { name: "確認" }).parentElement;
@@ -19,6 +54,67 @@ describe("BottomSheet", () => {
     fireEvent.pointerUp(dialog);
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("drags from the handle and closes after the existing threshold", () => {
+    const onClose = vi.fn();
+    render(<BottomSheet open onClose={onClose} title="確認"><p>内容</p></BottomSheet>);
+    const dialog = screen.getByRole("dialog", { name: "確認" });
+    const handle = dialog.querySelector<HTMLElement>(".bottom-sheet__handle");
+    if (!handle) throw new Error("BottomSheet handle not found");
+
+    fireEvent.pointerDown(handle, { clientX: 180, clientY: 100, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerMove(dialog, { clientX: 180, clientY: 140, pointerId: 1, pointerType: "touch" });
+    expect(dialog.style.getPropertyValue("--sheet-drag-offset")).toBe("40px");
+    fireEvent.pointerMove(dialog, { clientX: 180, clientY: 180, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerUp(dialog, { clientX: 180, clientY: 180, pointerId: 1, pointerType: "touch" });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("lets a scrollable child consume downward movement while it is below the top", () => {
+    const onClose = vi.fn();
+    render(<BottomSheet open onClose={onClose} title="確認"><div className="scroll-region" style={{ overflowY: "auto" }}><button type="button">行</button></div></BottomSheet>);
+    const dialog = screen.getByRole("dialog", { name: "確認" });
+    const region = dialog.querySelector<HTMLElement>(".scroll-region");
+    if (!region) throw new Error("scroll region not found");
+    Object.defineProperty(region, "clientHeight", { configurable: true, value: 100 });
+    Object.defineProperty(region, "scrollHeight", { configurable: true, value: 300 });
+    Object.defineProperty(region, "scrollTop", { configurable: true, writable: true, value: 80 });
+
+    fireEvent.pointerDown(region, { clientX: 180, clientY: 100, pointerId: 2, pointerType: "touch" });
+    fireEvent.pointerMove(region, { clientX: 180, clientY: 190, pointerId: 2, pointerType: "touch" });
+    fireEvent.pointerUp(region, { clientX: 180, clientY: 190, pointerId: 2, pointerType: "touch" });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(dialog.style.getPropertyValue("--sheet-drag-offset")).toBe("0px");
+  });
+
+  it("hands a top scrollable child to sheet drag and ignores upward or horizontal movement", () => {
+    const onClose = vi.fn();
+    render(<BottomSheet open onClose={onClose} title="確認"><div className="scroll-region" style={{ overflowY: "auto" }}><button type="button">行</button></div></BottomSheet>);
+    const dialog = screen.getByRole("dialog", { name: "確認" });
+    const region = dialog.querySelector<HTMLElement>(".scroll-region");
+    if (!region) throw new Error("scroll region not found");
+    Object.defineProperty(region, "clientHeight", { configurable: true, value: 100 });
+    Object.defineProperty(region, "scrollHeight", { configurable: true, value: 300 });
+    Object.defineProperty(region, "scrollTop", { configurable: true, writable: true, value: 0 });
+
+    fireEvent.pointerDown(region, { clientX: 180, clientY: 180, pointerId: 3, pointerType: "touch" });
+    fireEvent.pointerMove(region, { clientX: 180, clientY: 120, pointerId: 3, pointerType: "touch" });
+    fireEvent.pointerUp(region, { clientX: 180, clientY: 120, pointerId: 3, pointerType: "touch" });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(region, { clientX: 180, clientY: 100, pointerId: 4, pointerType: "touch" });
+    fireEvent.pointerMove(region, { clientX: 240, clientY: 102, pointerId: 4, pointerType: "touch" });
+    fireEvent.pointerUp(region, { clientX: 240, clientY: 102, pointerId: 4, pointerType: "touch" });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(region, { clientX: 180, clientY: 100, pointerId: 5, pointerType: "touch" });
+    fireEvent.pointerMove(region, { clientX: 180, clientY: 140, pointerId: 5, pointerType: "touch" });
+    expect(dialog.style.getPropertyValue("--sheet-drag-offset")).toBe("40px");
+    fireEvent.pointerMove(region, { clientX: 180, clientY: 200, pointerId: 5, pointerType: "touch" });
+    expect(dialog.style.getPropertyValue("--sheet-drag-offset")).toBe("100px");
+    fireEvent.pointerUp(region, { clientX: 180, clientY: 200, pointerId: 5, pointerType: "touch" });
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("focuses the first sheet control, traps Tab in both directions, and restores the opener", async () => {
@@ -51,5 +147,12 @@ describe("BottomSheet", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledOnce();
     background.remove();
+  });
+
+  it("closes through the backdrop when closable", () => {
+    const onClose = vi.fn();
+    render(<BottomSheet open onClose={onClose} title="確認"><button type="button">保存</button></BottomSheet>);
+    fireEvent.click(screen.getByRole("button", { name: "背景を閉じる" }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });
