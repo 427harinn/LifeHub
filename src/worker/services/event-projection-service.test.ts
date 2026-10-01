@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Event, EventOccurrenceOverride, RecurrenceRule } from "../types";
 import { dayToRange, isDateKey, monthKeyToGridRange, projectDefinitions, stableOccurrenceKey, stablePeriodMonthOccurrenceKey, stablePeriodRangeOccurrenceKey, stablePeriodWeekOccurrenceKey } from "./event-projection-service";
 import { occurrenceDates } from "./event-projection-service";
+import { EventProjectionService } from "./event-projection-service";
 
 const event: Event = {
   id: "event-1", userId: "user-1", category: "home", title: "薬", place: null, memo: null, timingType: "scheduled", allDay: false,
@@ -19,6 +20,26 @@ const periodEvent = (overrides: Partial<Event> = {}): Event => ({
 });
 
 describe("scheduled recurrence projection", () => {
+  it("bulk hydrates recurring definitions using unique rule and event IDs", async () => {
+    const events = [event, { ...event, id: "event-2" }, { ...event, id: "event-3", recurrenceRuleId: null }];
+    const listForRange = vi.fn(() => Promise.resolve(events));
+    const listByIds = vi.fn(() => Promise.resolve([rule()]));
+    const listForEvents = vi.fn(() => Promise.resolve([]));
+    const service = Object.create(EventProjectionService.prototype) as EventProjectionService;
+    Object.assign(service, {
+      repository: { listForRange },
+      recurrenceRepository: { listByIds, getById: vi.fn() },
+      overrideRepository: { listForEvents, listForEvent: vi.fn() }
+    });
+
+    await service.project("user-1", { startDate: "2026-09-01", endDate: "2026-09-01" });
+
+    expect(listByIds).toHaveBeenCalledTimes(1);
+    expect(listByIds).toHaveBeenCalledWith("user-1", ["rule-1"]);
+    expect(listForEvents).toHaveBeenCalledTimes(1);
+    expect(listForEvents).toHaveBeenCalledWith("user-1", ["event-1", "event-2"]);
+  });
+
   it("requests the six-week Calendar grid range around the month", () => {
     expect(monthKeyToGridRange("2026-09")).toEqual({ startDate: "2026-08-30", endDate: "2026-10-10" });
   });

@@ -76,18 +76,26 @@ export class NotificationSchedulerService {
 
   async run(env: Env, at = new Date()): Promise<void> {
     for (const setting of await this.settings.listAll()) {
-      try { if ((await this.states.getOrCreate(setting.userId, at.toISOString())).migrationState === "migration_locked") continue; await this.runForUser(setting, env, at); }
-      catch (error) { console.error(JSON.stringify({ event: "lifehub_notification_scheduler_user_failed", userId: setting.userId, errorName: error instanceof Error ? error.name : "UnknownError" })); }
+      let schedulerStage = "user_state";
+      try {
+        if ((await this.states.getOrCreate(setting.userId, at.toISOString())).migrationState === "migration_locked") continue;
+        schedulerStage = "user_processing";
+        await this.runForUser(setting, env, at);
+      } catch (error) {
+        console.error(JSON.stringify({ event: "lifehub_notification_scheduler_user_failed", userId: setting.userId, schedulerStage, errorName: error instanceof Error ? error.name : "UnknownError" }));
+      }
     }
   }
 
   private async runForUser(setting: UserSettings, env: Env, at: Date): Promise<void> {
     const rows = await this.notifications.listEventNotifications(setting.userId);
-    const maxOffset = rows.reduce((max, row) => Math.max(max, row.offsetMinutes), 0);
-    const localDate = getLocalDate(at, setting.timezone);
-    const range = { startDate: addDateKey(localDate, -2), endDate: addDateKey(localDate, Math.ceil(maxOffset / 1440) + 2) };
-    const projected = await this.projection.project(setting.userId, range, { timezone: setting.timezone, weekStartsOn: setting.weekStartsOn });
-    await this.runEventNotifications(setting, rows, uniqueEvents(projected), env, at);
+    if (rows.length > 0) {
+      const maxOffset = rows.reduce((max, row) => Math.max(max, row.offsetMinutes), 0);
+      const localDate = getLocalDate(at, setting.timezone);
+      const range = { startDate: addDateKey(localDate, -2), endDate: addDateKey(localDate, Math.ceil(maxOffset / 1440) + 2) };
+      const projected = await this.projection.project(setting.userId, range, { timezone: setting.timezone, weekStartsOn: setting.weekStartsOn });
+      await this.runEventNotifications(setting, rows, uniqueEvents(projected), env, at);
+    }
     await this.runSummary(setting, "morning", setting.morningSummaryEnabled, setting.morningSummaryTime, env, at);
     await this.runSummary(setting, "evening", setting.eveningSummaryEnabled, setting.eveningSummaryTime, env, at);
   }

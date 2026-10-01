@@ -25,6 +25,22 @@ const toOverride = (row: OverrideRow): EventOccurrenceOverride => ({
 export class EventOccurrenceOverrideRepository {
   constructor(private readonly db: D1Database) {}
 
+  async listForEvents(userId: string, eventIds: string[]): Promise<EventOccurrenceOverride[]> {
+    const uniqueEventIds = [...new Set(eventIds)];
+    if (uniqueEventIds.length === 0) return [];
+
+    const overrides: EventOccurrenceOverride[] = [];
+    for (let index = 0; index < uniqueEventIds.length; index += 99) {
+      const batch = uniqueEventIds.slice(index, index + 99);
+      const placeholders = batch.map(() => "?").join(", ");
+      const result = await this.db.prepare(
+        `SELECT id, user_id, event_id, occurrence_key, override_type, patch_json, created_at, updated_at FROM event_occurrence_overrides WHERE user_id = ? AND event_id IN (${placeholders})`
+      ).bind(userId, ...batch).all<OverrideRow>();
+      overrides.push(...result.results.map(toOverride));
+    }
+    return overrides;
+  }
+
   async get(userId: string, eventId: string, occurrenceKey: string): Promise<EventOccurrenceOverride | null> {
     const row = await this.db.prepare("SELECT id, user_id, event_id, occurrence_key, override_type, patch_json, created_at, updated_at FROM event_occurrence_overrides WHERE user_id = ? AND event_id = ? AND occurrence_key = ?").bind(userId, eventId, occurrenceKey).first<OverrideRow>();
     return row ? toOverride(row) : null;
