@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, CalendarDateSheet, CalendarShell, DailyShell, EventForm, MoneyCategoryDonut, MoneyForm, MoneyInlineDetail, MoneyStatusIcon } from "./App";
 import { allocateCalendarCellRows, calendarMoneyEntriesForDate, calendarMoneySummaryForDate, formatDate, formatDateRange, moneyAverageDivisorFor, recurrenceAfterBaseDateChange, recurrenceSummary, weekEnd } from "./lib/app-view-helpers";
 import type { Event, MoneyItem, MoneyProjection } from "./api/client";
@@ -320,6 +320,11 @@ describe("M11 search", () => {
 });
 
 describe("Money analysis", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-10T03:00:00.000Z"));
+  });
+
   it("uses the natural month count for actual averages", () => {
     expect(moneyAverageDivisorFor(2026, "2026-09", "forecast")).toBe(12);
     expect(moneyAverageDivisorFor(2026, "2026-09", "actual")).toBe(9);
@@ -361,6 +366,8 @@ describe("Money analysis", () => {
     expect(screen.getByRole("heading", { name: "お金" })).toBeInTheDocument();
     window.history.pushState({}, "", "/calendar");
   });
+
+  afterEach(() => vi.useRealTimers());
 });
 
 describe("EventForm timed start defaults", () => {

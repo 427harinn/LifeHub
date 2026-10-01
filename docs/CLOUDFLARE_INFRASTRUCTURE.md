@@ -154,9 +154,14 @@ Cron 自体は UTC で動作するため、実際に通知対象かどうかは�
 - default evening: 21:00
 - ユーザー設定で変更可能
 
-### M7 staging運用
+### staging Cron運用
 
-LifeHub staging Worker `lifehub-staging`だけに5分Cron（`*/5 * * * *`）を設定する。VAPIDはLifeHub staging専用Secretとして次の名前だけを使用する。
+LifeHub staging Worker `lifehub-staging`には次のCronを設定する。
+
+- Notification Scheduler: 5分ごと（`*/5 * * * *`）
+- MoneySettlement: 1日1回、UTC 15:02（`2 15 * * *`、JST 00:02）
+
+Cronごとにscheduled handlerが処理を分岐し、5分Cronでは通知のみ、日次CronではMoneySettlementのみを実行する。production/defaultにはCronを設定しない。VAPIDはLifeHub staging専用Secretとして次の名前だけを使用する。
 
 - `WEB_PUSH_VAPID_PUBLIC_KEY`
 - `WEB_PUSH_VAPID_PRIVATE_KEY`
