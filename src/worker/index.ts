@@ -565,7 +565,13 @@ export default {
     }
   },
   scheduled(controller: ScheduledController, env: Env, context: ExecutionContext) {
-    context.waitUntil(runNotificationScheduler(env, new Date(controller.scheduledTime)));
-    context.waitUntil(runMoneySettlement(env, new Date(controller.scheduledTime)));
+    const at = new Date(controller.scheduledTime);
+    if (controller.cron === "*/5 * * * *") {
+      context.waitUntil(runNotificationScheduler(env, at));
+      return;
+    }
+    if (controller.cron === "2 15 * * *") {
+      context.waitUntil(runMoneySettlement(env, at));
+    }
   }
 };

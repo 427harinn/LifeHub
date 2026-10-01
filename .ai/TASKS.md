@@ -276,6 +276,12 @@ Bottom Navigation icon差し替え、icon-rainbow、PWA manifest/icon polish、B
 - userId ownership、cancelled occurrence、invalid occurrenceKey、migration_locked writeをroute/serviceで検証している
 - production/default、HouseToDo、M10 Visualizationの残りには触れない（M9 UI polishとして当月expense donutのみ先行）
 
+## 現在のstaging Cron（2026-10-01）
+
+- Notification Scheduler: 5分ごと（`*/5 * * * *`）
+- MoneySettlement: 1日1回、UTC 15:02 / JST 00:02（`2 15 * * *`）
+- handlerはCronごとに片方だけを実行し、未知のCronは無視する。
+
 ---
 
 # EventForm UX follow-up tasks

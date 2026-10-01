@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./lib/archive-storage", () => ({
   ArchiveStorageError: class ArchiveStorageError extends Error {},
@@ -33,10 +33,14 @@ const requestUrl = (input: RequestInfo | URL) => typeof input === "string" ? inp
 
 describe("Calendar month prefetch", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-10T03:00:00.000Z"));
     window.history.pushState({}, "", "/calendar?date=2026-09-24");
     clearMemoryActiveSnapshots();
     vi.restoreAllMocks();
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it("prefetches previous and next months only after current network success", async () => {
     const pending = new Map<string, { resolve: (response: Response) => void }>();
@@ -92,10 +96,14 @@ describe("Calendar month prefetch", () => {
 
 describe("Money month local-first", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-10T03:00:00.000Z"));
     window.history.pushState({}, "", "/money");
     clearMemoryActiveSnapshots();
     vi.restoreAllMocks();
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it("prefetches previous and next Money months only after current network success", async () => {
     const pending = new Map<string, { resolve: (response: Response) => void }>();
