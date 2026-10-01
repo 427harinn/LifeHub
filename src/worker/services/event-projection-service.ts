@@ -220,9 +220,31 @@ export const dayToRange = (date: string): DateRange => ({ startDate: date, endDa
 export class EventProjectionService {
   constructor(private readonly repository: EventRepository, private readonly recurrenceRepository: RecurrenceRepository, private readonly overrideRepository: EventOccurrenceOverrideRepository) {}
 
+  private async hydrate(userId: string, events: Event[]): Promise<Definition[]> {
+    const recurringEvents = events.filter((event) => event.recurrenceRuleId !== null);
+    const ruleIds = [...new Set(recurringEvents.map((event) => event.recurrenceRuleId as string))];
+    const eventIds = [...new Set(recurringEvents.map((event) => event.id))];
+    const [rules, overrides] = await Promise.all([
+      this.recurrenceRepository.listByIds(userId, ruleIds),
+      this.overrideRepository.listForEvents(userId, eventIds)
+    ]);
+    const ruleById = new Map(rules.map((rule) => [rule.id, rule]));
+    const overridesByEventId = new Map<string, EventOccurrenceOverride[]>();
+    for (const override of overrides) {
+      const rows = overridesByEventId.get(override.eventId) ?? [];
+      rows.push(override);
+      overridesByEventId.set(override.eventId, rows);
+    }
+    return events.map((event) => ({
+      event,
+      rule: event.recurrenceRuleId ? ruleById.get(event.recurrenceRuleId) ?? null : null,
+      overrides: event.recurrenceRuleId ? overridesByEventId.get(event.id) ?? [] : []
+    }));
+  }
+
   async project(userId: string, range: DateRange, options: { timezone?: string; weekStartsOn?: number } = {}): Promise<ProjectedEvent[]> {
     const events = await this.repository.listForRange(userId, range.startDate, range.endDate);
-    const definitions = await Promise.all(events.map(async (event) => ({ event, rule: event.recurrenceRuleId ? await this.recurrenceRepository.getById(userId, event.recurrenceRuleId) : null, overrides: event.recurrenceRuleId ? await this.overrideRepository.listForEvent(userId, event.id) : [] })));
+    const definitions = await this.hydrate(userId, events);
     return projectDefinitions(definitions, range, options.weekStartsOn ?? 1).sort((left, right) => `${left.startDate ?? "9999-12-31"}T${left.startTime ?? left.deadlineTime ?? "00:00"}`.localeCompare(`${right.startDate ?? "9999-12-31"}T${right.startTime ?? right.deadlineTime ?? "00:00"}`));
   }
 
@@ -233,7 +255,7 @@ export class EventProjectionService {
     const today = getLocalDate(new Date(), options.timezone ?? "UTC");
     const range = { startDate: shiftDate(today, -1825), endDate: shiftDate(today, 1825) };
     const definitions = await this.repository.searchDefinitions(userId, normalized, 200);
-    const hydrated = await Promise.all(definitions.map(async (event) => ({ event, rule: event.recurrenceRuleId ? await this.recurrenceRepository.getById(userId, event.recurrenceRuleId) : null, overrides: event.recurrenceRuleId ? await this.overrideRepository.listForEvent(userId, event.id) : [] })));
+    const hydrated = await this.hydrate(userId, definitions);
     const occurrenceByKey = new Map<string, ProjectedEvent>();
     for (const event of projectDefinitions(hydrated, range, options.weekStartsOn ?? 1)) {
       const fields = (["title", "place", "memo"] as const).filter((field) => Boolean(event[field]?.toLocaleLowerCase().includes(normalized)));

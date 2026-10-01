@@ -29,6 +29,22 @@ const toRule = (row: RuleRow): RecurrenceRule => ({
 export class RecurrenceRepository {
   constructor(private readonly db: D1Database) {}
 
+  async listByIds(userId: string, ids: string[]): Promise<RecurrenceRule[]> {
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) return [];
+
+    const rules: RecurrenceRule[] = [];
+    for (let index = 0; index < uniqueIds.length; index += 99) {
+      const batch = uniqueIds.slice(index, index + 99);
+      const placeholders = batch.map(() => "?").join(", ");
+      const result = await this.db.prepare(
+        `SELECT id, user_id, frequency, interval, weekdays, day_of_month, starts_on, ends_on, created_at, updated_at FROM recurrence_rules WHERE user_id = ? AND id IN (${placeholders})`
+      ).bind(userId, ...batch).all<RuleRow>();
+      rules.push(...result.results.map(toRule));
+    }
+    return rules;
+  }
+
   async create(userId: string, input: RecurrenceRuleInput, now: string): Promise<RecurrenceRule> {
     const id = crypto.randomUUID();
     await this.db.prepare(
