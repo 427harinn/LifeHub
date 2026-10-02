@@ -173,6 +173,12 @@ describe("LifeHub M2 shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "設定" }));
     expect(screen.getByRole("heading", { name: /^設定$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "カレンダーを開く" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "使い方を開く" }));
+    expect(screen.getByRole("main", { name: "使い方ガイド" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/settings/guide");
+    fireEvent.click(screen.getByRole("button", { name: "使い方を閉じる" }));
+    expect(screen.getByRole("heading", { name: /^設定$/ })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/settings");
     fireEvent.click(screen.getByRole("button", { name: "カレンダーを開く" }));
     expect(screen.getByRole("heading", { name: /^カレンダー$/ })).toBeInTheDocument();
     expect(screen.getByText("Asia/Tokyo")).toBeInTheDocument();
