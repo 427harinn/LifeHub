@@ -5,6 +5,7 @@ import {
 } from "./api/client";
 import { BottomSheet, Button, DateInput, FormRow, Input, MobileShell, NavIcon, TimeInput } from "./components/ui";
 import { SwipeActionRow } from "./components/SwipeActionRow";
+import { GuidePage } from "./pages/GuidePage";
 import { AccountSettings, PasswordChangeSettings } from "./components/AccountSettings";
 import { NotificationOffsetPicker, NotificationSettingsSection } from "./components/NotificationSettings";
 import { getNotificationTemplates } from "./api/notifications";
@@ -45,7 +46,7 @@ import {
 type Screen = "calendar" | "calendar-search" | "daily" | "money" | "money-analysis" | "settings";
 type AddChoice = "家" | "仕事" | "お金";
 type CalendarFilter = "all" | "home" | "work" | "money";
-type SettingsDetail = "account" | "password" | "notifications" | "calendar" | "money" | "data";
+type SettingsDetail = "account" | "password" | "notifications" | "calendar" | "money" | "data" | "guide";
 type ReturnContext = { screen: "calendar" | "daily"; date: string; filter: CalendarFilter };
 type MoneyReturnContext = ReturnContext | { screen: "money"; month: string };
 type DataLoadState = "loading" | "success" | "refreshing" | "error";
@@ -71,7 +72,7 @@ const scheduleBackgroundWork = (work: () => void) => {
 
 const settingsDetailFromPath = (): SettingsDetail | null => {
   const detail = window.location.pathname.match(/^\/settings\/([^/]+)$/)?.[1];
-  if (detail === "account" || detail === "password" || detail === "notifications" || detail === "notification" || detail === "calendar" || detail === "money" || detail === "data") return detail === "notification" ? "notifications" : detail;
+  if (detail === "account" || detail === "password" || detail === "notifications" || detail === "notification" || detail === "calendar" || detail === "money" || detail === "data" || detail === "guide") return detail === "notification" ? "notifications" : detail;
   return null;
 };
 const screenFromPath = (): Screen => { const path = window.location.pathname; if (path === "/calendar/search") return "calendar-search"; if (path === "/daily") return "daily"; if (path === "/money/analysis") return "money-analysis"; if (path === "/money") return "money"; if (path === "/settings" || settingsDetailFromPath()) return "settings"; return "calendar"; };
@@ -787,7 +788,8 @@ function ArchiveSettings({ metadata, state, candidate, error, onCheck }: { metad
   return <section className="archive-settings" aria-label="ローカルアーカイブ"><div className="archive-status-row"><span>端末に保存済み</span><strong>{recordCount > 0 ? `${firstDate ? `${firstDate}から` : "履歴"}・${recordCount}件` : "まだありません"}</strong></div><div className="archive-status-row"><span>クラウドに保存</span><strong>直近12か月</strong></div><div className="archive-status-row"><span>状態</span><strong>{archiveStateLabel[state]}{state === "candidate" ? `（${candidateCount}件）` : ""}</strong></div><div className="archive-status-row"><span>最終確認</span><strong>{latest}</strong></div>{error ? <p className="form-error" role="alert">{error}</p> : null}<Button disabled={state === "saving"} onClick={onCheck} variant="secondary">{state === "saving" ? "保存中…" : "アーカイブを確認"}</Button><p className="archive-note">古い履歴を端末に保存してから、クラウドの整理を確認します。</p></section>;
 }
 function SettingsDetailPage({ accountFeedback, detail, user, settings, archiveMetadata, archiveState, archiveCandidate, archiveError, onArchiveCheck, onBack, onBackToAccount, onLogout, onSettingsChange, onMigrationStarted, onOpenPassword, onPasswordChanged }: { accountFeedback: string; detail: SettingsDetail; user: AuthUser; settings: UserSettings | null; archiveMetadata: ArchiveMetadata[]; archiveState: ArchiveUiState; archiveCandidate: ArchiveCandidateResponse | null; archiveError: string; onArchiveCheck: () => void; onBack: () => void; onBackToAccount: () => void; onLogout: () => void; onSettingsChange: (settings: UserSettings) => void; onMigrationStarted: (migrationId: string) => void; onOpenPassword: () => void; onPasswordChanged: () => void }) {
-  const titles: Record<SettingsDetail, string> = { account: "アカウント", password: "パスワードを変更", notifications: "通知", calendar: "カレンダー", money: "お金", data: "データ / バックアップ" };
+  if (detail === "guide") return <GuidePage onClose={onBack} />;
+  const titles: Record<SettingsDetail, string> = { account: "アカウント", password: "パスワードを変更", notifications: "通知", calendar: "カレンダー", money: "お金", data: "データ / バックアップ", guide: "使い方" };
   const body = detail === "account" ? <AccountSettings onChangePassword={onOpenPassword} onLogout={onLogout} successMessage={accountFeedback} user={user} /> : detail === "password" ? <PasswordChangeSettings onCompleted={onPasswordChanged} /> : detail === "notifications" ? <NotificationSettingsSection onSettingsChange={onSettingsChange} settings={settings} /> : detail === "calendar" ? <CalendarSettings onSettingsChange={onSettingsChange} settings={settings} /> : detail === "money" ? <MoneyCategorySettings /> : <><BackupSettings onMigrationStarted={onMigrationStarted} userId={user.id} /><ArchiveSettings candidate={archiveCandidate} error={archiveError} metadata={archiveMetadata} onCheck={onArchiveCheck} state={archiveState} /></>;
   const back = detail === "password" ? onBackToAccount : onBack;
   return <main className="screen-page settings-page"><header className="screen-header"><button aria-label={detail === "password" ? "アカウントへ戻る" : "設定へ戻る"} className="back-button" onClick={back} type="button">‹</button><h1>{titles[detail]}</h1><span className="header-spacer" /></header><section className="settings-detail-list">{body}</section></main>;
@@ -799,7 +801,7 @@ function SettingsShell({ user, settings, settingsLoad, detail, archiveMetadata, 
   const passwordChanged = () => { setAccountFeedback("パスワードを変更しました。"); backToAccount(); };
   if (settingsLoad !== "success") return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><DataStateMessage onRetry={onRetrySettings} state={settingsLoad} /></main>;
   if (detail) return <SettingsDetailPage accountFeedback={accountFeedback} archiveCandidate={archiveCandidate} archiveError={archiveError} archiveMetadata={archiveMetadata} archiveState={archiveState} detail={detail} onArchiveCheck={onArchiveCheck} onBack={onBack} onBackToAccount={backToAccount} onLogout={onLogout} onMigrationStarted={onMigrationStarted} onOpenPassword={openPassword} onPasswordChanged={passwordChanged} onSettingsChange={onSettingsChange} settings={settings} user={user} />;
-  return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><section className="settings-root-list"><FormRow ariaLabel="アカウントを開く" label="アカウント" onClick={() => onOpenDetail("account")} /><FormRow ariaLabel="通知を開く" label="通知" onClick={() => onOpenDetail("notifications")} /><FormRow ariaLabel="カレンダーを開く" label="カレンダー" onClick={() => onOpenDetail("calendar")} /><FormRow ariaLabel="お金を開く" label="お金" onClick={() => onOpenDetail("money")} /><FormRow ariaLabel="データとバックアップを開く" label="データ / バックアップ" onClick={() => onOpenDetail("data")} /></section></main>;
+  return <main className="screen-page settings-page"><header className="screen-header"><h1>設定</h1></header><section className="settings-root-list"><FormRow ariaLabel="アカウントを開く" label="アカウント" onClick={() => onOpenDetail("account")} /><FormRow ariaLabel="通知を開く" label="通知" onClick={() => onOpenDetail("notifications")} /><FormRow ariaLabel="カレンダーを開く" label="カレンダー" onClick={() => onOpenDetail("calendar")} /><FormRow ariaLabel="お金を開く" label="お金" onClick={() => onOpenDetail("money")} /><FormRow ariaLabel="データとバックアップを開く" label="データ / バックアップ" onClick={() => onOpenDetail("data")} /><FormRow ariaLabel="使い方を開く" label="使い方" onClick={() => onOpenDetail("guide")} /></section></main>;
 }
 function AddChoiceSheet({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (choice: AddChoice) => void }) { return <BottomSheet open={open} onClose={onClose} title="追加"><div className="choice-list"><FormRow ariaLabel="家を追加" chevron={false} label="家" onClick={() => onSelect("家")} /><FormRow ariaLabel="仕事を追加" chevron={false} label="仕事" onClick={() => onSelect("仕事")} /><FormRow ariaLabel="お金を追加" chevron={false} label="お金" onClick={() => onSelect("お金")} /></div></BottomSheet>; }
 
