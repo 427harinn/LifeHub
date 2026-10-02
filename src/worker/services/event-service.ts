@@ -6,6 +6,7 @@ import type { Event, EventInput, PeriodEventInput, RecurrenceRuleInput, Schedule
 import { dateDifference, isDateKey, normalizeRecurrenceInput, shiftDate } from "./recurrence-service";
 import { EventProjectionService } from "./event-projection-service";
 import { NotificationRepository } from "../repositories/notification-repository";
+import { NotificationJobService } from "./notification-job-service";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_PLACE_LENGTH = 200;
@@ -96,7 +97,11 @@ const normalizeNotifications = (value: unknown): number[] => {
 const periodEndForMonth = (monthStart: string) => shiftDate(`${monthStart.slice(0, 7)}-01`, new Date(Date.UTC(Number(monthStart.slice(0, 4)), Number(monthStart.slice(5, 7)), 0)).getUTCDate() - 1);
 
 export class EventService {
-  constructor(private readonly repository: EventRepository, private readonly recurrenceRepository: RecurrenceRepository, private readonly overrideRepository: EventOccurrenceOverrideRepository, private readonly projection: EventProjectionService, private readonly notificationRepository?: NotificationRepository) {}
+  constructor(private readonly repository: EventRepository, private readonly recurrenceRepository: RecurrenceRepository, private readonly overrideRepository: EventOccurrenceOverrideRepository, private readonly projection: EventProjectionService, private readonly notificationRepository?: NotificationRepository, private readonly notificationJobs?: NotificationJobService) {}
+
+  private refreshNotificationJobs(userId: string, eventId: string, now: string) {
+    return this.notificationJobs?.refreshForEvent(userId, eventId, new Date(now));
+  }
 
   private async prepareRule(userId: string, recurrence: unknown, startsOn: string, now: string) {
     const input = normalizeRecurrenceInput(recurrence, startsOn);
@@ -110,6 +115,7 @@ export class EventService {
     const rule = await this.prepareRule(userId, body.recurrence, startsOn ?? now.slice(0, 10), now);
     const created = await this.repository.create(userId, input, rule?.id ?? null, now);
     if (requestedNotifications !== undefined && this.notificationRepository) await this.notificationRepository.replaceEventNotifications(userId, created.id, requestedNotifications, now);
+    await this.refreshNotificationJobs(userId, created.id, now);
     return { ...created, notifications: await this.notificationOffsets(userId, created.id) };
   }
 
@@ -171,6 +177,7 @@ export class EventService {
       const { occurrence } = await this.targetOccurrence(userId, event, body.occurrenceKey);
       const input = validateEventInput({ ...occurrence, ...body }, undefined);
       await this.overrideRepository.upsert(userId, id, body.occurrenceKey as string, "modified", input, now);
+      await this.refreshNotificationJobs(userId, id, now);
       return { ...occurrence, ...input, occurrenceKey: body.occurrenceKey, recurrence: rule, notifications: await this.notificationOffsets(userId, id) };
     }
 
@@ -191,6 +198,8 @@ export class EventService {
       const created = await this.repository.create(userId, splitInput, newRule?.id ?? null, now);
       const offsets = requestedNotifications === undefined ? await this.notificationOffsets(userId, id) : requestedNotifications;
       if (this.notificationRepository) await this.notificationRepository.replaceEventNotifications(userId, created.id, offsets, now);
+      await this.refreshNotificationJobs(userId, id, now);
+      await this.refreshNotificationJobs(userId, created.id, now);
       return { ...created, notifications: offsets };
     }
 
@@ -202,6 +211,7 @@ export class EventService {
     const updated = await this.repository.update(userId, id, input, ruleId, now);
     if (!updated) throw notFoundError();
     if (requestedNotifications !== undefined && this.notificationRepository) await this.notificationRepository.replaceEventNotifications(userId, id, requestedNotifications, now);
+    await this.refreshNotificationJobs(userId, id, now);
     return { ...updated, notifications: await this.notificationOffsets(userId, id) };
   }
 
@@ -211,14 +221,17 @@ export class EventService {
     if (scope === "occurrence") {
       await this.targetOccurrence(userId, event, body.occurrenceKey);
       await this.overrideRepository.upsert(userId, id, body.occurrenceKey as string, "cancelled", null, now);
+      await this.refreshNotificationJobs(userId, id, now);
       return;
     }
     if (scope === "following") {
       if (!rule || !body.occurrenceKey) throw validationError({ scope: "繰り返し予定の対象範囲が不正です。" });
       const { date } = await this.targetOccurrence(userId, event, body.occurrenceKey);
       await this.recurrenceRepository.update(userId, rule.id, { ...rule, endsOn: shiftDate(date, -1), weekdays: rule.weekdays }, now);
+      await this.refreshNotificationJobs(userId, id, now);
       return;
     }
     if (!await this.repository.softDelete(userId, id, now)) throw notFoundError();
+    await this.refreshNotificationJobs(userId, id, now);
   }
 }

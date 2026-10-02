@@ -25,6 +25,7 @@ import { MoneyService } from "./services/money-service";
 import { MoneyOccurrenceOverrideRepository } from "./repositories/money-occurrence-override-repository";
 import { MoneyOccurrenceSettlementRepository } from "./repositories/money-occurrence-settlement-repository";
 import { runMoneySettlement } from "./services/money-settlement-service";
+import { NotificationJobService, runNotificationJobRefill } from "./services/notification-job-service";
 import { ArchiveService } from "./services/archive-service";
 import { BackupService } from "./services/backup-service";
 import { MigrationService } from "./services/migration-service";
@@ -119,7 +120,13 @@ const patchSettings = requireAuth(async ({ request, env, user }) => {
     }
   }
   if (Object.keys(details).length > 0) throw validationError(details);
-  const settings = await new SettingsRepository(env.DB).update(user.id, input, nowIso());
+  const now = nowIso();
+  const repository = new SettingsRepository(env.DB);
+  const current = await repository.getOrCreate(user.id, now, DEFAULT_TIMEZONE);
+  const settings = await repository.update(user.id, input, now);
+  if (settings.timezone !== current.timezone || settings.weekStartsOn !== current.weekStartsOn || settings.periodDefaultDeadlineTime !== current.periodDefaultDeadlineTime) {
+    await new NotificationJobService(env.DB).backfillForUser(user.id, new Date(now));
+  }
   return json({ settings });
 });
 
@@ -175,7 +182,7 @@ const cancelMigration = requireAuth(async ({ request, env, user }) => {
 });
 
 const eventProjection = (env: Env) => new EventProjectionService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB));
-const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env), new NotificationRepository(env.DB));
+const eventService = (env: Env) => new EventService(new EventRepository(env.DB), new RecurrenceRepository(env.DB), new EventOccurrenceOverrideRepository(env.DB), eventProjection(env), new NotificationRepository(env.DB), new NotificationJobService(env.DB));
 const moneyService = (env: Env) => new MoneyService(new MoneyRepository(env.DB), new MoneyCategoryRepository(env.DB), new RecurrenceRepository(env.DB), new MoneyOccurrenceOverrideRepository(env.DB), new MoneyOccurrenceSettlementRepository(env.DB));
 const archiveService = (env: Env) => new ArchiveService(env.DB);
 const withEventNotifications = async (userId: string, events: Event[], db: D1Database) => {
@@ -494,6 +501,13 @@ const deleteEvent = requireAuth(async ({ request, env, user }) => {
   return json({ deleted: true });
 });
 
+const backfillNotificationJobs = requireAuth(async ({ env, user, request }) => {
+  if (env.APP_ENV !== "staging") return json({ error: { code: "NOT_FOUND", message: "対象が見つかりません。" } }, { status: 404 });
+  await requireWritableUserState({ request, env, user });
+  const result = await new NotificationJobService(env.DB).backfillForUser(user.id, new Date());
+  return json({ backfill: result });
+});
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
@@ -515,6 +529,7 @@ export default {
       if (url.pathname === "/api/notifications/vapid-public-key" && request.method === "GET") return await getVapidPublicKey(context);
       if (url.pathname === "/api/notifications/subscriptions" && request.method === "POST") return await registerSubscription(context);
       if (url.pathname === "/api/notifications/subscriptions" && request.method === "DELETE") return await unregisterSubscription(context);
+      if (url.pathname === "/api/notifications/jobs/backfill" && request.method === "POST") return await backfillNotificationJobs(context);
       if (url.pathname === "/api/notification-templates" && request.method === "GET") return await getNotificationTemplates(context);
       if (url.pathname === "/api/notification-templates" && request.method === "POST") return await createNotificationTemplate(context);
       const notificationTemplatePath = url.pathname.match(/^\/api\/notification-templates\/([^/]+)$/);
@@ -572,6 +587,7 @@ export default {
     }
     if (controller.cron === "2 15 * * *") {
       context.waitUntil(runMoneySettlement(env, at));
+      context.waitUntil(runNotificationJobRefill(env, at));
     }
   }
 };
