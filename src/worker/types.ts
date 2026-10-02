@@ -89,6 +89,20 @@ export type EventNotification = {
   createdAt: string;
 };
 
+export type NotificationJob = {
+  id: string;
+  userId: string;
+  eventId: string;
+  occurrenceKey: string | null;
+  eventNotificationId: string;
+  scheduledFor: string;
+  payload: { title: string; body: string; data: { kind: "event"; eventId: string; date: string; occurrenceKey: string | null; url: string } };
+  status: "pending" | "sent";
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type NotificationDelivery = {
   id: string;
   userId: string;

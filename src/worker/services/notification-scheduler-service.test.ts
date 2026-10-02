@@ -23,11 +23,14 @@ const scheduler = (rows: Array<{ id: string; eventId: string; offsetMinutes: num
   const claim = vi.fn(() => Promise.resolve(true));
   const sendPayload = vi.fn(() => Promise.resolve({ sent: 1, failed: 0 }));
   const markSent = vi.fn(() => Promise.resolve());
+  const dueJobs = rows.map((row) => ({ id: "job-1", userId: "user-1", eventId: row.eventId, occurrenceKey: null, eventNotificationId: row.id, scheduledFor: "2026-09-10T10:00:00.000Z", payload: { title: "予定のお知らせ", body: "10:00 歯医者", data: { kind: "event" as const, eventId: row.eventId, date: "2026-09-10", occurrenceKey: null, url: "/calendar?date=2026-09-10&event=event-1" } }, status: "pending" as const, sentAt: null, createdAt: "", updatedAt: "" }));
   Object.assign(service, {
     settings: { listAll: () => Promise.resolve([settings()]) },
     states: { getOrCreate: () => Promise.resolve({ migrationState: "active" }) },
-    notifications: { listEventNotifications: () => Promise.resolve(rows) },
-    deliveries: { claim, markSent, release: vi.fn(() => Promise.resolve()) },
+    notifications: { listEventNotificationsForEvent: () => Promise.resolve(rows) },
+    jobs: { listDue: () => Promise.resolve(dueJobs), markSent, deletePending: vi.fn(() => Promise.resolve()) },
+    events: { getById: () => Promise.resolve(event()) },
+    deliveries: { claim, markSent, isSent: () => Promise.resolve(false), release: vi.fn(() => Promise.resolve()) },
     projection: { project },
     push: { sendPayload }
   });
@@ -89,13 +92,13 @@ describe("notification scheduler projections", () => {
     expect(project).toHaveBeenCalledWith("user-1", { startDate: "2026-09-10", endDate: "2026-09-10" }, { timezone: "UTC", weekStartsOn: 1 });
   });
 
-  it("projects and delivers an existing event notification", async () => {
-    const { service, project, claim, sendPayload, markSent } = scheduler([{ id: "notification-1", eventId: "event-1", offsetMinutes: 0 }], [event({ startDate: "2026-09-10", endDate: "2026-09-10", startTime: "10:00", endTime: "11:00" })]);
+  it("delivers a due job without projecting Event definitions", async () => {
+    const { service, project, claim, sendPayload, markSent } = scheduler([{ id: "notification-1", eventId: "event-1", offsetMinutes: 0 }]);
     await service.run({} as Env, new Date("2026-09-10T10:00:00.000Z"));
-    expect(project).toHaveBeenCalledTimes(1);
+    expect(project).not.toHaveBeenCalled();
     expect(claim).toHaveBeenCalledWith(expect.objectContaining({ notificationType: "event", eventNotificationId: "notification-1" }));
     expect(sendPayload).toHaveBeenCalledTimes(1);
-    expect(markSent).toHaveBeenCalledTimes(1);
+    expect(markSent).toHaveBeenCalledTimes(2);
   });
 
   it.each([

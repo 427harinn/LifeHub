@@ -248,6 +248,13 @@ export class EventProjectionService {
     return projectDefinitions(definitions, range, options.weekStartsOn ?? 1).sort((left, right) => `${left.startDate ?? "9999-12-31"}T${left.startTime ?? left.deadlineTime ?? "00:00"}`.localeCompare(`${right.startDate ?? "9999-12-31"}T${right.startTime ?? right.deadlineTime ?? "00:00"}`));
   }
 
+  async projectEvent(userId: string, eventId: string, range: DateRange, options: { timezone?: string; weekStartsOn?: number } = {}): Promise<ProjectedEvent[]> {
+    const event = await this.repository.getById(userId, eventId);
+    if (!event) return [];
+    const definitions = await this.hydrate(userId, [event]);
+    return projectDefinitions(definitions, range, options.weekStartsOn ?? 1).sort((left, right) => `${left.startDate ?? "9999-12-31"}T${left.startTime ?? left.deadlineTime ?? "00:00"}`.localeCompare(`${right.startDate ?? "9999-12-31"}T${right.startTime ?? right.deadlineTime ?? "00:00"}`));
+  }
+
   async search(userId: string, query: string, options: { timezone?: string; weekStartsOn?: number; limit?: number } = {}): Promise<EventSearchResult[]> {
     const normalized = query.trim().toLocaleLowerCase();
     if (normalized.length < 2) return [];

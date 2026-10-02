@@ -22,6 +22,14 @@ export class NotificationRepository {
     return result.results.map(toEventNotification);
   }
 
+  async listEventNotificationTargets(userId?: string): Promise<Array<{ userId: string; eventId: string }>> {
+    const query = userId
+      ? "SELECT DISTINCT event_notifications.user_id, event_notifications.event_id FROM event_notifications INNER JOIN events ON events.id = event_notifications.event_id WHERE events.active = 1 AND events.deleted_at IS NULL AND event_notifications.user_id = ? ORDER BY event_notifications.user_id, event_notifications.event_id"
+      : "SELECT DISTINCT event_notifications.user_id, event_notifications.event_id FROM event_notifications INNER JOIN events ON events.id = event_notifications.event_id WHERE events.active = 1 AND events.deleted_at IS NULL ORDER BY event_notifications.user_id, event_notifications.event_id";
+    const result = userId ? await this.db.prepare(query).bind(userId).all<{ user_id: string; event_id: string }>() : await this.db.prepare(query).all<{ user_id: string; event_id: string }>();
+    return result.results.map((row) => ({ userId: row.user_id, eventId: row.event_id }));
+  }
+
   async replaceEventNotifications(userId: string, eventId: string, offsets: number[], now: string): Promise<void> {
     const statements = [this.db.prepare("DELETE FROM event_notifications WHERE user_id = ? AND event_id = ?").bind(userId, eventId), ...offsets.map((offset, index) => this.db.prepare("INSERT INTO event_notifications (id, user_id, event_id, offset_minutes, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), userId, eventId, offset, index, now))];
     await this.db.batch(statements);
@@ -71,6 +79,10 @@ const staleBefore = (now: string) => new Date(Date.parse(now) - NOTIFICATION_CLA
 
 export class NotificationDeliveryRepository {
   constructor(private readonly db: D1Database) {}
+  async isSent(dedupeKey: string): Promise<boolean> {
+    const current = await this.db.prepare("SELECT status FROM notification_deliveries WHERE dedupe_key = ?").bind(dedupeKey).first<{ status: string }>();
+    return current?.status === "sent";
+  }
   async claim(input: DeliveryClaim): Promise<boolean> {
     const result = await this.db.prepare(`INSERT INTO notification_deliveries (id, user_id, notification_type, event_id, occurrence_key, event_notification_id, scheduled_for, dedupe_key, sent_at, status, claimed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'pending', ?, ?, ?)
       ON CONFLICT(dedupe_key) DO UPDATE SET id = excluded.id, status = 'pending', claimed_at = excluded.claimed_at, updated_at = excluded.updated_at
