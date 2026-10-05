@@ -26,6 +26,7 @@ import { MoneyOccurrenceOverrideRepository } from "./repositories/money-occurren
 import { MoneyOccurrenceSettlementRepository } from "./repositories/money-occurrence-settlement-repository";
 import { runMoneySettlement } from "./services/money-settlement-service";
 import { NotificationJobService, runNotificationJobRefill } from "./services/notification-job-service";
+import { NotificationSummaryJobService, runNotificationSummaryJobRefill } from "./services/notification-summary-job-service";
 import { ArchiveService } from "./services/archive-service";
 import { BackupService } from "./services/backup-service";
 import { MigrationService } from "./services/migration-service";
@@ -61,6 +62,7 @@ const authRegister: Handler = async ({ request, env }) => {
   const now = nowIso();
   await new UserStateRepository(env.DB).getOrCreate(result.user.id, now);
   await new SettingsRepository(env.DB).getOrCreate(result.user.id, now, DEFAULT_TIMEZONE);
+  await new NotificationSummaryJobService(env.DB).refreshForUser(result.user.id, new Date(now));
   await new MoneyCategoryRepository(env.DB).ensureForUser(result.user.id, now);
   return json({ user: result.user }, { status: 201, headers: { "set-cookie": createSessionCookie(result.token, env.APP_ENV) } });
 };
@@ -126,6 +128,9 @@ const patchSettings = requireAuth(async ({ request, env, user }) => {
   const settings = await repository.update(user.id, input, now);
   if (settings.timezone !== current.timezone || settings.weekStartsOn !== current.weekStartsOn || settings.periodDefaultDeadlineTime !== current.periodDefaultDeadlineTime) {
     await new NotificationJobService(env.DB).backfillForUser(user.id, new Date(now));
+  }
+  if (settings.timezone !== current.timezone || settings.morningSummaryEnabled !== current.morningSummaryEnabled || settings.morningSummaryTime !== current.morningSummaryTime || settings.eveningSummaryEnabled !== current.eveningSummaryEnabled || settings.eveningSummaryTime !== current.eveningSummaryTime) {
+    await new NotificationSummaryJobService(env.DB).refreshForUser(user.id, new Date(now));
   }
   return json({ settings });
 });
@@ -588,6 +593,7 @@ export default {
     if (controller.cron === "2 15 * * *") {
       context.waitUntil(runMoneySettlement(env, at));
       context.waitUntil(runNotificationJobRefill(env, at));
+      context.waitUntil(runNotificationSummaryJobRefill(env, at));
     }
   }
 };

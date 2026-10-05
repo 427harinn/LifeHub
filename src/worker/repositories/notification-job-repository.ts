@@ -34,6 +34,11 @@ export class NotificationJobRepository {
     await this.db.prepare("DELETE FROM notification_jobs WHERE id = ? AND status = 'pending'").bind(id).run();
   }
 
+  async deleteExpiredPending(before: string): Promise<number> {
+    const result = await this.db.prepare("DELETE FROM notification_jobs WHERE status = 'pending' AND scheduled_for <= ?").bind(before).run();
+    return result.meta.changes ?? 0;
+  }
+
   async deletePendingForEvent(userId: string, eventId: string): Promise<void> {
     await this.db.prepare("DELETE FROM notification_jobs WHERE user_id = ? AND event_id = ? AND status = 'pending'").bind(userId, eventId).run();
   }

@@ -23,6 +23,11 @@ const toState = (row: StateRow): LifeHubUserState => ({
 export class UserStateRepository {
   constructor(private readonly db: D1Database) {}
 
+  async get(userId: string): Promise<LifeHubUserState | null> {
+    const row = await this.db.prepare("SELECT user_id, migration_state, migration_started_at, migration_backup_checksum, migration_backup_created_at, created_at, updated_at FROM lifehub_user_state WHERE user_id = ?").bind(userId).first<StateRow>();
+    return row ? toState(row) : null;
+  }
+
   async getOrCreate(userId: string, now: string): Promise<LifeHubUserState> {
     const existing = await this.db.prepare("SELECT user_id, migration_state, migration_started_at, migration_backup_checksum, migration_backup_created_at, created_at, updated_at FROM lifehub_user_state WHERE user_id = ?").bind(userId).first<StateRow>();
     if (existing) return toState(existing);

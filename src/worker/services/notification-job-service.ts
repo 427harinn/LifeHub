@@ -75,7 +75,10 @@ export class NotificationJobService {
   }
 
   async refill(at: Date): Promise<{ events: number; jobs: number }> {
-    return this.refillTargets(await this.notifications.listEventNotificationTargets(), at);
+    const expired = await this.jobs.deleteExpiredPending(new Date(at.getTime() - DELIVERY_WINDOW_MS).toISOString());
+    const result = await this.refillTargets(await this.notifications.listEventNotificationTargets(), at);
+    console.log(JSON.stringify({ event: "lifehub_notification_jobs_expired", jobs: expired }));
+    return result;
   }
 
   async backfillForUser(userId: string, at: Date): Promise<{ events: number; jobs: number }> {

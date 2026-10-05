@@ -17,24 +17,32 @@ const settings = (changes: Partial<UserSettings> = {}): UserSettings => ({
   createdAt: "", updatedAt: "", ...changes
 });
 
-const scheduler = (rows: Array<{ id: string; eventId: string; offsetMinutes: number }>, projectedEvents: Event[] = []) => {
+const scheduler = (rows: Array<{ id: string; eventId: string; offsetMinutes: number }>, projectedEvents: Event[] = [], summaryRows: Array<{ id: string; userId: string; summaryType: "morning" | "evening"; localDate: string; scheduledFor: string }> = []) => {
   const service = Object.create(NotificationSchedulerService.prototype) as NotificationSchedulerService;
-  const project = vi.fn(() => Promise.resolve(projectedEvents));
   const claim = vi.fn(() => Promise.resolve(true));
-  const sendPayload = vi.fn(() => Promise.resolve({ sent: 1, failed: 0 }));
   const markSent = vi.fn(() => Promise.resolve());
   const dueJobs = rows.map((row) => ({ id: "job-1", userId: "user-1", eventId: row.eventId, occurrenceKey: null, eventNotificationId: row.id, scheduledFor: "2026-09-10T10:00:00.000Z", payload: { title: "予定のお知らせ", body: "10:00 歯医者", data: { kind: "event" as const, eventId: row.eventId, date: "2026-09-10", occurrenceKey: null, url: "/calendar?date=2026-09-10&event=event-1" } }, status: "pending" as const, sentAt: null, createdAt: "", updatedAt: "" }));
+  const dueSummaryJobs = summaryRows.map((row) => ({ ...row, status: "pending" as const, sentAt: null, createdAt: "", updatedAt: "" }));
+  const get = vi.fn(() => Promise.resolve({ migrationState: "active" as const }));
+  const getOrCreate = vi.fn(() => Promise.resolve(settings()));
+  const summaryMarkSent = vi.fn(() => Promise.resolve());
+  const listAll = vi.fn(() => Promise.resolve([settings()]));
+  const listDue = vi.fn(() => Promise.resolve(dueJobs));
+  const listSummaryDue = vi.fn(() => Promise.resolve(dueSummaryJobs));
+  const project = vi.fn(() => Promise.resolve(projectedEvents));
+  const sendPayload = vi.fn(() => Promise.resolve({ sent: 1, failed: 0 }));
   Object.assign(service, {
-    settings: { listAll: () => Promise.resolve([settings()]) },
-    states: { getOrCreate: () => Promise.resolve({ migrationState: "active" }) },
+    settings: { listAll, getOrCreate },
+    states: { get, getOrCreate: vi.fn() },
     notifications: { listEventNotificationsForEvent: () => Promise.resolve(rows) },
-    jobs: { listDue: () => Promise.resolve(dueJobs), markSent, deletePending: vi.fn(() => Promise.resolve()) },
+    jobs: { listDue, markSent, deletePending: vi.fn(() => Promise.resolve()), deleteExpiredPending: vi.fn(() => Promise.resolve(0)) },
+    summaryJobs: { listDue: listSummaryDue, markSent: summaryMarkSent, deleteExpiredPending: vi.fn(() => Promise.resolve(0)) },
     events: { getById: () => Promise.resolve(event()) },
     deliveries: { claim, markSent, isSent: () => Promise.resolve(false), release: vi.fn(() => Promise.resolve()) },
     projection: { project },
     push: { sendPayload }
   });
-  return { service, project, claim, sendPayload, markSent };
+  return { service, project, claim, sendPayload, markSent, summaryMarkSent, listAll, get, getOrCreate, listDue, listSummaryDue };
 };
 
 describe("notification schedule resolution", () => {
@@ -78,18 +86,29 @@ describe("summary copy", () => {
 });
 
 describe("notification scheduler projections", () => {
-  it("skips all projections when there are no event notifications and summary times are outside the window", async () => {
-    const { service, project } = scheduler([]);
+  it("performs due queries only when both queues are empty", async () => {
+    const { service, project, listAll, get, getOrCreate, listDue, listSummaryDue, sendPayload } = scheduler([]);
     await service.run({} as Env, new Date("2026-09-10T12:00:00.000Z"));
+    expect(listDue).toHaveBeenCalledTimes(1);
+    expect(listSummaryDue).toHaveBeenCalledTimes(1);
+    expect(listAll).not.toHaveBeenCalled();
+    expect(get).not.toHaveBeenCalled();
+    expect(getOrCreate).not.toHaveBeenCalled();
     expect(project).not.toHaveBeenCalled();
+    expect(sendPayload).not.toHaveBeenCalled();
   });
 
-  it("runs only the summary projection when there are no event notifications", async () => {
-    const { service, project } = scheduler([]);
-    Object.assign(service, { settings: { listAll: () => Promise.resolve([settings({ morningSummaryEnabled: true, morningSummaryTime: "08:00" })]) } });
+  it("delivers a morning summary only for its due user", async () => {
+    const { service, project, claim, sendPayload, summaryMarkSent, getOrCreate } = scheduler([], [event()], [{ id: "summary-1", userId: "user-1", summaryType: "morning", localDate: "2026-09-10", scheduledFor: "2026-09-10T08:00:00.000Z" }]);
+    Object.assign(service, { settings: { listAll: vi.fn(() => Promise.resolve([])), getOrCreate: vi.fn(() => Promise.resolve(settings({ morningSummaryEnabled: true, morningSummaryTime: "08:00" }))) } });
     await service.run({} as Env, new Date("2026-09-10T08:05:00.000Z"));
     expect(project).toHaveBeenCalledTimes(1);
     expect(project).toHaveBeenCalledWith("user-1", { startDate: "2026-09-10", endDate: "2026-09-10" }, { timezone: "UTC", weekStartsOn: 1 });
+    expect(getOrCreate).not.toHaveBeenCalled();
+    expect((service as unknown as { settings: { getOrCreate: ReturnType<typeof vi.fn> } }).settings.getOrCreate).toHaveBeenCalledWith("user-1", "2026-09-10T08:05:00.000Z");
+    expect(claim).toHaveBeenCalledWith(expect.objectContaining({ notificationType: "morning_summary", dedupeKey: "summary:user-1:morning_summary:2026-09-10T08:00:00.000Z" }));
+    expect(sendPayload).toHaveBeenCalledWith("user-1", expect.objectContaining({ title: "今日の予定", body: "10:00 歯医者", data: { kind: "summary", period: "morning", localDate: "2026-09-10", url: "/calendar?date=2026-09-10" } }), expect.anything());
+    expect(summaryMarkSent).toHaveBeenCalledWith("summary-1", "2026-09-10T08:05:00.000Z");
   });
 
   it("delivers a due job without projecting Event definitions", async () => {
@@ -101,19 +120,39 @@ describe("notification scheduler projections", () => {
     expect(markSent).toHaveBeenCalledTimes(2);
   });
 
-  it.each([
-    ["morning", "2026-09-10T08:05:00.000Z", "08:00", "morning_summary"],
-    ["evening", "2026-09-10T18:05:00.000Z", "18:00", "evening_summary"]
-  ] as const)("keeps %s summary delivery behavior", async (period, at, time, notificationType) => {
-    const { service, project, claim, sendPayload } = scheduler([], [event()]);
-    const summarySettings = settings({
-      morningSummaryEnabled: period === "morning", morningSummaryTime: period === "morning" ? time : "00:00",
-      eveningSummaryEnabled: period === "evening", eveningSummaryTime: period === "evening" ? time : "00:00"
-    });
-    Object.assign(service, { settings: { listAll: () => Promise.resolve([summarySettings]) } });
-    await service.run({} as Env, new Date(at));
+  it("delivers an evening summary using the current title and payload contract", async () => {
+    const { service, project, claim, sendPayload } = scheduler([], [event()], [{ id: "summary-2", userId: "user-1", summaryType: "evening", localDate: "2026-09-10", scheduledFor: "2026-09-10T18:00:00.000Z" }]);
+    Object.assign(service, { settings: { listAll: vi.fn(() => Promise.resolve([])), getOrCreate: vi.fn(() => Promise.resolve(settings({ eveningSummaryEnabled: true, eveningSummaryTime: "18:00" }))) } });
+    await service.run({} as Env, new Date("2026-09-10T18:05:00.000Z"));
     expect(project).toHaveBeenCalledTimes(1);
-    expect(claim).toHaveBeenCalledWith(expect.objectContaining({ notificationType }));
-    expect(sendPayload).toHaveBeenCalledTimes(1);
+    expect(claim).toHaveBeenCalledWith(expect.objectContaining({ notificationType: "evening_summary" }));
+    expect(sendPayload).toHaveBeenCalledWith("user-1", expect.objectContaining({ title: "今日の予定を確認", data: expect.objectContaining({ period: "evening" }) }), expect.anything());
+  });
+
+  it("completes a due job when the summary was disabled after refill", async () => {
+    const { service, project, claim, summaryMarkSent } = scheduler([], [event()], [{ id: "summary-3", userId: "user-1", summaryType: "morning", localDate: "2026-09-10", scheduledFor: "2026-09-10T08:00:00.000Z" }]);
+    Object.assign(service, { settings: { listAll: vi.fn(() => Promise.resolve([])), getOrCreate: vi.fn(() => Promise.resolve(settings({ morningSummaryEnabled: false }))) } });
+    await service.run({} as Env, new Date("2026-09-10T08:05:00.000Z"));
+    expect(project).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(summaryMarkSent).toHaveBeenCalledWith("summary-3", "2026-09-10T08:05:00.000Z");
+  });
+
+  it("completes a due summary without delivery when the day has no events", async () => {
+    const { service, project, claim, summaryMarkSent } = scheduler([], [], [{ id: "summary-4", userId: "user-1", summaryType: "morning", localDate: "2026-09-10", scheduledFor: "2026-09-10T08:00:00.000Z" }]);
+    Object.assign(service, { settings: { listAll: vi.fn(() => Promise.resolve([])), getOrCreate: vi.fn(() => Promise.resolve(settings({ morningSummaryEnabled: true }))) } });
+    await service.run({} as Env, new Date("2026-09-10T08:05:00.000Z"));
+    expect(project).toHaveBeenCalledTimes(1);
+    expect(claim).not.toHaveBeenCalled();
+    expect(summaryMarkSent).toHaveBeenCalledWith("summary-4", "2026-09-10T08:05:00.000Z");
+  });
+
+  it("does not inspect settings or send either due job for a migration-locked user", async () => {
+    const { service, project, claim, summaryMarkSent } = scheduler([{ id: "notification-1", eventId: "event-1", offsetMinutes: 0 }], [event()], [{ id: "summary-5", userId: "user-1", summaryType: "morning", localDate: "2026-09-10", scheduledFor: "2026-09-10T08:00:00.000Z" }]);
+    Object.assign(service, { states: { get: vi.fn(() => Promise.resolve({ migrationState: "migration_locked" })) } });
+    await service.run({} as Env, new Date("2026-09-10T10:00:00.000Z"));
+    expect(project).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(summaryMarkSent).not.toHaveBeenCalled();
   });
 });
