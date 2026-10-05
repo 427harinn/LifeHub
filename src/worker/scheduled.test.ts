@@ -9,11 +9,16 @@ vi.mock("./services/money-settlement-service", () => ({
 vi.mock("./services/notification-job-service", () => ({
   runNotificationJobRefill: vi.fn(() => Promise.resolve())
 }));
+vi.mock("./services/notification-summary-job-service", () => ({
+  NotificationSummaryJobService: vi.fn(),
+  runNotificationSummaryJobRefill: vi.fn(() => Promise.resolve())
+}));
 
 import worker from "./index";
 import { runMoneySettlement } from "./services/money-settlement-service";
 import { runNotificationScheduler } from "./services/notification-scheduler-service";
 import { runNotificationJobRefill } from "./services/notification-job-service";
+import { runNotificationSummaryJobRefill } from "./services/notification-summary-job-service";
 
 describe("scheduled handler", () => {
   const env = {} as Env;
@@ -33,16 +38,18 @@ describe("scheduled handler", () => {
     expect(runNotificationScheduler).toHaveBeenCalledWith(env, new Date(scheduledTime));
     expect(runMoneySettlement).not.toHaveBeenCalled();
     expect(runNotificationJobRefill).not.toHaveBeenCalled();
+    expect(runNotificationSummaryJobRefill).not.toHaveBeenCalled();
     expect(waitUntil).toHaveBeenCalledTimes(1);
   });
 
-  it("runs money settlement and notification job refill for the daily cron", () => {
+  it("runs money settlement and both notification job refills for the daily cron", () => {
     const waitUntil = invoke("2 15 * * *");
 
     expect(runMoneySettlement).toHaveBeenCalledWith(env, new Date(scheduledTime));
     expect(runNotificationScheduler).not.toHaveBeenCalled();
     expect(runNotificationJobRefill).toHaveBeenCalledWith(env, new Date(scheduledTime));
-    expect(waitUntil).toHaveBeenCalledTimes(2);
+    expect(runNotificationSummaryJobRefill).toHaveBeenCalledWith(env, new Date(scheduledTime));
+    expect(waitUntil).toHaveBeenCalledTimes(3);
   });
 
   it("ignores unknown crons", () => {
@@ -51,6 +58,7 @@ describe("scheduled handler", () => {
     expect(runMoneySettlement).not.toHaveBeenCalled();
     expect(runNotificationScheduler).not.toHaveBeenCalled();
     expect(runNotificationJobRefill).not.toHaveBeenCalled();
+    expect(runNotificationSummaryJobRefill).not.toHaveBeenCalled();
     expect(waitUntil).not.toHaveBeenCalled();
   });
 });

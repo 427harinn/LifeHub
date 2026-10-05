@@ -3,6 +3,7 @@ import { EventOccurrenceOverrideRepository } from "../repositories/event-occurre
 import { NotificationDeliveryRepository, NotificationRepository, type DeliveryClaim } from "../repositories/notification-repository";
 import { EventRepository } from "../repositories/event-repository";
 import { NotificationJobRepository } from "../repositories/notification-job-repository";
+import { NotificationSummaryJobRepository, type NotificationSummaryJob } from "../repositories/notification-summary-job-repository";
 import { RecurrenceRepository } from "../repositories/recurrence-repository";
 import { SettingsRepository } from "../repositories/settings-repository";
 import { UserStateRepository } from "../repositories/user-state-repository";
@@ -67,6 +68,7 @@ export class NotificationSchedulerService {
   private readonly notifications: NotificationRepository;
   private readonly deliveries: NotificationDeliveryRepository;
   private readonly jobs: NotificationJobRepository;
+  private readonly summaryJobs: NotificationSummaryJobRepository;
   private readonly events: EventRepository;
   private readonly projection: EventProjectionService;
   constructor(private readonly db: D1Database, private readonly push = new WebPushService(db)) {
@@ -75,18 +77,18 @@ export class NotificationSchedulerService {
     this.notifications = new NotificationRepository(db);
     this.deliveries = new NotificationDeliveryRepository(db);
     this.jobs = new NotificationJobRepository(db);
+    this.summaryJobs = new NotificationSummaryJobRepository(db);
     this.events = new EventRepository(db);
     this.projection = new EventProjectionService(this.events, new RecurrenceRepository(db), new EventOccurrenceOverrideRepository(db));
   }
 
   async run(env: Env, at = new Date()): Promise<void> {
-    const allSettings = await this.settings.listAll();
-    const settingsByUser = new Map(allSettings.map((setting) => [setting.userId, setting]));
-    for (const job of await this.jobs.listDue(at.toISOString(), NOTIFICATION_DELIVERY_WINDOW_MINUTES)) {
-      const setting = settingsByUser.get(job.userId);
-      if (!setting) { await this.jobs.deletePending(job.id); continue; }
+    const dueEventJobs = await this.jobs.listDue(at.toISOString(), NOTIFICATION_DELIVERY_WINDOW_MINUTES);
+    const dueSummaryJobs = await this.summaryJobs.listDue(at.toISOString(), NOTIFICATION_DELIVERY_WINDOW_MINUTES);
+    console.log(JSON.stringify({ event: "lifehub_notification_scheduler_started", scheduledTime: at.toISOString(), dueEventJobs: dueEventJobs.length, dueSummaryJobs: dueSummaryJobs.length }));
+    for (const job of dueEventJobs) {
       try {
-        if ((await this.states.getOrCreate(job.userId, at.toISOString())).migrationState === "migration_locked") continue;
+        if ((await this.states.get(job.userId))?.migrationState === "migration_locked") continue;
         const event = await this.events.getById(job.userId, job.eventId);
         if (!event) { await this.jobs.deletePending(job.id); continue; }
         const currentNotifications = await this.notifications.listEventNotificationsForEvent(job.userId, job.eventId);
@@ -100,39 +102,37 @@ export class NotificationSchedulerService {
         console.error(JSON.stringify({ event: "lifehub_notification_job_failed", jobId: job.id, errorName: error instanceof Error ? error.name : "UnknownError" }));
       }
     }
-    for (const setting of allSettings) {
-      let schedulerStage = "user_state";
+    for (const job of dueSummaryJobs) {
       try {
-        if ((await this.states.getOrCreate(setting.userId, at.toISOString())).migrationState === "migration_locked") continue;
-        schedulerStage = "user_processing";
-        await this.runSummariesForUser(setting, env, at);
+        if ((await this.states.get(job.userId))?.migrationState === "migration_locked") continue;
+        const setting = await this.settings.getOrCreate(job.userId, at.toISOString());
+        const enabled = job.summaryType === "morning" ? setting.morningSummaryEnabled : setting.eveningSummaryEnabled;
+        const configuredTime = job.summaryType === "morning" ? setting.morningSummaryTime : setting.eveningSummaryTime;
+        const scheduledFor = zonedDateTimeToDate(job.localDate, configuredTime, setting.timezone).toISOString();
+        if (!enabled || scheduledFor !== job.scheduledFor) {
+          await this.summaryJobs.markSent(job.id, at.toISOString());
+          continue;
+        }
+        const events = uniqueEvents(await this.projection.project(job.userId, { startDate: job.localDate, endDate: job.localDate }, { timezone: setting.timezone, weekStartsOn: setting.weekStartsOn }));
+        if (events.length === 0) {
+          await this.summaryJobs.markSent(job.id, at.toISOString());
+          continue;
+        }
+        const notificationType = job.summaryType === "morning" ? "morning_summary" : "evening_summary";
+        await this.deliver({ id: crypto.randomUUID(), userId: job.userId, notificationType, eventId: null, occurrenceKey: null, eventNotificationId: null, scheduledFor: job.scheduledFor, dedupeKey: `summary:${job.userId}:${notificationType}:${job.scheduledFor}`, now: at.toISOString() }, env, { title: summaryTitle(job.summaryType), body: formatSummaryBody(events), data: { kind: "summary", period: job.summaryType, localDate: job.localDate, url: `/calendar?date=${job.localDate}` } }, undefined, job);
       } catch (error) {
-        console.error(JSON.stringify({ event: "lifehub_notification_scheduler_user_failed", userId: setting.userId, schedulerStage, errorName: error instanceof Error ? error.name : "UnknownError" }));
+        console.error(JSON.stringify({ event: "lifehub_notification_summary_job_failed", jobId: job.id, errorName: error instanceof Error ? error.name : "UnknownError" }));
       }
     }
   }
 
-  private async runSummariesForUser(setting: UserSettings, env: Env, at: Date): Promise<void> {
-    await this.runSummary(setting, "morning", setting.morningSummaryEnabled, setting.morningSummaryTime, env, at);
-    await this.runSummary(setting, "evening", setting.eveningSummaryEnabled, setting.eveningSummaryTime, env, at);
-  }
-
-  private async runSummary(setting: UserSettings, period: SummaryPeriod, enabled: boolean, time: string, env: Env, at: Date): Promise<void> {
-    if (!enabled) return;
-    const schedule = resolveScheduledNotification(at, setting.timezone, time);
-    if (!schedule) return;
-    const events = uniqueEvents(await this.projection.project(setting.userId, { startDate: schedule.localDate, endDate: schedule.localDate }, { timezone: setting.timezone, weekStartsOn: setting.weekStartsOn }));
-    if (events.length === 0) return;
-    const notificationType = period === "morning" ? "morning_summary" : "evening_summary";
-    await this.deliver({ id: crypto.randomUUID(), userId: setting.userId, notificationType, eventId: null, occurrenceKey: null, eventNotificationId: null, scheduledFor: schedule.scheduledFor.toISOString(), dedupeKey: `summary:${setting.userId}:${notificationType}:${schedule.scheduledFor.toISOString()}`, now: at.toISOString() }, env, { title: summaryTitle(period), body: formatSummaryBody(events), data: { kind: "summary", period, localDate: schedule.localDate, url: `/calendar?date=${schedule.localDate}` } });
-  }
-
-  private async deliver(claim: DeliveryClaim, env: Env, payload: object, jobId?: string): Promise<void> {
+  private async deliver(claim: DeliveryClaim, env: Env, payload: object, jobId?: string, summaryJob?: NotificationSummaryJob): Promise<void> {
     if (!(await this.deliveries.claim(claim))) {
       if (jobId && await this.deliveries.isSent(claim.dedupeKey)) await this.jobs.markSent(jobId, claim.now);
+      if (summaryJob && await this.deliveries.isSent(claim.dedupeKey)) await this.summaryJobs.markSent(summaryJob.id, claim.now);
       return;
     }
-    try { const result = await this.push.sendPayload(claim.userId, payload, pushEnv(env)); if (result.sent > 0) { await this.deliveries.markSent(claim.dedupeKey, claim.now); if (jobId) await this.jobs.markSent(jobId, claim.now); } else await this.deliveries.release(claim.dedupeKey); }
+    try { const result = await this.push.sendPayload(claim.userId, payload, pushEnv(env)); if (result.sent > 0) { await this.deliveries.markSent(claim.dedupeKey, claim.now); if (jobId) await this.jobs.markSent(jobId, claim.now); if (summaryJob) await this.summaryJobs.markSent(summaryJob.id, claim.now); } else await this.deliveries.release(claim.dedupeKey); }
     catch (error) { await this.deliveries.release(claim.dedupeKey); console.error(JSON.stringify({ event: "lifehub_notification_delivery_failed", notificationType: claim.notificationType, errorName: error instanceof Error ? error.name : "UnknownError" })); }
   }
 }
