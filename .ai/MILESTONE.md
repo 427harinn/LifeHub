@@ -1,3 +1,15 @@
+# オフライン閲覧（読み取り専用）対応（2026-11-26）
+
+- 要望: 「ネットにつながってないときにオフライン状態にして予定を確認できるようにしたい」。スコープは閲覧専用で確定（オフライン編集は調査のみ実施し、条件付き可能・サーバー側変更必須のため別検討）
+- branch: `codex/lifehub-offline-readonly`（base: `main` `726753e`）。production / default branch / production secrets は操作しない。PR作成後に停止し、auto-mergeしない
+- 実装: Service Workerへアプリシェルキャッシュ（`lifehub-app-shell-v1`、ナビゲーションはNetwork First→キャッシュ、静的アセットはStale While Revalidate、`/api/*`・非GET・クロスオリジンはバイパス、Push / notificationclick は従来どおり維持）
+- 実装: ネットワーク到達不能時のみ localStorage の最終認証ユーザー＋スナップショットコンテキスト（IndexedDBメタデータで補完）からスナップショット表示を復元。401では復元しない。オフラインバナー（保存時点つき）表示、追加・編集・削除・確定額・メモ保存を無効化、`online` で自動復帰
+- 検証: lint / typecheck / build 成功、unit 218 tests passed（新規14件: SWハンドラ、offline-session、Appオフライン復元）。ローカル実サーバー（wrangler dev）+ Chromium で登録→予定作成→オフライン再読み込みでカレンダー＋バナー表示を確認
+- Evidence: `artifacts/evidence/offline-readonly/`（online / offline 各390×844）
+- オフライン編集の調査結果: 単発CRUDは条件付き可能。必須条件は outbox（IndexedDB新ストア）、POST冪等キー、仮ID→実ID remap。繰り返し `following` 分割と通知連動は初回スコープから外すのが現実的
+
+---
+
 # Milestone 14: Release Readiness Phase E+F
 
 ## App icon follow-up（2026-09-17）
