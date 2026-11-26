@@ -16,6 +16,7 @@ import { MoneyCategoryRepository } from "./repositories/money-category-repositor
 import { isMoneyCategoryColorKey } from "../lib/money-category-colors";
 import { MoneyRepository } from "./repositories/money-repository";
 import { AuthService } from "./services/auth-service";
+import { createPasswordResetEmailSender, type PasswordResetEmailBindings } from "./services/password-reset-email-service";
 import { EventService } from "./services/event-service";
 import { EventProjectionService, dayToRange, isDateKey, monthKeyToGridRange } from "./services/event-projection-service";
 import type { Event, UserSettings } from "./types";
@@ -78,6 +79,37 @@ const authLogin: Handler = async ({ request, env }) => {
 const authLogout: Handler = async ({ request, env }) => {
   await new AuthService(env.DB).logout(request);
   return json({ loggedOut: true }, { headers: { "set-cookie": createExpiredSessionCookie(env.APP_ENV) } });
+};
+
+const authPasswordResetRequest: Handler = async ({ request, env }) => {
+  const body = await parseObject(request);
+  const email = stringValue(body.email).toLowerCase();
+  if (!email || email.length > EMAIL_MAX_LENGTH || !/^\S+@\S+\.\S+$/.test(email)) throw validationError({ email: "メールアドレスを入力してください。" });
+  const created = await new AuthService(env.DB).createPasswordResetToken(email);
+  if (created) {
+    const sender = createPasswordResetEmailSender(env as Env & PasswordResetEmailBindings);
+    if (sender) {
+      const resetUrl = `${new URL(request.url).origin}/password-reset?token=${encodeURIComponent(created.token)}`;
+      try {
+        await sender.sendPasswordResetEmail({ to: created.user.email, resetUrl });
+      } catch (error) {
+        // Delivery failure must not change the response: the endpoint never
+        // reveals whether an account exists for the email.
+        console.error("Password reset email delivery failed", error instanceof Error ? error.message : "unknown error");
+      }
+    }
+  }
+  return json({ accepted: true }, { status: 202 });
+};
+
+const authPasswordResetConfirm: Handler = async ({ request, env }) => {
+  const body = await parseObject(request);
+  const token = stringValue(body.token);
+  const password = stringValue(body.password);
+  if (!token) throw validationError({ token: "再設定リンクが無効です。もう一度お試しください。" });
+  if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) throw validationError({ password: `パスワードは${PASSWORD_MIN_LENGTH}〜${PASSWORD_MAX_LENGTH}文字で入力してください。` });
+  const result = await new AuthService(env.DB).resetPassword(token, password);
+  return json({ user: result.user }, { headers: { "set-cookie": createSessionCookie(result.token, env.APP_ENV) } });
 };
 
 const authMe = requireAuth(({ user }) => Promise.resolve(json({ user })));
@@ -518,6 +550,8 @@ export default {
       if (url.pathname === "/api/auth/login" && request.method === "POST") return await authLogin(context);
       if (url.pathname === "/api/auth/logout" && request.method === "POST") return await authLogout(context);
       if (url.pathname === "/api/auth/password" && request.method === "POST") return await authChangePassword(context);
+      if (url.pathname === "/api/auth/password-reset/request" && request.method === "POST") return await authPasswordResetRequest(context);
+      if (url.pathname === "/api/auth/password-reset/confirm" && request.method === "POST") return await authPasswordResetConfirm(context);
       if (url.pathname === "/api/auth/me" && request.method === "GET") return await authMe(context);
       if (url.pathname === "/api/settings" && request.method === "GET") return await getSettings(context);
       if (url.pathname === "/api/settings" && request.method === "PATCH") return await patchSettings(context);

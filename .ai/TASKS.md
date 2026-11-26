@@ -5,11 +5,24 @@
 - [x] O3: `src/lib/offline-session.ts`（最終認証ユーザー＋スナップショットコンテキスト）とオフライン復元・バナー・編集無効化・`online` 復帰を実装
 - [x] O4: unit test追加（SW / offline-session / Appオフライン復元）と lint / typecheck / build / 全218 tests を確認
 - [x] O5: ローカル実サーバー + Chromium でオフライン再読み込みの実挙動と390×844 Evidenceを確認
-- [x] O6: docs（PRODUCT_SPEC §17）と .ai 記録を同期
+- [x] O6: docs（PRODUCT_SPEC、オフライン閲覧は §18）と .ai 記録を同期
 - [x] O7: push / PR #36 作成後STOP（auto-mergeしない）
 - [x] O8: オフライン編集の可否調査（条件付き可能。outbox・冪等キー・仮ID remap が必須、繰り返し分割と通知は初回対象外）
 
 ---
+
+# Password reset Tasks（2026-11-26）
+
+- [x] P1: 既存認証（AuthService / users / sessions / パスワード変更）を確認
+- [x] P2: migration 0016 `password_reset_tokens` と PasswordResetTokenRepository を追加
+- [x] P3: AuthService にトークン発行・再設定（全session無効化つき）を実装
+- [x] P4: request / confirm API（登録有無を漏らさない応答）を実装
+- [x] P5: メール送信レイヤー（未設定時は送信なし、fetch の Illegal invocation 対策済み）を実装
+- [x] P6: ログイン画面に「パスワードを忘れた場合」導線と再設定画面（/password-reset）を実装
+- [x] P7: unit test（新規12件）／全216件 passed、lint / typecheck / build を確認
+- [x] P8: ローカル実サーバーでメール受信スタブ経由の全フローと 390×844 Evidence を確認
+- [x] P9: docs（PRODUCT_SPEC §17 / API_SPEC §22 / CLOUDFLARE_INFRASTRUCTURE）と .ai を同期し、PR作成後 STOP
+- [x] P10: PR #37 マージ後、PR #36 ブランチへ取り込み競合解消（PRODUCT_SPEC のオフライン閲覧は §18 へ繰り下げ）
 
 # Milestone 14 Phase E+F Tasks
 

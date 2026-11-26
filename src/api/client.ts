@@ -98,6 +98,8 @@ export const login = (email: string, password: string) => request<{ user: AuthUs
 export const register = (displayName: string, email: string, password: string) => request<{ user: AuthUser }>("/api/auth/register", { method: "POST", body: JSON.stringify({ displayName, email, password }) });
 export const logout = () => request<{ loggedOut: boolean }>("/api/auth/logout", { method: "POST" });
 export const changePassword = (input: { currentPassword: string; newPassword: string; confirmation: string }) => request<{ changed: boolean }>("/api/auth/password", { method: "POST", body: JSON.stringify(input) });
+export const requestPasswordReset = (email: string) => request<{ accepted: boolean }>("/api/auth/password-reset/request", { method: "POST", body: JSON.stringify({ email }) });
+export const confirmPasswordReset = (token: string, password: string) => request<{ user: AuthUser }>("/api/auth/password-reset/confirm", { method: "POST", body: JSON.stringify({ token, password }) });
 export const getSettings = () => request<{ settings: UserSettings }>("/api/settings");
 export const updateSettings = (input: Partial<UserSettings>) => request<{ settings: UserSettings }>("/api/settings", { method: "PATCH", body: JSON.stringify(input) });
 export const getEvents = (startDate: string, endDate: string) => request<{ events: Event[] }>(`/api/events?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
