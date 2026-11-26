@@ -169,6 +169,14 @@ Cronごとにscheduled handlerが処理を分岐し、5分Cronでは通知のみ
 
 `WEB_PUSH_VAPID_PRIVATE_KEY`は公式`web-push generate-vapid-keys`互換のURL-safe base64 private scalarをcanonical形式とする。Workerは移行期間のJSON JWKも受理する。secret値は表示・取得・ログ出力せず、LifeHub用generatorはrepo外へ出力する。
 
+パスワード再設定メール用に、環境ごとに次の名前だけを使用する（値はsecretとして設定し、Git / docs / log / PRへ保存しない）。
+
+- `PASSWORD_RESET_EMAIL_API_KEY`（secret）
+- `PASSWORD_RESET_EMAIL_FROM`
+- `PASSWORD_RESET_EMAIL_API_URL`（任意。未設定時はResendのAPIエンドポイント）
+
+未設定の環境ではメール送信を行わない（再設定APIの応答は変わらない）。
+
 secret値はGit / docs / log / PRへ保存しない。OAuth期限切れまたはCloudflare API 7403再発時はstaging操作を停止し、`wrangler whoami`、account、D1 binding / database ID、secret名を確認してから再開する。
 
 ---
