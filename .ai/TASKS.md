@@ -6,7 +6,7 @@
 - [x] O4: unit test追加（SW / offline-session / Appオフライン復元）と lint / typecheck / build / 全218 tests を確認
 - [x] O5: ローカル実サーバー + Chromium でオフライン再読み込みの実挙動と390×844 Evidenceを確認
 - [x] O6: docs（PRODUCT_SPEC §17）と .ai 記録を同期
-- [ ] O7: push / PR作成後STOP（auto-mergeしない）
+- [x] O7: push / PR #36 作成後STOP（auto-mergeしない）
 - [x] O8: オフライン編集の可否調査（条件付き可能。outbox・冪等キー・仮ID remap が必須、繰り返し分割と通知は初回対象外）
 
 ---
