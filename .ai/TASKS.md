@@ -1,3 +1,16 @@
+# オフライン閲覧（読み取り専用）Tasks（2026-11-26）
+
+- [x] O1: 現状調査（スナップショットはIndexedDBにあり、不足はアプリシェルのキャッシュと認証ゲートと判明）
+- [x] O2: `public/sw.js` にアプリシェルキャッシュとオフライン・フォールバックを実装（Push維持、`/api/*` バイパス）
+- [x] O3: `src/lib/offline-session.ts`（最終認証ユーザー＋スナップショットコンテキスト）とオフライン復元・バナー・編集無効化・`online` 復帰を実装
+- [x] O4: unit test追加（SW / offline-session / Appオフライン復元）と lint / typecheck / build / 全218 tests を確認
+- [x] O5: ローカル実サーバー + Chromium でオフライン再読み込みの実挙動と390×844 Evidenceを確認
+- [x] O6: docs（PRODUCT_SPEC §17）と .ai 記録を同期
+- [ ] O7: push / PR作成後STOP（auto-mergeしない）
+- [x] O8: オフライン編集の可否調査（条件付き可能。outbox・冪等キー・仮ID remap が必須、繰り返し分割と通知は初回対象外）
+
+---
+
 # Milestone 14 Phase E+F Tasks
 
 ## App icon follow-up
