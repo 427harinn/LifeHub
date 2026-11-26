@@ -22,6 +22,8 @@ POST /api/auth/login
 POST /api/auth/logout
 GET  /api/auth/me
 GET  /api/user-state
+POST /api/auth/password-reset/request
+POST /api/auth/password-reset/confirm
 ```
 
 register / login成功時に `LifeHubUserState` と `UserSettings` が存在しない場合は初期生成する。未認証の通常APIは401を返す。
@@ -487,6 +489,19 @@ POST /api/auth/password
 
 認証済みuserだけが、`currentPassword`、`newPassword`、`confirmation`を送信できる。Workerは既存AuthServiceのPBKDF2検証・ハッシュ処理を再利用し、現在passwordを検証してから新しいhashを保存する。新passwordは12〜128文字、confirmation一致を要求する。現在のsessionは維持する。migration lock中は既存のwritable user state制御により変更を拒否する。
 
-## 22. M14 runtime data-state rule
+## 22. Password reset（パスワードを忘れた場合）
+
+```text
+POST /api/auth/password-reset/request
+POST /api/auth/password-reset/confirm
+```
+
+`request` は `email` を受け、登録の有無にかかわらず常に `202 { accepted: true }` を返す（アカウントの存在を漏らさない）。登録がある場合のみ、再設定トークンを発行して登録メールアドレスへ再設定リンク（`/password-reset?token=...`）を送る。再度requestすると前回の未使用トークンは無効になる。
+
+トークンは平文を保存せずSHA-256 hashだけを `password_reset_tokens`（migration 0016）に保存し、有効期限30分・1回限りとする。`confirm` は `token` と新しい `password`（12〜128文字）を受け、成功時はpassword hashを更新し、そのuserの全sessionを無効化したうえで新しいsession Cookieを返す。無効・期限切れ・使用済みトークンはすべて同じ `PASSWORD_RESET_TOKEN_INVALID`（400）を返す。
+
+メール送信はWorkerのsecret/var `PASSWORD_RESET_EMAIL_API_KEY` / `PASSWORD_RESET_EMAIL_FROM`（任意で `PASSWORD_RESET_EMAIL_API_URL`、既定はResendのAPI）で設定し、未設定の環境では送信を行わない（応答は変わらない）。送信失敗はログにだけ残し、応答には影響させない。
+
+## 23. M14 runtime data-state rule
 
 Daily、Calendar Date Sheet、Calendar、Money、Money Analysisの通常runtime payloadにtest fixtureを混在させない。イベント・period・Moneyが0件の場合は実データのempty stateを表示し、API失敗はemptyへfallbackせずerrorとretryを表示する。month/date/yearの競合リクエストは最新requestだけを画面へcommitし、abort済みrequestはerror扱いにしない。

@@ -18,4 +18,8 @@ export class SessionRepository {
   async deleteByTokenHash(tokenHash: string) {
     await this.db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
   }
+
+  async deleteAllForUser(userId: string) {
+    await this.db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
+  }
 }

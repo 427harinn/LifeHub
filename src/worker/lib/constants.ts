@@ -1,5 +1,6 @@
 export const SESSION_COOKIE_NAME = "lifehub_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+export const PASSWORD_RESET_TOKEN_TTL_SECONDS = 60 * 30;
 export const SESSION_TOKEN_BYTES = 32;
 export const PBKDF2_ITERATIONS = 100_000;
 export const PASSWORD_MIN_LENGTH = 12;

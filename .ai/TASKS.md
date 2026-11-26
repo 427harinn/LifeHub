@@ -1,3 +1,15 @@
+# Password reset Tasks（2026-11-26）
+
+- [x] P1: 既存認証（AuthService / users / sessions / パスワード変更）を確認
+- [x] P2: migration 0016 `password_reset_tokens` と PasswordResetTokenRepository を追加
+- [x] P3: AuthService にトークン発行・再設定（全session無効化つき）を実装
+- [x] P4: request / confirm API（登録有無を漏らさない応答）を実装
+- [x] P5: メール送信レイヤー（未設定時は送信なし、fetch の Illegal invocation 対策済み）を実装
+- [x] P6: ログイン画面に「パスワードを忘れた場合」導線と再設定画面（/password-reset）を実装
+- [x] P7: unit test（新規12件）／全216件 passed、lint / typecheck / build を確認
+- [x] P8: ローカル実サーバーでメール受信スタブ経由の全フローと 390×844 Evidence を確認
+- [x] P9: docs（PRODUCT_SPEC §17 / API_SPEC §22 / CLOUDFLARE_INFRASTRUCTURE）と .ai を同期し、PR作成後 STOP
+
 # Milestone 14 Phase E+F Tasks
 
 ## App icon follow-up

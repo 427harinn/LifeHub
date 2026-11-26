@@ -1,3 +1,14 @@
+# Password reset（パスワードを忘れた場合）
+
+## 記録（2026-11-26）
+
+- base: `main` `726753ea1d3615cc6b6239418dd6f6952355c460`、branch: `codex/lifehub-password-reset`。
+- 背景: パスワードを忘れると復旧手段がなく、アカウント削除機能もないため、ログイン画面から辿れるメールリンク方式のパスワード再設定を追加する。
+- 実装: migration 0016 `password_reset_tokens`（SHA-256 hashのみ保存、30分・1回限り）、`POST /api/auth/password-reset/request`（登録有無で応答を変えない、常に202）、`POST /api/auth/password-reset/confirm`（全session無効化＋新session発行）。メール送信は外部メール送信API（既定Resend互換）へ分離し、`PASSWORD_RESET_EMAIL_API_KEY` / `PASSWORD_RESET_EMAIL_FROM` 未設定時は送信しない。
+- 検証: unit test 全216件 passed（新規12件）、lint / typecheck / build成功。ローカル実サーバー＋メール受信スタブで request→メール内リンク→confirm→新パスワードでログイン、旧パスワード・トークン再利用の拒否を確認。390×844の画面Evidenceは `artifacts/evidence/password-reset/`（ローカル保存、PRには含めない）。
+- 実挙動確認で検出・修正: Workers runtimeでは global fetch をオブジェクトのメソッドとして呼ぶと `Illegal invocation` になるため、送信レイヤーの既定fetchをラッパー関数にした。
+- production/default・HouseToDoは操作しない。PR作成後に停止し、auto-mergeしない。staging / productionで実際にメールを送るには各環境へsecret設定が必要（手順はPRに記載）。
+
 # Milestone 14: Release Readiness Phase E+F
 
 ## App icon follow-up（2026-09-17）
